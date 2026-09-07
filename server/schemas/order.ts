@@ -8,6 +8,9 @@ export const orderStatuses = [
 
 export type OrderStatus = (typeof orderStatuses)[number];
 
+export const orderTypes = ["Dine in", "Takeaway"] as const;
+export type OrderType = (typeof orderTypes)[number];
+
 export type Order = {
   id: string;
   customer: string;
@@ -16,6 +19,8 @@ export type Order = {
   itemList: string[];
   total: number;
   status: OrderStatus;
+  orderType?: OrderType;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -25,6 +30,8 @@ export type OrderInput = {
   table: string;
   itemList: string[];
   total: number;
+  orderType?: OrderType;
+  notes?: string;
 };
 
 export function validateOrderInput(body: unknown): {
@@ -53,6 +60,13 @@ export function validateOrderInput(body: unknown): {
     input.total < 0
   )
     errors.push("total must be a non-negative number.");
+  if (
+    input.orderType !== undefined &&
+    !orderTypes.includes(input.orderType as OrderType)
+  ) {
+    errors.push(`orderType must be one of: ${orderTypes.join(", ")}.`);
+  }
+
   if (errors.length > 0) return { errors };
 
   return {
@@ -62,6 +76,8 @@ export function validateOrderInput(body: unknown): {
       table: input.table!.trim(),
       itemList: input.itemList!.map((item) => item.trim()),
       total: Number(input.total!.toFixed(2)),
+      orderType: input.orderType ?? (input.table!.toLowerCase().includes("takeaway") ? "Takeaway" : "Dine in"),
+      notes: typeof input.notes === "string" ? input.notes.trim() : "",
     },
   };
 }

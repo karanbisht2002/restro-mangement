@@ -26,9 +26,10 @@ itemsDbRouter.get("/", async (_request, response) => {
 });
 
 itemsDbRouter.get("/:id", async (request, response) => {
+  const rawId = String(request.params.id);
   const result = await pool.query<MenuItem>(
     `SELECT ${itemColumns} FROM menu_items WHERE id = $1`,
-    [request.params.id],
+    [rawId],
   );
   if (result.rowCount === 0) {
     response.status(404).json({ error: "Menu item not found." });
@@ -68,10 +69,32 @@ itemsDbRouter.post("/", async (request: Request, response: Response) => {
   response.status(201).json({ data: result.rows[0] });
 });
 
+itemsDbRouter.patch("/:id/availability", async (request, response) => {
+  const rawId = String(request.params.id);
+  const { available } = request.body;
+  if (typeof available !== "boolean") {
+    response.status(400).json({ error: "Field 'available' must be a boolean." });
+    return;
+  }
+  const result = await pool.query<MenuItem>(
+    `UPDATE menu_items SET available = $2, updated_at = NOW() WHERE id = $1 RETURNING ${itemColumns}`,
+    [rawId, available],
+  );
+  if (result.rowCount === 0) {
+    response.status(404).json({ error: "Menu item not found." });
+    return;
+  }
+  response.json({
+    data: result.rows[0],
+    message: `Menu item marked as ${available ? "available" : "unavailable"}.`,
+  });
+});
+
 itemsDbRouter.patch("/:id", async (request, response) => {
+  const rawId = String(request.params.id);
   const current = await pool.query<MenuItem>(
     `SELECT ${itemColumns} FROM menu_items WHERE id = $1`,
-    [request.params.id],
+    [rawId],
   );
   if (current.rowCount === 0) {
     response.status(404).json({ error: "Menu item not found." });
@@ -89,7 +112,7 @@ itemsDbRouter.patch("/:id", async (request, response) => {
     `UPDATE menu_items SET name=$2, price=$3, type=$4, image=$5, description=$6, category=$7, available=$8, preparation_time_minutes=$9, allergens=$10, tags=$11, updated_at=NOW()
      WHERE id=$1 RETURNING ${itemColumns}`,
     [
-      request.params.id,
+      rawId,
       item.name,
       item.price,
       item.type,
@@ -106,13 +129,14 @@ itemsDbRouter.patch("/:id", async (request, response) => {
 });
 
 itemsDbRouter.delete("/:id", async (request, response) => {
+  const rawId = String(request.params.id);
   const result = await pool.query<MenuItem>(
     `DELETE FROM menu_items WHERE id = $1 RETURNING ${itemColumns}`,
-    [request.params.id],
+    [rawId],
   );
   if (result.rowCount === 0) {
     response.status(404).json({ error: "Menu item not found." });
     return;
   }
-  response.json({ data: result.rows[0] });
+  response.json({ data: result.rows[0], message: "Menu item deleted." });
 });
