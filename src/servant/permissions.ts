@@ -6,4 +6,5 @@ export const serverPages: Page[] = [
   "Floor plan",
   "Orders",
   "Billing",
+  "Settings",
 ];

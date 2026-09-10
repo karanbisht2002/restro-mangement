@@ -115,7 +115,7 @@ function App() {
             ["Orders", ShoppingBag],
             ["Floor plan", Utensils],
             ["Menu", Menu],
-            ["Team", Users],
+            ["Employees", Users],
           ].map(([label, Icon]) => (
             <button
               key={label as string}
@@ -133,14 +133,14 @@ function App() {
             Settings
           </button>
           <div className="mt-4 flex items-center gap-3 rounded-xl bg-[#f0f1ed] p-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e5c7a6] text-xs font-bold text-[#684f37]">
-              AR
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#315a3d] text-xs font-bold text-[#f4bc83]">
+              PS
             </div>
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-[#24312e]">
-                Aarav Rao
+                Priya Shah
               </p>
-              <p className="text-[11px] text-[#84908a]">Manager</p>
+              <p className="text-[11px] text-[#84908a]">General Manager</p>
             </div>
             <ChevronDown className="ml-auto text-[#84908a]" size={15} />
           </div>
@@ -154,7 +154,7 @@ function App() {
               <CalendarDays size={14} /> Tuesday, September 24, 2024
             </div>
             <h1 className="display-font text-4xl font-bold tracking-tight text-[#24312e] sm:text-5xl">
-              Good afternoon, Aarav.
+              Good afternoon, Priya.
             </h1>
             <p className="mt-2 text-sm text-[#84908a]">
               Here’s what’s happening at your restaurant today.

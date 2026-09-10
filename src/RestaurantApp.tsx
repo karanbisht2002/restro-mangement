@@ -21,6 +21,7 @@ import {
   Package,
   Pencil,
   Plus,
+  Minus,
   QrCode,
   Search,
   Settings2,
@@ -38,7 +39,44 @@ import {
   Upload,
   Utensils,
   X,
+  MapPin,
+  KeyRound,
+  ShieldCheck,
+  Smartphone,
+  Coffee,
+  Send,
+  Navigation,
+  Mail,
+  Phone,
+  Copy,
+  Percent,
+  Printer,
+  Receipt,
+  Banknote,
+  History,
+  Tag,
+  Split,
+  ArrowLeft,
+  XCircle,
+  ShieldAlert,
 } from "lucide-react";
+import { ToastContainer, type ToastItem } from "./components/Toast";
+import { fetchTransactions, recordTransaction } from "./api/transactions";
+import type { TransactionRecord } from "./types";
+import { fetchOverviewMetrics, type OverviewData } from "./api/overview";
+
+export function formatMoney(amount: number | string, symbol: string = "₹"): string {
+  if (typeof amount === "number") {
+    return `${symbol}${amount.toLocaleString()}`;
+  }
+  const str = String(amount);
+  const clean = str.replace(/^[^\d.-]+/, "").trim();
+  const num = parseFloat(clean);
+  if (!isNaN(num)) {
+    return `${symbol}${num.toLocaleString()}`;
+  }
+  return `${symbol}${amount}`;
+}
 import { kitchenPages } from "./kitchen/permissions";
 import {
   getNextKitchenStatus,
@@ -52,7 +90,7 @@ import ServantControlPanel from "./servant/ServantControlPanel";
 import { managerPages } from "./manager/permissions";
 import { serverPages } from "./servant/permissions";
 import type { Order, OrderStatus, Page, StaffRole } from "./types";
-import { createOrder, fetchOrders, updateOrderStatus } from "./api/orders";
+import { createOrder, fetchOrders, updateOrderStatus, updateOrder } from "./api/orders";
 import {
   createMenuItem,
   fetchMenuItems,
@@ -77,6 +115,37 @@ import {
   type TableStatus,
 } from "./api/tables";
 import { getKitchenStatus, toggleKitchenStatus } from "./api/kitchen";
+import EmployeePortal from "./EmployeePortal";
+import {
+  fetchStaff,
+  createStaff,
+  updateStaff,
+  deleteStaff,
+  loginWebStaff,
+  updateActiveOperators,
+  fetchRestaurantSettings,
+  updateRestaurantSettings,
+  clockInStaff,
+  clockOutStaff,
+  fetchLeaves,
+  updateLeaveStatus,
+  fetchAnnouncements,
+  createAnnouncement,
+  fetchDepartments,
+  createDepartment,
+  deleteDepartment,
+  type StaffMember,
+  type RestaurantSettings,
+  type LeaveRequest,
+  type Announcement,
+} from "./api/team";
+import SettingsPage, {
+  type StationDisplayPreferences,
+  type StoreSettings,
+} from "./components/SettingsPage";
+import NotificationCenterModal from "./components/NotificationCenterModal";
+import TransactionsPage from "./components/TransactionsPage";
+import InventoryPage from "./components/InventoryPage";
 
 type Icon = ComponentType<{
   size?: number;
@@ -100,7 +169,10 @@ const navGroups: { title: string; items: { label: Page; icon: Icon }[] }[] = [
       { label: "Menu", icon: Utensils },
       { label: "Inventory", icon: Package },
       { label: "Billing", icon: CircleDollarSign },
-      { label: "Team", icon: Users },
+      { label: "Transactions", icon: Receipt },
+      { label: "Employees", icon: Users },
+      { label: "Dashboard access", icon: ShieldCheck },
+      { label: "Settings", icon: Settings2 },
     ],
   },
 ];
@@ -145,7 +217,7 @@ const initialOrders: Order[] = [
     table: "Table 08",
     items: "2 items",
     itemList: ["Citrus butter chicken", "Garlic naan"],
-    total: "₹1,842",
+    total: "1842",
     status: "Queued",
   },
   {
@@ -154,7 +226,7 @@ const initialOrders: Order[] = [
     table: "Table 14",
     items: "4 items",
     itemList: ["Charred paneer tikka", "Truffle mushroom bao", "2 lime sodas"],
-    total: "₹3,640",
+    total: "3640",
     status: "Ready",
   },
   {
@@ -163,7 +235,7 @@ const initialOrders: Order[] = [
     table: "Takeaway",
     items: "1 item",
     itemList: ["Burnt basque cheesecake"],
-    total: "₹760",
+    total: "760",
     status: "Served",
   },
   {
@@ -172,7 +244,7 @@ const initialOrders: Order[] = [
     table: "Table 03",
     items: "3 items",
     itemList: ["Citrus spritz", "Wild mushroom risotto", "Still water"],
-    total: "₹2,250",
+    total: "2250",
     status: "Preparing",
   },
 ];
@@ -683,6 +755,7 @@ function OverviewPage({
   onBook,
   onOrder,
   onWebsite,
+  onNavigate,
   role,
   tables,
   orders,
@@ -690,10 +763,13 @@ function OverviewPage({
   onTableStatusChange,
   kitchenClosed,
   onToggleKitchenClosed,
+  userName,
+  currencySymbol = "₹",
 }: {
   onBook: (tableId?: string) => void;
   onOrder: (tableId?: string) => void;
   onWebsite: () => void;
+  onNavigate?: (page: Page) => void;
   role: StaffRole;
   tables: RestaurantTable[];
   orders: Order[];
@@ -701,15 +777,60 @@ function OverviewPage({
   onTableStatusChange: (id: string, status: TableStatus) => void;
   kitchenClosed?: boolean;
   onToggleKitchenClosed?: () => void;
+  userName?: string;
+  currencySymbol?: string;
 }) {
+  const [overviewMetrics, setOverviewMetrics] = useState<OverviewData | null>(null);
+
+  useEffect(() => {
+    fetchOverviewMetrics()
+      .then((data) => setOverviewMetrics(data))
+      .catch((err) => console.error("Failed to load overview metrics:", err));
+  }, [orders, tables, bookings]);
+
+  // Dynamic Occupied count from live state / API
   const occupiedCount = tables.filter((t) => t.status === "Occupied").length;
-  const activeOrdersCount = orders.filter((o) => o.status !== "Served").length;
+  const totalTables = tables.length || overviewMetrics?.tables?.total || 1;
+  const activeOrdersCount = orders.filter(
+    (o) => o.status !== "Served" && o.status !== "Paid" && o.status !== "Cancelled"
+  ).length;
+
+  // Dynamic Revenue calculation (strictly today's revenue from API, resets to 0 at midnight)
+  const todayRevenue = overviewMetrics?.revenue ? overviewMetrics.revenue.today : 0;
+
+  // Dynamic greeting & date
+  const now = new Date();
+  const currentHour = now.getHours();
+  const greeting =
+    currentHour < 12 ? "Good morning" : currentHour < 17 ? "Good afternoon" : "Good evening";
+  const formattedDate = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  // Weekly chart breakdown from database
+  const defaultWeeklyChart = [
+    { day: "Mon", heightPercent: 4, revenue: 0, orderCount: 0, isToday: false },
+    { day: "Tue", heightPercent: 4, revenue: 0, orderCount: 0, isToday: false },
+    { day: "Wed", heightPercent: 4, revenue: 0, orderCount: 0, isToday: false },
+    { day: "Thu", heightPercent: 4, revenue: 0, orderCount: 0, isToday: false },
+    { day: "Fri", heightPercent: 4, revenue: 0, orderCount: 0, isToday: false },
+    { day: "Sat", heightPercent: 4, revenue: 0, orderCount: 0, isToday: false },
+    { day: "Sun", heightPercent: 4, revenue: 0, orderCount: 0, isToday: true },
+  ];
+  const weeklyChartData = overviewMetrics?.weeklyChart?.length
+    ? overviewMetrics.weeklyChart
+    : defaultWeeklyChart;
+
+  const pacingPercent = overviewMetrics?.revenue?.pacingPercent ?? 0;
 
   return (
     <>
       <SectionHeading
-        eyebrow="Tuesday, September 24, 2024"
-        title="Good afternoon, Aarav."
+        eyebrow={formattedDate}
+        title={`${greeting}, ${userName ? userName.split(" ")[0] : "Priya"}.`}
         description="Here’s what’s happening at your restaurant today."
         action={
           <div className="flex gap-3">
@@ -749,25 +870,28 @@ function OverviewPage({
           </div>
         }
       />
-      <section className="grid gap-4 md:grid-cols-3">
-        <StatCard
-          label="Today's revenue"
-          value="₹1,84,286"
-          change="+12.8%"
-          icon={CircleDollarSign}
-          color="bg-[#e8f1e8] text-[#3b724c]"
-        />
+      <section className={`grid gap-4 ${role === "Server" ? "sm:grid-cols-2 md:grid-cols-2" : "md:grid-cols-3"}`}>
+        {/* Hide Today's earning in Server panel */}
+        {role !== "Server" && (
+          <StatCard
+            label="Today's revenue"
+            value={formatMoney(Math.round(todayRevenue), currencySymbol)}
+            change={`${pacingPercent >= 0 ? "+" : ""}${pacingPercent}% vs avg`}
+            icon={CircleDollarSign}
+            color="bg-[#e8f1e8] text-[#3b724c]"
+          />
+        )}
         <StatCard
           label="Active orders"
           value={String(activeOrdersCount || orders.length)}
-          change="+4 since 11am"
+          change={`${activeOrdersCount} in service`}
           icon={ShoppingBag}
           color="bg-[#fbe8dc] text-[#b7623d]"
         />
         <StatCard
           label="Tables occupied"
-          value={`${occupiedCount} / ${tables.length}`}
-          change={`${Math.round((occupiedCount / (tables.length || 1)) * 100)}% capacity`}
+          value={`${occupiedCount} / ${totalTables}`}
+          change={`${Math.round((occupiedCount / totalTables) * 100)}% capacity`}
           icon={Users}
           color="bg-[#eee8f6] text-[#72558e]"
         />
@@ -794,44 +918,60 @@ function OverviewPage({
           kitchenClosed={kitchenClosed}
         />
       )}
-      <section className="mt-8 grid gap-6 xl:grid-cols-[1.35fr_1fr]">
-        <article className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 sm:p-6">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h2 className="display-font text-xl font-bold text-[#24312e]">
-                Revenue overview
-              </h2>
-              <p className="mt-1 text-xs text-[#84908a]">
-                Your earnings across the last 7 days
-              </p>
-            </div>
-            <button className="flex items-center gap-1 rounded-lg border border-[#dfe1dc] px-3 py-2 text-xs font-bold text-[#68736e]">
-              This week <ChevronDown size={14} />
-            </button>
-          </div>
-          <div className="flex h-48 items-end gap-2 sm:gap-4">
-            {[42, 55, 49, 74, 63, 82, 96].map((height, index) => (
-              <div
-                key={height}
-                className="flex flex-1 flex-col items-center gap-3"
-              >
-                <div
-                  className={`w-full max-w-12 rounded-t-lg ${index === 6 ? "bg-[#b7623d]" : "bg-[#c8d9c6]"}`}
-                  style={{ height: `${height}%` }}
-                />
-                <span className="text-[11px] font-medium text-[#84908a]">
-                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index]}
-                </span>
+      <section className={`mt-8 grid gap-6 ${role === "Server" ? "" : "xl:grid-cols-[1.35fr_1fr]"}`}>
+        {/* Hide Revenue overview chart in Server panel */}
+        {role !== "Server" && (
+          <article className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 sm:p-6 shadow-xs">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="display-font text-xl font-bold text-[#24312e]">
+                  Revenue overview
+                </h2>
+                <p className="mt-1 text-xs text-[#84908a]">
+                  Real order revenue across the last 7 days
+                </p>
               </div>
-            ))}
-          </div>
-          <div className="mt-6 flex items-center gap-2 border-t border-[#e9eae6] pt-4 text-xs text-[#84908a]">
-            <span className="h-2 w-2 rounded-full bg-[#b7623d]" />
-            Today is pacing{" "}
-            <strong className="text-[#3b724c]">18% ahead</strong> of your daily
-            average
-          </div>
-        </article>
+              <span className="rounded-lg border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs font-bold text-[#68736e]">
+                Past 7 Days
+              </span>
+            </div>
+            <div className="flex h-48 items-end gap-2 sm:gap-4">
+              {weeklyChartData.map((item: any) => (
+                <div
+                  key={item.day}
+                  className="group relative flex flex-1 flex-col items-center gap-2"
+                  title={`${item.day}: ${formatMoney(Number(item.revenue || 0), currencySymbol)} (${item.orderCount || 0} orders)`}
+                >
+                  {/* Real data tooltip on hover */}
+                  <div className="pointer-events-none absolute -top-8 z-20 hidden whitespace-nowrap rounded-md bg-[#24312e] px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover:block transition-all">
+                    {formatMoney(Number(item.revenue || 0), currencySymbol)} • {item.orderCount || 0} orders
+                  </div>
+                  <div
+                    className={`w-full max-w-12 rounded-t-lg transition-all duration-300 ${
+                      item.isToday
+                        ? "bg-[#b7623d]"
+                        : Number(item.revenue || 0) > 0
+                        ? "bg-[#729e7b]"
+                        : "bg-[#d8ded6]"
+                    }`}
+                    style={{ height: `${item.heightPercent}%` }}
+                  />
+                  <span className="text-[11px] font-semibold text-[#84908a]">
+                    {item.day}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex items-center gap-2 border-t border-[#e9eae6] pt-4 text-xs text-[#84908a]">
+              <span className="h-2 w-2 rounded-full bg-[#b7623d]" />
+              Today is pacing{" "}
+              <strong className="text-[#3b724c]">
+                {pacingPercent >= 0 ? `+${pacingPercent}% ahead` : `${pacingPercent}% behind`}
+              </strong>{" "}
+              of your daily average
+            </div>
+          </article>
+        )}
         <article className="rounded-2xl border border-[#e0e2dc] bg-[#24312e] p-5 text-white sm:p-6">
           <div className="flex items-start justify-between">
             <div>
@@ -844,17 +984,18 @@ function OverviewPage({
           </div>
           <div className="mt-7 grid grid-cols-2 gap-3">
             {[
-              ["Floor plan", Table2],
-              ["Add menu item", Plus],
-              ["Staff schedule", CalendarDays],
-              ["View reports", FileText],
-            ].map(([label, ActionIcon]) => (
+              { label: "Floor plan", Icon: Table2, action: () => onNavigate?.("Floor plan") },
+              { label: "Add menu item", Icon: Plus, action: () => onNavigate?.("Menu") },
+              { label: "Staff schedule", Icon: CalendarDays, action: () => onNavigate?.("Employees") },
+              { label: "View reports", Icon: FileText, action: () => onNavigate?.("Transactions") },
+            ].map(({ label, Icon, action }) => (
               <button
-                key={label as string}
-                className="flex min-h-24 flex-col items-start justify-between rounded-xl border border-[#41504a] bg-[#30403a] p-4 text-left transition hover:border-[#f4bc83]"
+                key={label}
+                onClick={action}
+                className="flex min-h-24 flex-col items-start justify-between rounded-xl border border-[#41504a] bg-[#30403a] p-4 text-left transition hover:border-[#f4bc83] hover:bg-[#394a43] cursor-pointer"
               >
-                <ActionIcon size={19} className="text-[#f4bc83]" />
-                <span className="text-xs font-bold">{label as string}</span>
+                <Icon size={19} className="text-[#f4bc83]" />
+                <span className="text-xs font-bold">{label}</span>
               </button>
             ))}
           </div>
@@ -892,7 +1033,7 @@ function OverviewPage({
                   <td className="py-4 text-[#68736e]">{order.table}</td>
                   <td className="py-4 text-[#68736e]">{order.items}</td>
                   <td className="py-4 font-bold text-[#24312e]">
-                    {order.total}
+                    {formatMoney(order.total, currencySymbol)}
                   </td>
                   <td className="py-4">
                     <StatusPill status={order.status} />
@@ -913,12 +1054,14 @@ function ReservationsPage({
   onCancelBooking,
   onBook,
   kitchenClosed = false,
+  currencySymbol = "₹",
 }: {
   bookings: TableBooking[];
   onStatusChange: (id: string, status: BookingStatus) => void;
   onCancelBooking: (id: string) => void;
   onBook: () => void;
   kitchenClosed?: boolean;
+  currencySymbol?: string;
 }) {
   const totalGuests = bookings.reduce((sum, b) => sum + (b.guests || 0), 0);
   const totalDeposit = bookings.reduce(
@@ -995,7 +1138,7 @@ function ReservationsPage({
         />
         <StatCard
           label="Deposit collected"
-          value={`₹${totalDeposit.toLocaleString("en-IN")}`}
+          value={`${currencySymbol || "₹"}${totalDeposit.toLocaleString("en-IN")}`}
           change={`${bookings.length} reservations`}
           icon={CreditCard}
           color="bg-[#eee8f6] text-[#72558e]"
@@ -1064,7 +1207,7 @@ function ReservationsPage({
                 <div>
                   <p className="font-bold text-[#24312e]">{booking.customer}</p>
                   <p className="mt-0.5 text-xs text-[#84908a]">
-                    Deposit ₹{booking.deposit} • {booking.source}
+                    Deposit {currencySymbol || "₹"}{booking.deposit} • {booking.source}
                     {booking.specialRequests ? ` • "${booking.specialRequests}"` : ""}
                   </p>
                   {booking.phone && (
@@ -2169,12 +2312,14 @@ function OrdersPage({
   onOrder,
   kitchenClosed = false,
   role,
+  currencySymbol = "₹",
 }: {
   orders: Order[];
   onStatusChange: (id: string, status: OrderStatus, actingRole?: StaffRole) => void;
   onOrder?: () => void;
   kitchenClosed?: boolean;
   role?: StaffRole;
+  currencySymbol?: string;
 }) {
   const [tab, setTab] = useState<"all" | "pending" | "new" | "served">("all");
   return (
@@ -2276,7 +2421,7 @@ function OrdersPage({
                             </span>
                           </p>
                           <p className="mt-1 text-xs text-[#68736e]">
-                            {order.items} • {order.total}
+                            {order.items} • {formatMoney(order.total, currencySymbol)}
                           </p>
                         </div>
                         <StatusPill status={order.status} />
@@ -2809,10 +2954,12 @@ function EditMenuItemModal({
   item,
   onClose,
   onUpdated,
+  currencySymbol = "₹",
 }: {
   item: ApiMenuItem;
   onClose: () => void;
   onUpdated: (updated: ApiMenuItem) => void;
+  currencySymbol?: string;
 }) {
   const [name, setName] = useState(item.name);
   const [price, setPrice] = useState(item.price.toString());
@@ -2938,7 +3085,7 @@ function EditMenuItemModal({
             />
           </label>
           <label className="text-xs font-bold text-[#68736e]">
-            Price (₹) <span className="text-[#b7623d]">*</span>
+            Price ({currencySymbol || "₹"}) <span className="text-[#b7623d]">*</span>
             <input
               required
               min="0"
@@ -3266,6 +3413,7 @@ function MenuPage({
   setSoldOutItems,
   canManage = false,
   canCreate,
+  currencySymbol = "₹",
 }: {
   menuItems: ApiMenuItem[];
   onMenuItemsChange?: (items: ApiMenuItem[]) => void;
@@ -3273,6 +3421,7 @@ function MenuPage({
   setSoldOutItems: (items: string[]) => void;
   canManage?: boolean;
   canCreate?: boolean;
+  currencySymbol?: string;
 }) {
   const isManager = canManage || canCreate || false;
   const [category, setCategory] = useState("All items");
@@ -3516,7 +3665,7 @@ function MenuPage({
                     <p className="mt-1 text-xs text-[#84908a]">
                       {item.category} •{" "}
                       {typeof item.price === "number"
-                        ? `₹${item.price.toLocaleString("en-IN")}`
+                        ? `${currencySymbol || "₹"}${item.price.toLocaleString("en-IN")}`
                         : item.price}
                     </p>
                   </div>
@@ -3680,7 +3829,7 @@ function MenuPage({
                 />
               </label>
               <label className="text-xs font-bold text-[#68736e]">
-                Price (₹) <span className="text-[#b7623d]">*</span>
+                Price ({currencySymbol || "₹"}) <span className="text-[#b7623d]">*</span>
                 <input
                   name="price"
                   required
@@ -3883,6 +4032,7 @@ function MenuPage({
           item={editingItem}
           onClose={() => setEditingItem(null)}
           onUpdated={handleItemUpdated}
+          currencySymbol={currencySymbol}
         />
       )}
 
@@ -3897,280 +4047,4828 @@ function MenuPage({
   );
 }
 
-function InventoryPage() {
+
+
+function ManualBillModal({
+  isOpen,
+  onClose,
+  tables = [],
+  menuItems = [],
+  soldOutItems = [],
+  servants = [],
+  taxRate = 5.0,
+  serviceCharge = 5.0,
+  currencySymbol = "₹",
+  onOrderCreated,
+  onTableStatusChange,
+  showToast,
+  role,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  tables: RestaurantTable[];
+  menuItems: ApiMenuItem[];
+  soldOutItems?: string[];
+  servants: { id?: string; name: string }[];
+  taxRate: number;
+  serviceCharge: number;
+  currencySymbol: string;
+  onOrderCreated?: (order: Order) => void;
+  onTableStatusChange?: (id: string, status: TableStatus) => void;
+  onDirectSettle?: (invoice: any) => void;
+  showToast: (type: "success" | "error" | "info", title: string, message: string) => void;
+  role?: StaffRole | null;
+}) {
+  if (!isOpen) return null;
+
+  const [orderType, setOrderType] = useState<"Dine in" | "Takeaway">("Dine in");
+  const [tableNumber, setTableNumber] = useState<string>(tables[0]?.id || "T01");
+  const [guestName, setGuestName] = useState<string>("");
+  const [guestCount, setGuestCount] = useState<number>(2);
+  const [servantName, setServantName] = useState<string>(servants[0]?.name || "");
+
+  interface ManualItem {
+    id: string;
+    name: string;
+    qty: number;
+    rate: number;
+    total: number;
+  }
+
+  const [selectedItems, setSelectedItems] = useState<ManualItem[]>([]);
+  const [dishSearch, setDishSearch] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+
+  const isDishUnavailable = (item: ApiMenuItem) => {
+    return (
+      item.available === false ||
+      (soldOutItems && soldOutItems.includes(item.name)) ||
+      (item as any).status === "Unavailable"
+    );
+  };
+
+  const categories = ["All", ...Array.from(new Set(menuItems.map((m) => m.category || "General")))];
+
+  const filteredMenuItems = menuItems
+    .filter((item) => {
+      const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+      const matchesSearch =
+        item.name.toLowerCase().includes(dishSearch.toLowerCase()) ||
+        (item.category && item.category.toLowerCase().includes(dishSearch.toLowerCase()));
+      return matchesCategory && matchesSearch;
+    })
+    .sort((a, b) => {
+      const aUnavail = isDishUnavailable(a);
+      const bUnavail = isDishUnavailable(b);
+      if (aUnavail === bUnavail) return 0;
+      return aUnavail ? 1 : -1;
+    });
+
+  const handleAddItem = (item: ApiMenuItem) => {
+    if (isDishUnavailable(item)) return;
+
+    setSelectedItems((prev) => {
+      const idx = prev.findIndex((i) => i.name.toLowerCase() === item.name.toLowerCase());
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = {
+          ...next[idx],
+          qty: next[idx].qty + 1,
+          total: (next[idx].qty + 1) * next[idx].rate,
+        };
+        return next;
+      }
+      return [
+        ...prev,
+        {
+          id: item.id || `dish-${Date.now()}-${Math.random()}`,
+          name: item.name,
+          qty: 1,
+          rate: item.price,
+          total: item.price,
+        },
+      ];
+    });
+  };
+
+  const handleUpdateQty = (idx: number, delta: number) => {
+    setSelectedItems((prev) => {
+      const it = prev[idx];
+      if (!it) return prev;
+      const nextQty = it.qty + delta;
+      if (nextQty <= 0) {
+        return prev.filter((_, i) => i !== idx);
+      }
+      const next = [...prev];
+      next[idx] = { ...it, qty: nextQty, total: nextQty * it.rate };
+      return next;
+    });
+  };
+
+  // Calculations
+  const subtotal = selectedItems.reduce((sum, it) => sum + it.total, 0);
+  const taxAmount = Number(((subtotal * taxRate) / 100).toFixed(2));
+  const serviceChargeAmount = Number(((subtotal * serviceCharge) / 100).toFixed(2));
+  const netPayable = Math.max(0, Number((subtotal + taxAmount + serviceChargeAmount).toFixed(2)));
+  const totalItemCount = selectedItems.reduce((sum, it) => sum + it.qty, 0);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!guestName.trim()) {
+      setError("Guest name is mandatory. Please enter the guest's name.");
+      return;
+    }
+
+    const effectiveTable = orderType === "Takeaway" ? "Takeaway" : tableNumber;
+
+    if (orderType === "Dine in" && (!effectiveTable || effectiveTable.trim() === "" || effectiveTable === "Takeaway")) {
+      setError("Assigning a table is mandatory for dine-in orders. Please select a table.");
+      return;
+    }
+
+    if (selectedItems.length === 0) {
+      setError("Please select at least one dish for this bill.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const formattedItemList = selectedItems.map((it) =>
+        it.qty > 1 ? `${it.qty}x ${it.name}` : it.name
+      );
+
+      const customerLabel = guestName.trim();
+
+      // Create order via API
+      const newOrder = await createOrder(
+        {
+          customer: customerLabel,
+          table: effectiveTable,
+          itemList: formattedItemList,
+          total: subtotal,
+          serverName: servantName.trim() || undefined,
+          orderType: orderType === "Takeaway" ? "Takeaway" : "Dine in",
+        },
+        role || "Server"
+      );
+
+      if (onOrderCreated) {
+        onOrderCreated(newOrder);
+      }
+
+      if (orderType === "Dine in" && onTableStatusChange) {
+        onTableStatusChange(tableNumber, "Occupied");
+      }
+
+      showToast("success", "Manual Bill Created", `Active bill created for ${effectiveTable} (${customerLabel}).`);
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || "Failed to create manual bill. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <>
-      <SectionHeading
-        eyebrow="Stock and recipes"
-        title="Inventory"
-        description="Track raw materials, recipe costing, wastage, and purchase receipts."
-        action={
-          <button className="flex items-center gap-2 rounded-xl bg-[#24312e] px-4 py-3 text-sm font-bold text-white">
-            <Plus size={18} />
-            Add stock
-          </button>
-        }
-      />
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          label="Stock value"
-          value="₹2,84,600"
-          change="+4.2% this month"
-          icon={Package}
-          color="bg-[#e8f1e8] text-[#3b724c]"
-        />
-        <StatCard
-          label="Low stock items"
-          value="2"
-          change="Needs attention"
-          icon={AlertTriangle}
-          color="bg-[#fff5dc] text-[#946243]"
-        />
-        <StatCard
-          label="Wastage this week"
-          value="₹4,280"
-          change="-8.4% vs last week"
-          icon={Trash2}
-          color="bg-[#fbe8dc] text-[#b7623d]"
-        />
-      </div>
-      <div className="mt-6 rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 sm:p-6">
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <h2 className="display-font text-xl font-bold">
-              Raw material catalog
-            </h2>
-            <p className="mt-1 text-xs text-[#84908a]">
-              Auto-depletion is active when an order enters preparation.
-            </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#24312e]/50 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto">
+      <div className="relative w-full max-w-4xl rounded-3xl bg-[#fbfaf7] border border-[#dfe1dc] shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#e9eae6] bg-white px-5 sm:px-6 py-4 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#24312e] text-[#f4bc83]">
+              <Receipt size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-[#24312e]">Create Manual Bill</h3>
+              <p className="text-xs text-[#84908a]">
+                Generate a custom dine-in or takeaway bill on the fly.
+              </p>
+            </div>
           </div>
-          <Search size={18} className="text-[#68736e]" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-2 text-[#84908a] hover:bg-[#f0f2ed] hover:text-[#24312e] transition cursor-pointer"
+          >
+            <X size={18} />
+          </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-155 text-left text-sm">
-            <thead className="border-b border-[#e9eae6] text-[10px] font-bold uppercase tracking-[.14em] text-[#9aa39d]">
-              <tr>
-                <th className="pb-3">Ingredient</th>
-                <th className="pb-3">On hand</th>
-                <th className="pb-3">Minimum</th>
-                <th className="pb-3">Cost</th>
-                <th className="pb-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {inventory.map((item) => {
-                const low = item.current < item.minimum;
-                return (
-                  <tr
-                    key={item.name}
-                    className="border-b border-[#f0f1ed] last:border-0"
+
+        {error && (
+          <div className="mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 flex items-center gap-2 shrink-0">
+            <AlertTriangle size={15} className="shrink-0 text-red-600" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          {/* Scrollable Form Content */}
+          <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+            {/* Order Type Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setOrderType("Dine in")}
+                className={`flex items-center justify-center gap-2 rounded-xl p-2.5 text-xs font-bold border transition cursor-pointer ${
+                  orderType === "Dine in"
+                    ? "border-[#24312e] bg-[#24312e] text-white shadow-xs"
+                    : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+                }`}
+              >
+                <Utensils size={14} />
+                <span>Dine in Table</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderType("Takeaway")}
+                className={`flex items-center justify-center gap-2 rounded-xl p-2.5 text-xs font-bold border transition cursor-pointer ${
+                  orderType === "Takeaway"
+                    ? "border-[#24312e] bg-[#24312e] text-white shadow-xs"
+                    : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+                }`}
+              >
+                <ShoppingBag size={14} />
+                <span>Takeaway / Counter</span>
+              </button>
+            </div>
+
+            {/* Table, Guest & Servant Grid */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {orderType === "Dine in" ? (
+                <div>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Assign Table <span className="text-red-500 font-bold">*</span>
+                  </label>
+                  <select
+                    required
+                    value={tableNumber}
+                    onChange={(e) => setTableNumber(e.target.value)}
+                    className={`w-full rounded-xl border px-3 py-2 text-xs outline-none focus:border-[#24312e] cursor-pointer ${
+                      !tableNumber && error ? "border-red-400 bg-red-50/50" : "border-[#dfe1dc] bg-white"
+                    }`}
                   >
-                    <td className="py-4 font-bold text-[#24312e]">
-                      {item.name}
-                    </td>
-                    <td className="py-4 text-[#68736e]">
-                      {item.current} {item.unit}
-                    </td>
-                    <td className="py-4 text-[#68736e]">
-                      {item.minimum} {item.unit}
-                    </td>
-                    <td className="py-4 text-[#68736e]">{item.cost}</td>
-                    <td className="py-4">
-                      <StatusPill status={low ? "Low stock" : "In stock"} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    <option value="" disabled>-- Select Table (Required) --</option>
+                    {tables.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.id} ({t.seats} seats · {t.zone}) - {t.status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">Pickup Channel</label>
+                  <input
+                    type="text"
+                    value="Pickup Counter / Takeaway"
+                    disabled
+                    className="w-full rounded-xl border border-[#dfe1dc] bg-[#eef0eb] px-3 py-2 text-xs text-[#68736e]"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-bold text-[#68736e] block mb-1">Assigned Servant / Waiter</label>
+                <select
+                  value={servantName}
+                  onChange={(e) => setServantName(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e] cursor-pointer"
+                >
+                  <option value="">-- No servant assigned (Optional) --</option>
+                  {servants.map((s) => (
+                    <option key={s.id || s.name} value={s.name}>
+                      {s.name} (Floor Server)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#68736e] block mb-1">
+                  Guest Name <span className="text-red-500 font-bold">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Saurav Sharma (Required)"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  className={`w-full rounded-xl border px-3 py-2 text-xs outline-none focus:border-[#24312e] ${
+                    !guestName.trim() && error ? "border-red-400 bg-red-50/50" : "border-[#dfe1dc] bg-white"
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#68736e] block mb-1">Guests / Covers</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={guestCount}
+                  onChange={(e) => setGuestCount(parseInt(e.target.value) || 1)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
+                />
+              </div>
+            </div>
+
+            {/* Menu Items Selection Section */}
+            <div className="rounded-2xl border border-[#e9eae6] bg-white p-3.5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#9aa39d]">
+                  Select Menu Items
+                </span>
+                {totalItemCount > 0 && (
+                  <span className="rounded-full bg-[#e8f1e8] px-2.5 py-0.5 text-[11px] font-bold text-[#315a3d]">
+                    {totalItemCount} {totalItemCount === 1 ? "dish" : "dishes"} selected
+                  </span>
+                )}
+              </div>
+
+              {/* Dish Search & Category Filters */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search size={13} className="absolute left-2.5 top-2.5 text-[#84908a]" />
+                  <input
+                    type="text"
+                    placeholder="Search menu dishes..."
+                    value={dishSearch}
+                    onChange={(e) => setDishSearch(e.target.value)}
+                    className="w-full rounded-lg border border-[#dfe1dc] bg-[#fbfaf7] pl-7 pr-2.5 py-1.5 text-xs outline-none focus:border-[#24312e]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`rounded-lg px-2.5 py-1 font-bold whitespace-nowrap transition cursor-pointer ${
+                      selectedCategory === cat
+                        ? "bg-[#24312e] text-white"
+                        : "bg-[#f0f2ed] text-[#68736e] hover:bg-[#dfe1dc]"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* Scrollable Dish Grid (3 columns) */}
+              <div className="max-h-[380px] overflow-y-auto pr-1">
+                {filteredMenuItems.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-[#84908a]">
+                    No dishes found matching your search.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {filteredMenuItems.map((dish) => {
+                      const unavailable = isDishUnavailable(dish);
+                      const cartItem = selectedItems.find(
+                        (i) => i.name.toLowerCase() === dish.name.toLowerCase()
+                      );
+                      const inCartQty = cartItem ? cartItem.qty : 0;
+
+                      return (
+                        <div
+                          key={dish.id}
+                          className={`group flex flex-col justify-between rounded-2xl p-2.5 text-xs border transition ${
+                            unavailable
+                              ? "bg-[#f4f5f1] border-dashed border-[#dfe1dc] opacity-65"
+                              : inCartQty > 0
+                              ? "bg-[#f2f7f3] border-[#315a3d]/50 shadow-xs ring-1 ring-[#315a3d]/20"
+                              : "bg-white border-[#eef0eb] hover:border-[#dfe1dc] hover:shadow-2xs"
+                          }`}
+                        >
+                          {/* Dish Image */}
+                          <div className="relative h-28 w-full overflow-hidden rounded-xl bg-[#e9eee5] flex items-center justify-center text-[#315a3d]">
+                            {dish.image ? (
+                              <img
+                                src={dish.image}
+                                alt={dish.name}
+                                className={`h-full w-full object-cover transition-transform duration-300 ${
+                                  unavailable ? "grayscale contrast-75" : "group-hover:scale-105"
+                                }`}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <Utensils size={28} className="text-[#315a3d]/50" />
+                            )}
+                            <div className="absolute top-2 left-2 flex items-center gap-1 rounded-md bg-white/90 backdrop-blur-xs px-1.5 py-0.5 shadow-2xs">
+                              <span
+                                className={`inline-block h-2 w-2 rounded-full ${
+                                  dish.type === "veg" ? "bg-[#3b724c]" : "bg-[#b7623d]"
+                                }`}
+                              />
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-[#24312e]">
+                                {dish.type === "veg" ? "Veg" : "Non-veg"}
+                              </span>
+                            </div>
+                            {unavailable && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
+                                <span className="flex items-center gap-1 rounded-full bg-red-600/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs">
+                                  <Ban size={10} /> Unavailable
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Dish Info */}
+                          <div className="mt-2 flex-1">
+                            <h4
+                              className={`font-bold text-xs line-clamp-1 ${
+                                unavailable
+                                  ? "text-[#84908a] line-through decoration-[#84908a]/40"
+                                  : "text-[#24312e]"
+                              }`}
+                              title={dish.name}
+                            >
+                              {dish.name}
+                            </h4>
+                            <div className="mt-0.5 flex items-center justify-between">
+                              <span className="text-[10px] text-[#84908a] line-clamp-1">{dish.category}</span>
+                              <span className="text-xs font-black text-[#24312e]">
+                                {currencySymbol}{dish.price}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Quantity Handler */}
+                          <div className="mt-2.5 pt-2 border-t border-[#f0f1ed]">
+                            {unavailable ? (
+                              <div className="w-full text-center rounded-lg bg-gray-100 py-1 text-[11px] font-semibold text-gray-400 select-none cursor-not-allowed border border-gray-200">
+                                Unavailable
+                              </div>
+                            ) : inCartQty > 0 ? (
+                              <div className="flex items-center justify-between rounded-lg border border-[#315a3d]/40 bg-white p-0.5 shadow-2xs">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const idx = selectedItems.findIndex(
+                                      (i) => i.name.toLowerCase() === dish.name.toLowerCase()
+                                    );
+                                    if (idx >= 0) handleUpdateQty(idx, -1);
+                                  }}
+                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-[#f0f4f1] text-[#315a3d] hover:bg-[#315a3d] hover:text-white transition cursor-pointer"
+                                  title="Decrease quantity"
+                                >
+                                  <Minus size={11} />
+                                </button>
+                                <span className="font-extrabold text-xs text-[#24312e] px-2 min-w-[20px] text-center">
+                                  {inCartQty}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const idx = selectedItems.findIndex(
+                                      (i) => i.name.toLowerCase() === dish.name.toLowerCase()
+                                    );
+                                    if (idx >= 0) handleUpdateQty(idx, 1);
+                                  }}
+                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-[#f0f4f1] text-[#315a3d] hover:bg-[#315a3d] hover:text-white transition cursor-pointer"
+                                  title="Increase quantity"
+                                >
+                                  <Plus size={11} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleAddItem(dish)}
+                                className="w-full rounded-lg bg-[#e8f1e8] py-1 text-xs font-bold text-[#315a3d] hover:bg-[#315a3d] hover:text-white transition cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                              >
+                                <Plus size={12} />
+                                <span>Add</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Sticky Action Footer */}
+          <div className="border-t border-[#e9eae6] bg-white px-5 sm:px-6 py-3.5 flex items-center justify-between shrink-0 gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#68736e]">
+                {totalItemCount} {totalItemCount === 1 ? "dish" : "dishes"}
+              </span>
+              <span className="text-xs text-[#dfe1dc]">•</span>
+              <span className="text-sm font-extrabold text-[#24312e]">
+                Total: {currencySymbol}{netPayable.toFixed(2)}
+              </span>
+              {totalItemCount > 0 && (
+                <span className="text-[10px] text-[#84908a] hidden sm:inline">
+                  (incl. {taxRate}% GST)
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-[#dfe1dc] bg-white px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || selectedItems.length === 0}
+                className="rounded-xl bg-[#24312e] hover:bg-[#315a3d] px-5 py-2 text-xs font-bold text-white shadow-sm transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? "Creating..." : "Create Bill"}
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
-    </>
+    </div>
   );
 }
 
-function BillingPage() {
+function BillingPage({
+  tables = [],
+  orders = [],
+  bookings = [],
+  menuItems = [],
+  soldOutItems = [],
+  restaurantSettings,
+  currencySymbol = "₹",
+  role,
+  servants = [],
+  onTableStatusChange,
+  onOrderStatusChange,
+  onBookingStatusChange,
+  onNavigateSettings,
+  onNavigateTransactions,
+  onOrderCreated,
+  onOrderUpdated,
+  onOrdersChange,
+}: {
+  tables?: RestaurantTable[];
+  orders?: Order[];
+  bookings?: TableBooking[];
+  menuItems?: ApiMenuItem[];
+  soldOutItems?: string[];
+  restaurantSettings?: StoreSettings;
+  currencySymbol?: string;
+  role?: StaffRole | null;
+  servants?: { id?: string; name: string }[];
+  onTableStatusChange?: (id: string, status: TableStatus) => void;
+  onOrderStatusChange?: (id: string, status: OrderStatus) => void;
+  onBookingStatusChange?: (id: string, status: BookingStatus) => void;
+  onNavigateSettings?: () => void;
+  onNavigateTransactions?: () => void;
+  onOrderCreated?: (order: Order) => void;
+  onOrderUpdated?: (order: Order) => void;
+  onOrdersChange?: (orders: Order[]) => void;
+}) {
+  const taxRate = restaurantSettings?.taxRate ?? 5.0;
+  const serviceCharge = restaurantSettings?.serviceCharge ?? 5.0;
+  const restroName = restaurantSettings?.restaurantName || "Table & Thyme";
+  const branchName = restaurantSettings?.branchName || "Downtown Branch";
+  const receiptFooter = restaurantSettings?.receiptFooter || "Thank you for dining with us! Please visit again.";
+  const logoUrl = restaurantSettings?.logoUrl || "";
+  const gstNumber = restaurantSettings?.gstNumber || "07AAAAA0000A1Z5";
+
+  // State management
+  const [activeTab, setActiveTab] = useState<"active-tables" | "takeaway" | "settled-history">("active-tables");
+  const [selectedSessionId, setSelectedSessionId] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "Card" | "Cash" | "Split">("UPI");
+  const [cashTenderedInput, setCashTenderedInput] = useState<string>("");
+  const [waiveServiceCharge, setWaiveServiceCharge] = useState<boolean>(false);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [customDiscountInput, setCustomDiscountInput] = useState<string>("");
+  const [splitCount, setSplitCount] = useState<number>(2);
+  const [cardAuthCode, setCardAuthCode] = useState<string>("AUTH-" + Math.floor(100000 + Math.random() * 900000));
+  const [searchFilter, setSearchFilter] = useState<string>("");
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [receiptModalInvoice, setReceiptModalInvoice] = useState<any | null>(null);
+
+  // In-billing item editing & POS simulation state
+  const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
+  const [showManualBillModal, setShowManualBillModal] = useState<boolean>(false);
+  const [dishSearchQuery, setDishSearchQuery] = useState<string>("");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+
+  // Recent transaction records state
+  const [transactionsList, setTransactionsList] = useState<TransactionRecord[]>([]);
+
+  // Date helper to verify transactions made today
+  const isTodayDate = (dateVal?: string | Date) => {
+    if (!dateVal) return false;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return false;
+    const today = new Date();
+    return (
+      d.getDate() === today.getDate() &&
+      d.getMonth() === today.getMonth() &&
+      d.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const showToast = (type: "success" | "error" | "info", title: string, message: string) => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, type, title, message, duration: 4000 }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  interface BillableItem {
+    name: string;
+    qty: number;
+    rate: number;
+    total: number;
+  }
+
+  interface BillableSession {
+    id: string;
+    tableId?: string;
+    title: string;
+    type: "dine-in" | "takeaway";
+    customer: string;
+    guests: number;
+    server: string;
+    time: string;
+    items: BillableItem[];
+    subtotal: number;
+    deposit: number;
+    orderIds: string[];
+    bookingId?: string;
+  }
+
+  const normalizeTableKey = (str: string): string => {
+    if (!str) return "";
+    return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+  };
+
+  const isMatchingTable = (orderTable: string, tableId: string): boolean => {
+    if (!orderTable || !tableId) return false;
+    const cleanOrder = normalizeTableKey(orderTable);
+    const cleanTable = normalizeTableKey(tableId);
+    if (cleanOrder === cleanTable) return true;
+    const numOrder = cleanOrder.replace(/^table/, "").replace(/^t/, "").replace(/^0+/, "");
+    const numTable = cleanTable.replace(/^table/, "").replace(/^t/, "").replace(/^0+/, "");
+    if (numOrder && numTable && numOrder === numTable) return true;
+    return false;
+  };
+
+  const parseBillableItems = (
+    itemList: string[] | undefined,
+    orderTotal: number,
+    menuItemsList: ApiMenuItem[]
+  ): BillableItem[] => {
+    if (!itemList || !itemList.length) return [];
+
+    const itemMap = new Map<string, { qty: number; rate: number; total: number }>();
+
+    itemList.forEach((raw) => {
+      let qty = 1;
+      let name = raw.trim();
+
+      const prefixMatch = name.match(/^(\d+)\s*[xX]?\s+(.+)$/);
+      const suffixMatch = name.match(/^(.+?)\s+[xX]\s*(\d+)$/);
+      if (prefixMatch) {
+        qty = parseInt(prefixMatch[1], 10) || 1;
+        name = prefixMatch[2].trim();
+      } else if (suffixMatch) {
+        name = suffixMatch[1].trim();
+        qty = parseInt(suffixMatch[2], 10) || 1;
+      }
+
+      const menuItem =
+        menuItemsList.find(
+          (m) => m.name.toLowerCase().trim() === name.toLowerCase().trim()
+        ) ||
+        menuItemsList.find(
+          (m) =>
+            m.name.toLowerCase().trim().includes(name.toLowerCase().trim()) ||
+            name.toLowerCase().trim().includes(m.name.toLowerCase().trim())
+        );
+
+      const displayName = menuItem ? menuItem.name : name;
+      const rate = menuItem
+        ? menuItem.price
+        : Math.round(orderTotal / itemList.length) || 200;
+
+      const existing = itemMap.get(displayName);
+      if (existing) {
+        existing.qty += qty;
+        existing.total += rate * qty;
+      } else {
+        itemMap.set(displayName, { qty, rate, total: rate * qty });
+      }
+    });
+
+    return Array.from(itemMap.entries()).map(([name, data]) => ({
+      name,
+      qty: data.qty,
+      rate: data.rate,
+      total: data.total,
+    }));
+  };
+
+  const [sessions, setSessions] = useState<BillableSession[]>([]);
+  const [settledSessionIds, setSettledSessionIds] = useState<Set<string>>(new Set());
+  const [settledInvoices, setSettledInvoices] = useState<any[]>([]);
+
+  // Fetch transactions and hydrate settled invoices on load or when rates update
+  useEffect(() => {
+    fetchTransactions()
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setTransactionsList(data);
+          // Hydrate settledInvoices from all completed transactions
+          const successfulInvoices = data
+            .filter((tx) => tx.status === "Success")
+            .map((tx) => {
+              const txDate = tx.createdAt ? new Date(tx.createdAt) : new Date();
+              const itemsList = Array.isArray(tx.items) ? tx.items : [];
+              const calculatedSubtotal =
+                itemsList.reduce(
+                  (acc: number, it: any) =>
+                    acc + (Number(it.total) || (Number(it.rate) * Number(it.qty)) || 0),
+                  0
+                ) || Number(tx.amount || 0);
+              return {
+                id: tx.id || `inv-${tx.invoiceNo}`,
+                invoiceNo: tx.invoiceNo,
+                title: tx.sessionTitle || "Table",
+                customer: tx.customer || "Guest",
+                server: tx.servant || "Staff",
+                date: !isNaN(txDate.getTime())
+                  ? txDate.toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
+                  : "Today",
+                time: !isNaN(txDate.getTime())
+                  ? txDate.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "12:00 PM",
+                createdAt: tx.createdAt,
+                items: itemsList,
+                subtotal: calculatedSubtotal,
+                taxRate: taxRate,
+                taxAmount: Number(tx.taxAmount || 0),
+                serviceCharge: serviceCharge,
+                serviceChargeAmount: Number(tx.serviceChargeAmount || 0),
+                discountAmount: Number(tx.discountAmount || 0),
+                depositCredit: Number(tx.depositCredit || 0),
+                total: Number(tx.amount || 0),
+                paymentMethod: tx.paymentMode || "UPI",
+              };
+            });
+          setSettledInvoices(successfulInvoices);
+        }
+      })
+      .catch(() => {});
+  }, [taxRate, serviceCharge]);
+
+  // Merge live tables and orders dynamically from backend API
+  useEffect(() => {
+    const dynamicDineIn: BillableSession[] = [];
+
+    tables.forEach((t) => {
+      // 1. If table was settled in this session, skip it completely
+      const tIdClean = normalizeTableKey(t.id);
+      const tNum = t.id.replace(/^t0?/i, "");
+      if (
+        settledSessionIds.has(t.id) ||
+        settledSessionIds.has(tIdClean) ||
+        settledSessionIds.has(`table${tNum}`) ||
+        settledSessionIds.has(`Table ${tNum}`) ||
+        settledSessionIds.has(`Table 0${tNum}`)
+      ) {
+        return;
+      }
+
+      // 2. Only consider ACTIVE orders (not already paid or cancelled)
+      const activeTableOrders = orders.filter((o) => {
+        if (o.status === "Paid" || o.status === "Cancelled") return false;
+        if (o.table && o.table.toLowerCase().includes("takeaway")) return false;
+        return isMatchingTable(o.table, t.id);
+      });
+
+      // 3. A table is active if it has active orders OR its status is Occupied or Booked
+      const isTableOccupied = t.status === "Occupied" || t.status === "Booked";
+
+      if (isTableOccupied || activeTableOrders.length > 0) {
+        const booking = bookings.find(
+          (b) =>
+            isMatchingTable(b.tableId || "", t.id) &&
+            b.status !== "Cancelled" &&
+            b.status !== "Completed"
+        );
+
+        const allRawItems: string[] = [];
+        let combinedOrderTotal = 0;
+        activeTableOrders.forEach((o) => {
+          if (o.itemList && Array.isArray(o.itemList)) {
+            allRawItems.push(...o.itemList);
+          }
+          const cleanTotal = parseFloat(String(o.total).replace(/[^0-9.]/g, "")) || 0;
+          combinedOrderTotal += cleanTotal;
+        });
+
+        const items = parseBillableItems(allRawItems, combinedOrderTotal, menuItems);
+        const subtotal = items.length > 0
+          ? items.reduce((sum, it) => sum + it.total, 0)
+          : combinedOrderTotal;
+
+        const depositVal = typeof booking?.deposit === "number" ? booking.deposit : 0;
+        const serverFromOrder = activeTableOrders.find((o) => o.serverName)?.serverName;
+        const assignedServer = serverFromOrder || t.serverName || (servants[0]?.name ?? "Arjun Rao");
+
+        dynamicDineIn.push({
+          id: t.id,
+          tableId: t.id,
+          title: t.id.startsWith("T") ? `Table ${t.id.replace(/^T0?/, "")}` : t.id,
+          type: "dine-in",
+          customer: booking?.customer || activeTableOrders[0]?.customer || "Dining Guest",
+          guests: t.seats || 2,
+          server: assignedServer,
+          time: "Active",
+          items,
+          subtotal,
+          deposit: depositVal,
+          orderIds: activeTableOrders.map((o) => o.id),
+          bookingId: booking?.id,
+        });
+      }
+    });
+
+    // Also include any active dine-in orders whose table is not in the tables list
+    const capturedOrderIds = new Set(dynamicDineIn.flatMap((s) => s.orderIds));
+    const uncapturedOrders = orders.filter(
+      (o) =>
+        !capturedOrderIds.has(o.id) &&
+        !o.table.toLowerCase().includes("takeaway") &&
+        o.status !== "Paid" &&
+        o.status !== "Cancelled"
+    );
+
+    const uncapturedByTable = new Map<string, Order[]>();
+    uncapturedOrders.forEach((o) => {
+      const key = o.table || "Unknown";
+      const existing = uncapturedByTable.get(key) || [];
+      existing.push(o);
+      uncapturedByTable.set(key, existing);
+    });
+
+    uncapturedByTable.forEach((tableOrders, tableKey) => {
+      if (settledSessionIds.has(tableKey) || settledSessionIds.has(normalizeTableKey(tableKey))) {
+        return;
+      }
+      const allRawItems: string[] = [];
+      let combinedOrderTotal = 0;
+      tableOrders.forEach((o) => {
+        if (o.itemList && Array.isArray(o.itemList)) {
+          allRawItems.push(...o.itemList);
+        }
+        const cleanTotal = parseFloat(String(o.total).replace(/[^0-9.]/g, "")) || 0;
+        combinedOrderTotal += cleanTotal;
+      });
+
+      const items = parseBillableItems(allRawItems, combinedOrderTotal, menuItems);
+      const subtotal = items.length > 0
+        ? items.reduce((sum, it) => sum + it.total, 0)
+        : combinedOrderTotal;
+
+      const serverFromOrder = tableOrders.find((o) => o.serverName)?.serverName;
+      const assignedServer = serverFromOrder || (servants[0]?.name ?? "Arjun Rao");
+
+      dynamicDineIn.push({
+        id: tableKey,
+        tableId: tableKey,
+        title: tableKey.startsWith("T") ? `Table ${tableKey.replace(/^T0?/, "")}` : tableKey,
+        type: "dine-in",
+        customer: tableOrders[0]?.customer || "Dining Guest",
+        guests: 2,
+        server: assignedServer,
+        time: "Active",
+        items,
+        subtotal,
+        deposit: 0,
+        orderIds: tableOrders.map((o) => o.id),
+      });
+    });
+
+    setSessions(dynamicDineIn);
+    if (!selectedSessionId || !dynamicDineIn.some((s) => s.id === selectedSessionId)) {
+      if (dynamicDineIn.length > 0) {
+        setSelectedSessionId(dynamicDineIn[0].id);
+      }
+    }
+  }, [tables, orders, bookings, menuItems, settledSessionIds]);
+
+  // Takeaway sessions
+  const takeawaySessions: BillableSession[] = orders
+    .filter((o) => o.table.toLowerCase().includes("takeaway") && o.status !== "Paid" && o.status !== "Cancelled")
+    .map((o) => {
+      const cleanTotal = parseFloat(String(o.total).replace(/[^0-9.]/g, "")) || 0;
+      const items = parseBillableItems(o.itemList, cleanTotal, menuItems);
+      const subtotal = items.length > 0
+        ? items.reduce((sum, it) => sum + it.total, 0)
+        : cleanTotal;
+
+      return {
+        id: `takeaway-${o.id}`,
+        title: `Takeaway ${o.id}`,
+        type: "takeaway",
+        customer: o.customer || "Counter Guest",
+        guests: 1,
+        server: o.serverName || "Pickup Counter",
+        time: "Quick Takeaway",
+        items,
+        subtotal,
+        deposit: 0,
+        orderIds: [o.id],
+      };
+    });
+
+  const currentPool = activeTab === "takeaway" ? takeawaySessions : sessions;
+  const filteredSessions = currentPool.filter(
+    (s) =>
+      s.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      s.customer.toLowerCase().includes(searchFilter.toLowerCase())
+  );
+
+  const selectedSession: BillableSession | null =
+    currentPool.find((s) => s.id === selectedSessionId) ||
+    currentPool[0] ||
+    null;
+
+  // Helper to persist session item modifications to backend API
+  const persistSessionItems = async (
+    session: BillableSession,
+    updatedItems: BillableItem[]
+  ) => {
+    const newSubtotal = updatedItems.reduce((acc, it) => acc + it.total, 0);
+
+    const newItemList: string[] = [];
+    updatedItems.forEach((it) => {
+      if (it.qty > 1) {
+        newItemList.push(`${it.qty}x ${it.name}`);
+      } else {
+        newItemList.push(it.name);
+      }
+    });
+
+    // Optimistic local state update
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === session.id ? { ...s, items: updatedItems, subtotal: newSubtotal } : s
+      )
+    );
+
+    const primaryOrderId = session.orderIds && session.orderIds.length > 0 ? session.orderIds[0] : null;
+
+    if (primaryOrderId) {
+      try {
+        const updated = await updateOrder(primaryOrderId, {
+          itemList: newItemList,
+          total: newSubtotal,
+        });
+        if (onOrderUpdated) {
+          onOrderUpdated(updated);
+        }
+      } catch (err) {
+        console.error("Failed to sync updated items to order:", err);
+      }
+    } else {
+      try {
+        const created = await createOrder(
+          {
+            customer: session.customer || `Table ${session.title} Guest`,
+            table: session.tableId || session.id,
+            itemList: newItemList,
+            total: newSubtotal,
+            serverName: session.server || undefined,
+            orderType: session.type === "takeaway" ? "Takeaway" : "Dine in",
+          },
+          role || "Server"
+        );
+        if (onOrderCreated) {
+          onOrderCreated(created);
+        }
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === session.id ? { ...s, orderIds: [created.id] } : s
+          )
+        );
+      } catch (err) {
+        console.error("Failed to create order from billing:", err);
+      }
+    }
+  };
+
+  // In-Billing Item Manipulation Handlers
+  const handleAddItemToSession = async (menuItem: ApiMenuItem) => {
+    if (!selectedSession) return;
+    const existingIdx = selectedSession.items.findIndex(
+      (it) => it.name.toLowerCase() === menuItem.name.toLowerCase()
+    );
+    let newItems = [...selectedSession.items];
+    if (existingIdx >= 0) {
+      const it = newItems[existingIdx];
+      newItems[existingIdx] = {
+        ...it,
+        qty: it.qty + 1,
+        total: (it.qty + 1) * it.rate,
+      };
+    } else {
+      newItems.push({
+        name: menuItem.name,
+        qty: 1,
+        rate: menuItem.price,
+        total: menuItem.price,
+      });
+    }
+
+    await persistSessionItems(selectedSession, newItems);
+    showToast("success", "Dish Added", `Added ${menuItem.name} to ${selectedSession.title}`);
+  };
+
+  const handleUpdateItemQty = async (itemIdx: number, delta: number) => {
+    if (!selectedSession) return;
+    let newItems = [...selectedSession.items];
+    const it = newItems[itemIdx];
+    if (!it) return;
+    const nextQty = it.qty + delta;
+    if (nextQty <= 0) {
+      newItems.splice(itemIdx, 1);
+    } else {
+      newItems[itemIdx] = {
+        ...it,
+        qty: nextQty,
+        total: nextQty * it.rate,
+      };
+    }
+
+    await persistSessionItems(selectedSession, newItems);
+  };
+
+  const handleRemoveItem = async (itemIdx: number) => {
+    if (!selectedSession) return;
+    const newItems = selectedSession.items.filter((_, idx) => idx !== itemIdx);
+    await persistSessionItems(selectedSession, newItems);
+    showToast("info", "Item Removed", "Dish removed from active billing ticket.");
+  };
+
+  const handleUpdateSessionServer = async (newServer: string) => {
+    if (!selectedSession) return;
+    setSessions((prev) =>
+      prev.map((s) => (s.id === selectedSession.id ? { ...s, server: newServer } : s))
+    );
+    const primaryOrderId = selectedSession.orderIds?.[0];
+    if (primaryOrderId) {
+      try {
+        const updated = await updateOrder(primaryOrderId, { serverName: newServer });
+        if (onOrderUpdated) onOrderUpdated(updated);
+      } catch (err) {
+        console.error("Failed to update server on order:", err);
+      }
+    }
+    showToast("success", "Servant Assigned", `${newServer || "Servant"} assigned to ${selectedSession.title}`);
+  };
+
+  // Calculations
+  const subtotal = selectedSession?.subtotal || 0;
+  const effectiveTaxRate = taxRate;
+  const effectiveServiceRate = waiveServiceCharge ? 0 : serviceCharge;
+  const taxAmount = Number(((subtotal * effectiveTaxRate) / 100).toFixed(2));
+  const serviceChargeAmount = Number(((subtotal * effectiveServiceRate) / 100).toFixed(2));
+
+  let discountAmount = 0;
+  if (discountPercent > 0) {
+    discountAmount = Number(((subtotal * discountPercent) / 100).toFixed(2));
+  } else if (Number(customDiscountInput) > 0) {
+    discountAmount = Number(customDiscountInput);
+  }
+
+  const depositCredit = selectedSession?.deposit || 0;
+  const grossPayable = subtotal + taxAmount + serviceChargeAmount - discountAmount;
+  const finalPayable = Math.max(0, Number((grossPayable - depositCredit).toFixed(2)));
+
+  const tenderedNum = parseFloat(cashTenderedInput) || 0;
+  const changeDue = Math.max(0, tenderedNum - finalPayable);
+
+  // Payment Failure Simulation Handler
+  const handlePaymentFailure = async (customReason?: string) => {
+    if (!selectedSession) return;
+    setIsProcessingPayment(true);
+    const reason =
+      customReason ||
+      (paymentMethod === "UPI"
+        ? "UPI QR Scanner timeout: Customer cancelled payment request"
+        : paymentMethod === "Card"
+        ? "Card declined: Chip read error or daily contactless limit reached"
+        : "Cash discrepancy: Insufficient tender provided");
+
+    const invoiceNo = `INV-${Date.now().toString().slice(-6)}`;
+    setPaymentError(reason);
+
+    const failedTx: Partial<TransactionRecord> = {
+      id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      invoiceNo,
+      sessionTitle: selectedSession.title,
+      customer: selectedSession.customer,
+      servant: selectedSession.server || "Unassigned",
+      amount: finalPayable,
+      paymentMode: paymentMethod === "UPI" ? "UPI / Scanner" : paymentMethod,
+      status: "Failed",
+      failureReason: reason,
+      items: selectedSession.items,
+      taxAmount,
+      serviceChargeAmount,
+      discountAmount,
+      depositCredit,
+    };
+
+    try {
+      const saved = await recordTransaction(failedTx);
+      setTransactionsList((prev) => [saved, ...prev]);
+    } catch {
+      setTransactionsList((prev) => [{ ...failedTx, createdAt: new Date().toISOString() } as TransactionRecord, ...prev]);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+
+    showToast("error", "Payment Failed", reason);
+    // Table is NOT released, session stays active, stays in billing screen as requested!
+  };
+
+  // Payment Success Handler
+  const handlePaymentSuccess = async () => {
+    if (!selectedSession) return;
+    setIsProcessingPayment(true);
+    setPaymentError(null);
+
+    const invoiceNo = `INV-${Date.now().toString().slice(-6)}`;
+    const newInvoice = {
+      id: `inv-${Date.now()}`,
+      invoiceNo,
+      title: selectedSession.title,
+      customer: selectedSession.customer,
+      server: selectedSession.server || "Unassigned",
+      date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      createdAt: new Date().toISOString(),
+      items: selectedSession.items,
+      subtotal,
+      taxRate: effectiveTaxRate,
+      taxAmount,
+      serviceCharge: effectiveServiceRate,
+      serviceChargeAmount,
+      discountAmount,
+      depositCredit,
+      total: finalPayable,
+      paymentMethod: paymentMethod === "UPI" ? "UPI / Scanner" : paymentMethod,
+      cashTendered: paymentMethod === "Cash" && tenderedNum ? tenderedNum : undefined,
+      changeDue: paymentMethod === "Cash" && tenderedNum ? changeDue : undefined,
+    };
+
+    setSettledInvoices((prev) => [newInvoice, ...prev]);
+
+    const successTx: Partial<TransactionRecord> = {
+      id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      invoiceNo,
+      sessionTitle: selectedSession.title,
+      customer: selectedSession.customer,
+      servant: selectedSession.server || "Unassigned",
+      amount: finalPayable,
+      paymentMode: paymentMethod === "UPI" ? "UPI / Scanner" : paymentMethod,
+      status: "Success",
+      items: selectedSession.items,
+      taxAmount,
+      serviceChargeAmount,
+      discountAmount,
+      depositCredit,
+    };
+
+    try {
+      const saved = await recordTransaction(successTx);
+      setTransactionsList((prev) => [saved, ...prev]);
+    } catch {
+      setTransactionsList((prev) => [{ ...successTx, createdAt: new Date().toISOString() } as TransactionRecord, ...prev]);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+
+    // Release table
+    if (selectedSession.tableId && onTableStatusChange) {
+      onTableStatusChange(selectedSession.tableId, "Needs cleaning");
+    }
+
+    // Update order status: find ALL orders matching this table/session and mark them Paid
+    const matchingOrders = orders.filter((o) => {
+      if (o.status === "Paid" || o.status === "Cancelled") return false;
+      if (selectedSession.orderIds && selectedSession.orderIds.includes(o.id)) return true;
+      if (selectedSession.type === "takeaway" && o.table?.toLowerCase().includes("takeaway")) {
+        return `takeaway-${o.id}` === selectedSession.id || o.id === selectedSession.id;
+      }
+      return isMatchingTable(o.table, selectedSession.tableId || selectedSession.id);
+    });
+
+    if (onOrderStatusChange) {
+      matchingOrders.forEach((order) => {
+        onOrderStatusChange(order.id, "Paid");
+      });
+    }
+
+    // Update booking status
+    if (selectedSession.bookingId && onBookingStatusChange) {
+      onBookingStatusChange(selectedSession.bookingId, "Completed");
+    }
+
+    // Remember in settledSessionIds so it is NEVER re-added by table polling
+    setSettledSessionIds((prev) => {
+      const next = new Set(prev);
+      next.add(selectedSession.id);
+      if (selectedSession.tableId) {
+        next.add(selectedSession.tableId);
+        next.add(selectedSession.tableId.toLowerCase());
+        next.add(selectedSession.tableId.toUpperCase());
+        next.add(`Table ${selectedSession.tableId.replace(/^T0?/i, "")}`);
+        next.add(`Table 0${selectedSession.tableId.replace(/^T0?/i, "")}`);
+      }
+      return next;
+    });
+
+    // Remove from active sessions and select next session
+    setSessions((prev) => {
+      const remaining = prev.filter(
+        (s) => s.id !== selectedSession.id && s.tableId !== selectedSession.tableId
+      );
+      if (remaining.length > 0) {
+        setSelectedSessionId(remaining[0].id);
+      } else {
+        setSelectedSessionId("");
+      }
+      return remaining;
+    });
+
+    showToast(
+      "success",
+      `Payment Succeeded (${invoiceNo})`,
+      `${selectedSession.title} settled with ${paymentMethod}. Redirecting to bill printing.`
+    );
+
+    // Prompt print preview immediately upon success
+    setReceiptModalInvoice(newInvoice);
+  };
+
+  const executeDirectPrint = (inv: any) => {
+    setReceiptModalInvoice(inv);
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
+  // Today's settled calculations
+  const todaySettledInvoices = settledInvoices.filter((inv) =>
+    inv.createdAt ? isTodayDate(inv.createdAt) : true
+  );
+  const totalCollectedToday = todaySettledInvoices.reduce(
+    (acc, inv) => acc + (Number(inv.total) || 0),
+    0
+  );
+  const settledCountToday = todaySettledInvoices.length;
+
   return (
     <>
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+
+      {/* Embedded thermal receipt print stylesheet */}
+      <style>{`
+        @keyframes scanSweep {
+          0% { top: 0%; opacity: 0; }
+          15% { opacity: 1; }
+          85% { opacity: 1; }
+          100% { top: 100%; opacity: 0; }
+        }
+        .scanner-beam {
+          animation: scanSweep 2.2s ease-in-out infinite;
+        }
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #thermal-print-area, #thermal-print-area * {
+            visibility: visible !important;
+          }
+          #thermal-print-area {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
+            margin: 0 auto !important;
+            padding: 4mm !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            font-size: 11px !important;
+            line-height: 1.35 !important;
+            display: block !important;
+            z-index: 9999999 !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+
+      {/* Hidden container exclusively activated for window.print() */}
+      <div id="thermal-print-area" className="hidden">
+        {receiptModalInvoice && (
+          <div>
+            <div style={{ textAlign: "center", marginBottom: "8px" }}>
+              {logoUrl && (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  style={{ maxHeight: "40px", maxWidth: "120px", margin: "0 auto 4px auto", display: "block" }}
+                />
+              )}
+              <h2 style={{ fontSize: "16px", fontWeight: "bold", margin: "0" }}>{restroName}</h2>
+              <p style={{ fontSize: "10px", margin: "2px 0" }}>{branchName}</p>
+              <p style={{ fontSize: "10px", margin: "2px 0" }}>GSTIN: {gstNumber}</p>
+              <p style={{ fontSize: "10px", margin: "2px 0" }}>TAX INVOICE</p>
+            </div>
+
+            <div style={{ borderTop: "1px dashed #000", borderBottom: "1px dashed #000", padding: "4px 0", margin: "6px 0", fontSize: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>Invoice: {receiptModalInvoice.invoiceNo}</span>
+                <span>{receiptModalInvoice.time}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>{receiptModalInvoice.title} ({receiptModalInvoice.customer})</span>
+                <span>{receiptModalInvoice.date}</span>
+              </div>
+              <div>Server: {receiptModalInvoice.server}</div>
+            </div>
+
+            <div style={{ margin: "6px 0" }}>
+              <table style={{ width: "100%", fontSize: "10px", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px dashed #000", textAlign: "left" }}>
+                    <th style={{ padding: "3px 0", width: "12%" }}>Qty</th>
+                    <th style={{ padding: "3px 0", width: "50%" }}>Item</th>
+                    <th style={{ padding: "3px 0", width: "18%", textAlign: "right" }}>Rate</th>
+                    <th style={{ padding: "3px 0", width: "20%", textAlign: "right" }}>Amt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {receiptModalInvoice.items && receiptModalInvoice.items.map((it: any, i: number) => (
+                    <tr key={i}>
+                      <td style={{ padding: "2px 0" }}>{it.qty}</td>
+                      <td style={{ padding: "2px 0" }}>{it.name}</td>
+                      <td style={{ padding: "2px 0", textAlign: "right" }}>{it.rate}</td>
+                      <td style={{ padding: "2px 0", textAlign: "right" }}>{it.total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ borderTop: "1px dashed #000", paddingTop: "4px", fontSize: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", margin: "2px 0" }}>
+                <span>Subtotal</span>
+                <span>{currencySymbol}{Number(receiptModalInvoice.subtotal).toFixed(2)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", margin: "2px 0" }}>
+                <span>GST ({receiptModalInvoice.taxRate ?? taxRate}%)</span>
+                <span>+{currencySymbol}{Number(receiptModalInvoice.taxAmount).toFixed(2)}</span>
+              </div>
+              {receiptModalInvoice.serviceCharge > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", margin: "2px 0" }}>
+                  <span>Service Charge ({receiptModalInvoice.serviceCharge}%)</span>
+                  <span>+{currencySymbol}{Number(receiptModalInvoice.serviceChargeAmount).toFixed(2)}</span>
+                </div>
+              )}
+              {receiptModalInvoice.discountAmount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", margin: "2px 0" }}>
+                  <span>Discount</span>
+                  <span>-{currencySymbol}{Number(receiptModalInvoice.discountAmount).toFixed(2)}</span>
+                </div>
+              )}
+              {receiptModalInvoice.depositCredit > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", margin: "2px 0" }}>
+                  <span>Booking Deposit Credit</span>
+                  <span>-{currencySymbol}{Number(receiptModalInvoice.depositCredit).toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ borderTop: "1px solid #000", borderBottom: "1px solid #000", padding: "4px 0", margin: "6px 0", display: "flex", justifyContent: "space-between", fontWeight: "bold", fontSize: "13px" }}>
+              <span>TOTAL PAYABLE</span>
+              <span>{currencySymbol}{Number(receiptModalInvoice.total).toFixed(2)}</span>
+            </div>
+
+            <div style={{ fontSize: "10px", margin: "4px 0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>Payment Mode:</span>
+                <span style={{ fontWeight: "bold" }}>PAID via {receiptModalInvoice.paymentMethod}</span>
+              </div>
+              {receiptModalInvoice.cashTendered && (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Cash Tendered:</span>
+                    <span>{currencySymbol}{Number(receiptModalInvoice.cashTendered).toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Change Returned:</span>
+                    <span>{currencySymbol}{Number(receiptModalInvoice.changeDue).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div style={{ textAlign: "center", marginTop: "12px", borderTop: "1px dashed #000", paddingTop: "6px", fontSize: "9px" }}>
+              <p style={{ margin: "2px 0", fontStyle: "italic" }}>"{receiptFooter}"</p>
+              <p style={{ margin: "4px 0 0 0", fontWeight: "bold" }}>*** HAVE A DELIGHTFUL DAY ***</p>
+            </div>
+          </div>
+        )}
+      </div>
+
       <SectionHeading
-        eyebrow="Point of sale"
-        title="Billing"
-        description="Close sessions, split bills, apply taxes, and release tables."
+        eyebrow="Point of Sale & Invoicing"
+        title="Billing & Checkout"
+        description="Dynamic item billing, servant assignment, and interactive POS terminal with scanner & card payment."
         action={
-          <button className="flex items-center gap-2 rounded-xl bg-[#24312e] px-4 py-3 text-sm font-bold text-white">
-            <Plus size={18} />
-            Open bill
+          <button
+            type="button"
+            onClick={() => setShowManualBillModal(true)}
+            className="flex items-center gap-2 rounded-2xl bg-[#24312e] hover:bg-[#315a3d] px-4 py-2.5 text-xs font-bold text-white transition cursor-pointer shadow-sm"
+            title="Create a custom bill with table, guest, dishes and servant"
+          >
+            <Plus size={15} />
+            <span>Create Manual Bill</span>
           </button>
         }
       />
-      <div className="grid gap-4 sm:grid-cols-3">
+
+      {/* Dynamic Tax Rates Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3.5 sm:p-4 text-xs">
+        <div className="flex items-center gap-2.5 text-emerald-950 font-medium">
+          <CheckCircle2 size={18} className="text-emerald-700 shrink-0" />
+          <span>
+            <strong>Dynamic POS Calculation Active:</strong> All orders calculate{" "}
+            <strong>{taxRate}% GST</strong> and <strong>{serviceCharge}% Service Charge</strong> under system currency{" "}
+            <strong className="text-emerald-900 bg-emerald-200/60 px-1.5 py-0.5 rounded text-xs font-bold">{currencySymbol}</strong>.
+          </span>
+        </div>
+        {onNavigateSettings && (
+          <button
+            onClick={onNavigateSettings}
+            className="text-[11px] font-bold text-emerald-800 underline hover:text-emerald-950 cursor-pointer"
+          >
+            Adjust Rates in Settings →
+          </button>
+        )}
+      </div>
+
+      {/* Top Stat Cards */}
+      <div className="grid gap-4 sm:grid-cols-4">
         <StatCard
-          label="Open bills"
-          value="8"
-          change="₹42,680 running total"
+          label="Open sessions"
+          value={String(sessions.length + takeawaySessions.length)}
+          change={`${currencySymbol}${(sessions.reduce((s, t) => s + t.subtotal, 0) + takeawaySessions.reduce((s, t) => s + t.subtotal, 0)).toLocaleString()} running`}
           icon={FileText}
           color="bg-[#fbe8dc] text-[#b7623d]"
         />
         <StatCard
           label="Collected today"
-          value="₹1,84,286"
-          change="Across 46 payments"
+          value={`${currencySymbol}${totalCollectedToday.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          change={`${settledCountToday} bills settled today`}
           icon={CircleDollarSign}
           color="bg-[#e8f1e8] text-[#3b724c]"
         />
         <StatCard
-          label="Deposits to adjust"
-          value="₹12,000"
-          change="24 reserved guests"
+          label="Active deposits"
+          value={`${currencySymbol}${sessions.reduce((acc, t) => acc + (t.deposit || 0), 0).toLocaleString()}`}
+          change="Auto-deducted on checkout"
           icon={CreditCard}
           color="bg-[#eee8f6] text-[#72558e]"
         />
+        <StatCard
+          label="Settled bills"
+          value={String(settledCountToday)}
+          change={`Total: ${currencySymbol}${totalCollectedToday.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          icon={Receipt}
+          color="bg-amber-50 text-amber-800"
+        />
       </div>
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 sm:p-6">
-          <div className="mb-5">
-            <h2 className="display-font text-xl font-bold">
-              Active table sessions
-            </h2>
-            <p className="mt-1 text-xs text-[#84908a]">
-              Deposits are automatically shown as credits.
-            </p>
-          </div>
-          {["Table 02", "Table 06", "Table 08", "Table 14"].map(
-            (table, index) => (
-              <div
-                key={table}
-                className="flex items-center justify-between border-b border-[#f0f1ed] py-4 last:border-0"
-              >
-                <div>
-                  <p className="font-bold text-[#24312e]">{table}</p>
-                  <p className="mt-1 text-xs text-[#84908a]">
-                    {index + 2} guests • {index + 1} orders
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-[#24312e]">
-                    ₹{[2480, 3640, 1842, 4820][index].toLocaleString()}
-                  </p>
-                  <button className="mt-1 text-xs font-bold text-[#b7623d]">
-                    Open bill
-                  </button>
-                </div>
-              </div>
-            ),
+
+      {/* Section View Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e9eae6] pb-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setActiveTab("active-tables")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer ${
+              activeTab === "active-tables"
+                ? "bg-[#24312e] text-white shadow-xs"
+                : "border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+            }`}
+          >
+            <Table2 size={15} />
+            <span>Active Dine-In Tables</span>
+            <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[10px]">
+              {sessions.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("takeaway")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer ${
+              activeTab === "takeaway"
+                ? "bg-[#24312e] text-white shadow-xs"
+                : "border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+            }`}
+          >
+            <ShoppingBag size={15} />
+            <span>Takeaway Tickets</span>
+            <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[10px]">
+              {takeawaySessions.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("settled-history")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer ${
+              activeTab === "settled-history"
+                ? "bg-[#24312e] text-white shadow-xs"
+                : "border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+            }`}
+          >
+            <History size={15} />
+            <span>Settled Invoices ({settledInvoices.length})</span>
+          </button>
+
+          {/* Direct Link to Manager Transactions Module */}
+          {role === "Manager" && onNavigateTransactions && (
+            <button
+              onClick={onNavigateTransactions}
+              className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3.5 py-2 text-xs font-bold text-amber-900 hover:bg-amber-100 transition cursor-pointer shadow-2xs"
+              title="Open the separate Transactions module"
+            >
+              <Receipt size={14} />
+              <span>Transactions Ledger →</span>
+            </button>
           )}
         </div>
-        <aside className="rounded-2xl border border-[#e0e2dc] bg-[#24312e] p-6 text-white">
-          <Sparkles className="text-[#f4bc83]" size={22} />
-          <h2 className="display-font mt-4 text-2xl font-bold">Fast close</h2>
-          <p className="mt-2 text-sm leading-6 text-[#aab8b0]">
-            Select a table to split items, add a discount, and collect payment.
-          </p>
-          <button className="mt-7 w-full rounded-xl bg-[#f4bc83] px-4 py-3 text-sm font-bold text-[#684f37]">
-            Start checkout
-          </button>
-        </aside>
+
+        <div className="flex items-center gap-2.5">
+          {activeTab !== "settled-history" && (
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-2.5 text-[#84908a]" />
+              <input
+                type="text"
+                placeholder="Search table or customer..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                className="rounded-xl border border-[#dfe1dc] bg-white pl-8 pr-3 py-1.5 text-xs outline-none focus:border-[#24312e] w-44 sm:w-52"
+              />
+            </div>
+          )}
+        </div>
       </div>
+
+      {activeTab === "settled-history" ? (
+        /* Tab 2: Settled Invoices History Screen */
+        <div className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="display-font text-xl font-bold text-[#24312e]">
+                Settled Bills & Invoices Archive
+              </h2>
+              <p className="mt-1 text-xs text-[#84908a]">
+                Audit past customer payments, inspect breakdowns, and reprint receipts anytime.
+              </p>
+            </div>
+            <span className="rounded-lg bg-[#e8f1e8] px-3 py-1 text-xs font-bold text-[#3b724c]">
+              Total Settled: {currencySymbol}{settledInvoices.reduce((acc, i) => acc + i.total, 0).toLocaleString()}
+            </span>
+          </div>
+
+          {settledInvoices.length === 0 ? (
+            <div className="py-12 text-center text-[#84908a]">
+              <Receipt size={40} className="mx-auto text-[#cbd5e1] mb-2" />
+              <p className="font-bold text-sm text-[#24312e]">No settled bills yet today</p>
+              <p className="text-xs mt-1">Completed table checkout receipts will be archived here.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-[#e9eae6] text-[10px] font-bold uppercase tracking-wider text-[#9aa39d]">
+                  <tr>
+                    <th className="pb-3">Invoice #</th>
+                    <th className="pb-3">Table / Source</th>
+                    <th className="pb-3">Customer</th>
+                    <th className="pb-3">Server</th>
+                    <th className="pb-3">Time</th>
+                    <th className="pb-3">Payment</th>
+                    <th className="pb-3 text-right">Subtotal</th>
+                    <th className="pb-3 text-right">GST / Tax</th>
+                    <th className="pb-3 text-right">Paid Total</th>
+                    <th className="pb-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#f0f1ed]">
+                  {settledInvoices.map((inv) => (
+                    <tr key={inv.id} className="hover:bg-white/60 transition">
+                      <td className="py-3.5 font-mono font-bold text-[#24312e]">{inv.invoiceNo}</td>
+                      <td className="py-3.5 font-bold text-[#315a3d]">{inv.title}</td>
+                      <td className="py-3.5 text-[#68736e]">{inv.customer}</td>
+                      <td className="py-3.5 text-[#45504b] font-medium">{inv.server}</td>
+                      <td className="py-3.5 text-[#84908a]">{inv.time}</td>
+                      <td className="py-3.5">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-[#eef3ee] px-2 py-0.5 text-[10px] font-bold text-[#315a3d]">
+                          {inv.paymentMethod}
+                        </span>
+                      </td>
+                      <td className="py-3.5 text-right font-medium">{currencySymbol}{Number(inv.subtotal || 0).toFixed(2)}</td>
+                      <td className="py-3.5 text-right text-emerald-700">+{currencySymbol}{Number(inv.taxAmount || 0).toFixed(2)}</td>
+                      <td className="py-3.5 text-right font-extrabold text-[#24312e]">
+                        {currencySymbol}{Number(inv.total || 0).toFixed(2)}
+                      </td>
+                      <td className="py-3.5 text-right">
+                        <button
+                          onClick={() => executeDirectPrint(inv)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#dfe1dc] bg-white px-2.5 py-1 text-xs font-bold text-[#24312e] hover:bg-[#f0f1ed] transition cursor-pointer shadow-2xs"
+                        >
+                          <Printer size={13} />
+                          <span>Re-Print</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Tab 3: Active Billing Sessions Layout */
+        <div className="grid gap-6 lg:grid-cols-[1fr_450px]">
+          {/* Left Column: Active Table Sessions */}
+          <div className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 sm:p-6 flex flex-col justify-between">
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="display-font text-xl font-bold text-[#24312e]">
+                    {activeTab === "takeaway" ? "Takeaway Tickets" : "Active Table Sessions"}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-[#84908a]">
+                    Select any billable session to modify items, manage servants, or process checkout.
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-[#68736e]">
+                  Active Currency: <strong className="text-[#24312e]">{currencySymbol}</strong>
+                </span>
+              </div>
+
+              {filteredSessions.length === 0 ? (
+                <div className="py-12 text-center text-[#84908a]">
+                  <Utensils size={36} className="mx-auto text-[#cbd5e1] mb-2" />
+                  <p className="font-bold text-sm text-[#24312e]">No active sessions found</p>
+                  <p className="text-xs mt-1 mb-4">Orders sent to tables or counter will appear here for billing.</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowManualBillModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#24312e] hover:bg-[#315a3d] px-4 py-2.5 text-xs font-bold text-white transition cursor-pointer shadow-xs"
+                  >
+                    <Plus size={14} />
+                    <span>+ Create Manual Bill</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredSessions.map((session) => {
+                    const isSelected = selectedSession.id === session.id;
+                    return (
+                      <div
+                        key={session.id}
+                        onClick={() => setSelectedSessionId(session.id)}
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl border p-4 transition cursor-pointer gap-3 ${
+                          isSelected
+                            ? "border-[#24312e] bg-[#f2f6f2] shadow-sm ring-1.5 ring-[#24312e]"
+                            : "border-[#eef0eb] bg-white hover:border-[#dfe1dc] hover:shadow-2xs"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className={`flex h-11 w-11 items-center justify-center rounded-xl font-bold text-xs shrink-0 ${
+                            isSelected ? "bg-[#24312e] text-white" : "bg-[#f0f2ed] text-[#24312e]"
+                          }`}>
+                            {session.type === "takeaway" ? "📦" : session.title.replace("Table ", "T")}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-sm text-[#24312e]">
+                                {session.title}
+                                {session.customer &&
+                                session.customer !== "Dining Guest" &&
+                                !session.title.toLowerCase().includes(session.customer.toLowerCase())
+                                  ? ` (${session.customer})`
+                                  : ""}
+                              </p>
+                              {session.deposit > 0 && (
+                                <span className="rounded bg-amber-100 text-amber-900 px-1.5 py-0.2 text-[10px] font-bold">
+                                  Deposit: {currencySymbol}{session.deposit}
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-xs text-[#84908a]">
+                              {session.guests} guests • Server: <span className="text-[#24312e] font-semibold">{session.server || "Unassigned"}</span>
+                            </p>
+                            <p className="text-[11px] text-[#68736e] mt-1 line-clamp-1">
+                              {session.items.map((it) => `${it.qty}x ${it.name}`).join(", ")}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-[#f0f1ed] flex sm:flex-col justify-between sm:justify-start items-baseline sm:items-end">
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-[#84908a] block">Subtotal</span>
+                            <p className="font-extrabold text-base text-[#24312e]">
+                              {currencySymbol}{session.subtotal.toLocaleString()}
+                            </p>
+                          </div>
+                          <span className={`text-[11px] font-bold mt-0.5 ${isSelected ? "text-[#315a3d]" : "text-[#b7623d]"}`}>
+                            {isSelected ? "Active in Terminal ✓" : "Settle Bill →"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom quick action bar */}
+            <div className="mt-6 pt-4 border-t border-[#e9eae6] flex items-center justify-between text-xs text-[#84908a]">
+              <span>
+                Displaying <strong>{filteredSessions.length}</strong> active billable sessions
+              </span>
+              <button
+                onClick={async () => {
+                  try {
+                    const [freshOrders, freshTables] = await Promise.all([
+                      fetchOrders(),
+                      fetchTables(),
+                    ]);
+                    if (onOrdersChange) onOrdersChange(freshOrders);
+                    showToast(
+                      "info",
+                      "Sessions Refreshed",
+                      "Loaded updated orders and floor tickets from server.",
+                    );
+                  } catch {
+                    showToast("error", "Refresh Failed", "Could not refresh from server.");
+                  }
+                }}
+                className="flex items-center gap-1 font-bold text-[#24312e] hover:underline cursor-pointer"
+              >
+                <RefreshCw size={13} />
+                Refresh Tickets
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column: Live Terminal & POS Checkout */}
+          <aside className="rounded-3xl border border-[#dfe1dc] bg-white p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+            {!selectedSession ? (
+              <div className="flex h-full min-h-[460px] flex-col items-center justify-center p-6 text-center text-[#84908a]">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0f2ed] text-[#24312e] mb-3">
+                  <CheckCircle2 size={28} className="text-emerald-700" />
+                </div>
+                <p className="font-bold text-base text-[#24312e]">No Active Session Selected</p>
+                <p className="text-xs mt-1.5 max-w-xs text-[#84908a]">
+                  All active table bills have been settled, or select an open table from the list on the left to proceed with billing.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div>
+                  {/* Receipt Header */}
+                  <div className="flex items-center justify-between border-b border-[#e9eae6] pb-4">
+                <div className="flex items-center gap-3">
+                  {logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      alt="Logo"
+                      className="h-10 w-10 rounded-xl object-contain border border-[#dfe1dc] bg-white p-0.5"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#24312e] text-[#f4bc83]">
+                      <ChefHat size={20} />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-bold text-sm text-[#24312e]">{restroName}</h3>
+                    <p className="text-[10px] text-[#84908a] uppercase tracking-wider font-semibold">
+                      {selectedSession.title}
+                      {selectedSession.customer &&
+                      selectedSession.customer !== "Dining Guest" &&
+                      !selectedSession.title.toLowerCase().includes(selectedSession.customer.toLowerCase())
+                        ? ` (${selectedSession.customer})`
+                        : ""}{" "}
+                      · POS Checkout
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => executeDirectPrint({
+                    invoiceNo: `INV-${Date.now().toString().slice(-6)}`,
+                    title: selectedSession.title,
+                    customer: selectedSession.customer,
+                    server: selectedSession.server,
+                    date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                    items: selectedSession.items,
+                    subtotal,
+                    taxRate: effectiveTaxRate,
+                    taxAmount,
+                    serviceCharge: effectiveServiceRate,
+                    serviceChargeAmount,
+                    discountAmount,
+                    depositCredit,
+                    total: finalPayable,
+                    paymentMethod,
+                    cashTendered: paymentMethod === "Cash" && tenderedNum ? tenderedNum : undefined,
+                    changeDue: paymentMethod === "Cash" && tenderedNum ? changeDue : undefined,
+                  })}
+                  className="flex items-center gap-1.5 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-1.5 text-xs font-bold text-[#24312e] hover:bg-[#f0f1ed] transition cursor-pointer shadow-2xs"
+                  title="Print preview slip"
+                >
+                  <Printer size={14} />
+                  <span>Print Slip</span>
+                </button>
+              </div>
+
+              {/* Guest & Servant Selector (Editable in billing) */}
+              <div className="my-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f7f8f5] px-3.5 py-2.5 text-xs text-[#68736e]">
+                <span>Guest: <strong className="text-[#24312e]">{selectedSession.customer}</strong></span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-[#45504b]">Servant:</span>
+                  <select
+                    value={selectedSession.server || ""}
+                    onChange={(e) => handleUpdateSessionServer(e.target.value)}
+                    className="rounded-lg border border-[#dfe1dc] bg-white px-2 py-1 text-xs font-bold text-[#24312e] outline-none focus:border-[#24312e] shadow-2xs cursor-pointer"
+                  >
+                    <option value="">-- Assign Servant --</option>
+                    {servants.map((s) => (
+                      <option key={s.id || s.name} value={s.name}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Itemized Order Items with Add & Remove Capabilities */}
+              <div className="space-y-2 border-b border-[#e9eae6] pb-3.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#9aa39d]">
+                    Itemized Order Dishes ({selectedSession.items.reduce((s, it) => s + it.qty, 0)})
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddItemModal(true)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-[#24312e] px-2 py-1 text-[11px] font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-2xs"
+                  >
+                    <Plus size={12} />
+                    <span>Add Dish</span>
+                  </button>
+                </div>
+
+                {/* Quick Add Dish Modal / Popover */}
+                {showAddItemModal && (
+                  <div className="rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 shadow-inner my-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-xs text-[#24312e]">
+                        Add Dish to {selectedSession.title}
+                        {selectedSession.customer &&
+                        selectedSession.customer !== "Dining Guest" &&
+                        !selectedSession.title.toLowerCase().includes(selectedSession.customer.toLowerCase())
+                          ? ` (${selectedSession.customer})`
+                          : ""}
+                      </span>
+                      <button
+                        onClick={() => setShowAddItemModal(false)}
+                        className="text-[#84908a] hover:text-[#24312e]"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="relative mb-2">
+                      <Search size={13} className="absolute left-2.5 top-2 text-[#84908a]" />
+                      <input
+                        type="text"
+                        placeholder="Search menu items..."
+                        value={dishSearchQuery}
+                        onChange={(e) => setDishSearchQuery(e.target.value)}
+                        className="w-full rounded-lg border border-[#dfe1dc] bg-white pl-7 pr-2.5 py-1 text-xs outline-none focus:border-[#24312e]"
+                      />
+                    </div>
+                    <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                      {menuItems
+                        .filter((m) => m.name.toLowerCase().includes(dishSearchQuery.toLowerCase()))
+                        .slice(0, 10)
+                        .map((dish) => {
+                          const isUnavailable =
+                            dish.available === false ||
+                            soldOutItems.includes(dish.name) ||
+                            (dish as any).status === "Unavailable";
+                          return (
+                            <div
+                              key={dish.id}
+                              className={`flex items-center justify-between rounded-lg p-2 text-xs border ${
+                                isUnavailable
+                                  ? "bg-[#f5f5f2] border-dashed border-[#dfe1dc] opacity-60"
+                                  : "bg-white border-[#eef0eb] hover:border-[#dfe1dc]"
+                              }`}
+                            >
+                              <div>
+                                <p className={`font-bold ${isUnavailable ? "text-[#84908a] line-through" : "text-[#24312e]"}`}>
+                                  {dish.name}
+                                </p>
+                                <span className="text-[10px] text-[#84908a]">
+                                  {dish.category} · {currencySymbol}{dish.price}
+                                </span>
+                              </div>
+                              {isUnavailable ? (
+                                <span className="rounded-lg bg-gray-200/80 px-2 py-0.5 text-[11px] font-semibold text-gray-500 border border-gray-300/80 select-none cursor-not-allowed">
+                                  Unavailable
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddItemToSession(dish)}
+                                  className="rounded-lg bg-[#e8f1e8] px-2.5 py-1 text-xs font-bold text-[#315a3d] hover:bg-[#315a3d] hover:text-white transition cursor-pointer"
+                                >
+                                  + Add
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Items List */}
+                <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                  {selectedSession.items.length === 0 ? (
+                    <div className="py-4 text-center text-[#84908a] text-xs">
+                      No dishes in this bill. Click <strong>+ Add Dish</strong> above to add items.
+                    </div>
+                  ) : (
+                    selectedSession.items.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between rounded-xl bg-[#fafaf7] p-2 text-[#24312e] border border-[#f0f2ed]"
+                      >
+                        <div className="flex items-center gap-2">
+                          {/* Quantity Controls */}
+                          <div className="flex items-center rounded-lg border border-[#dfe1dc] bg-white shadow-2xs">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateItemQty(idx, -1)}
+                              className="px-1.5 py-0.5 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] rounded-l-lg cursor-pointer"
+                              title="Decrease quantity"
+                            >
+                              -
+                            </button>
+                            <span className="px-1.5 text-xs font-black text-[#24312e]">
+                              {item.qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateItemQty(idx, 1)}
+                              className="px-1.5 py-0.5 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] rounded-r-lg cursor-pointer"
+                              title="Increase quantity"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <div>
+                            <span className="font-semibold block">{item.name}</span>
+                            <span className="text-[10px] text-[#84908a]">
+                              @{currencySymbol}{item.rate} each
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold">
+                            {currencySymbol}{item.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(idx)}
+                            className="p-1 text-[#b7623d] hover:bg-red-50 rounded-lg transition cursor-pointer"
+                            title="Remove item"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Dynamic Charges & Calculations */}
+              <div className="mt-3 space-y-2 text-xs">
+                <div className="flex justify-between text-[#68736e]">
+                  <span>F&B Subtotal</span>
+                  <span className="font-semibold text-[#24312e]">
+                    {currencySymbol}{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-[#68736e]">
+                  <span className="flex items-center gap-1">
+                    <span>GST / Tax ({taxRate}%)</span>
+                    <span className="rounded bg-emerald-100 text-emerald-800 text-[9px] px-1 font-bold">Dynamic</span>
+                  </span>
+                  <span className="font-semibold text-emerald-700">
+                    +{currencySymbol}{taxAmount.toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center text-[#68736e]">
+                  <div className="flex items-center gap-2">
+                    <span>Service Charge ({serviceCharge}%)</span>
+                    <label className="flex items-center gap-1 text-[10px] text-[#84908a] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={waiveServiceCharge}
+                        onChange={(e) => setWaiveServiceCharge(e.target.checked)}
+                        className="rounded accent-[#24312e]"
+                      />
+                      <span>Waive</span>
+                    </label>
+                  </div>
+                  <span className="font-semibold text-indigo-700">
+                    {waiveServiceCharge ? (
+                      <span className="line-through text-[#84908a]">+{currencySymbol}{((subtotal * serviceCharge) / 100).toFixed(2)}</span>
+                    ) : (
+                      `+${currencySymbol}${serviceChargeAmount.toFixed(2)}`
+                    )}
+                  </span>
+                </div>
+
+                {/* Discount */}
+                <div className="rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-[#68736e] mb-1.5">
+                    <span className="flex items-center gap-1">
+                      <Tag size={12} className="text-[#b7623d]" />
+                      <span>Promotional Discount</span>
+                    </span>
+                    {discountAmount > 0 && (
+                      <span className="text-emerald-700 font-extrabold">
+                        -{currencySymbol}{discountAmount.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[
+                      { label: "0%", val: 0 },
+                      { label: "5%", val: 5 },
+                      { label: "10%", val: 10 },
+                      { label: "15%", val: 15 },
+                    ].map((d) => (
+                      <button
+                        key={d.val}
+                        type="button"
+                        onClick={() => {
+                          setDiscountPercent(d.val);
+                          setCustomDiscountInput("");
+                        }}
+                        className={`flex-1 rounded-lg py-1 text-[11px] font-bold transition ${
+                          discountPercent === d.val && !customDiscountInput
+                            ? "bg-[#24312e] text-white shadow-2xs"
+                            : "bg-white border border-[#dfe1dc] text-[#68736e] hover:bg-[#f0f1ed]"
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Advance Booking Deposit Adjustment */}
+                {depositCredit > 0 && (
+                  <div className="flex justify-between items-center text-amber-900 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                    <div>
+                      <p className="font-bold">Booking Deposit Credit</p>
+                      <p className="text-[10px] text-amber-700">Paid in advance via reservation</p>
+                    </div>
+                    <span className="font-extrabold text-sm">
+                      -{currencySymbol}{depositCredit.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Grand Total */}
+                <div className="border-t border-[#e9eae6] pt-3 flex items-baseline justify-between">
+                  <div>
+                    <span className="font-bold text-sm text-[#24312e] block">Net Payable Total</span>
+                    <span className="text-[10px] text-[#84908a]">Including all dynamic taxes</span>
+                  </div>
+                  <span className="display-font font-black text-2xl text-[#24312e]">
+                    {currencySymbol}{finalPayable.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment Mode Selector */}
+              <div className="mt-4 pt-3 border-t border-[#e9eae6]">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#9aa39d] mb-2">
+                  Select POS Terminal Mode
+                </p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { id: "UPI", icon: QrCode, label: "POS Scanner" },
+                    { id: "Card", icon: CreditCard, label: "POS Card" },
+                    { id: "Cash", icon: Banknote, label: "Cash" },
+                    { id: "Split", icon: Split, label: "Split" },
+                  ].map((m) => {
+                    const Icon = m.icon;
+                    const isSel = paymentMethod === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setPaymentMethod(m.id as any);
+                          setPaymentError(null);
+                        }}
+                        className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2.5 text-xs font-bold transition cursor-pointer ${
+                          isSel
+                            ? "bg-[#24312e] text-white shadow-xs"
+                            : "border border-[#dfe1dc] bg-[#fbfaf7] text-[#68736e] hover:bg-[#f0f1ed]"
+                        }`}
+                      >
+                        <Icon size={16} />
+                        <span className="text-[11px]">{m.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Mode 1: Interactive POS Scanner Machine UI */}
+                {paymentMethod === "UPI" && (
+                  <div className="mt-3 rounded-2xl border border-[#2d3b37] bg-[#1a2321] p-4 text-white shadow-md">
+                    <div className="flex items-center justify-between border-b border-[#2d3b37] pb-2 text-[10px]">
+                      <span className="flex items-center gap-1.5 font-mono font-bold text-emerald-400">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                        POS SCANNER TERMINAL #TT-SCAN-01
+                      </span>
+                      <span className="rounded bg-emerald-950 px-1.5 py-0.5 text-emerald-300 font-bold border border-emerald-800">
+                        READY TO SCAN
+                      </span>
+                    </div>
+
+                    <div className="my-3 flex flex-col sm:flex-row items-center gap-4">
+                      {/* Realistic QR Scanner Box with Animated Laser Beam */}
+                      <div className="relative flex h-28 w-28 items-center justify-center rounded-xl bg-white p-2 shadow-inner shrink-0 overflow-hidden border-2 border-emerald-500">
+                        <QrCode size={92} className="text-[#1a2321]" />
+                        {/* Animated Laser Sweep */}
+                        <div className="scanner-beam absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent shadow-[0_0_8px_#10b981]" />
+                      </div>
+
+                      <div className="text-center sm:text-left">
+                        <p className="font-bold text-sm text-emerald-100">{restroName} POS Pay</p>
+                        <p className="text-[10px] text-[#9ca3af]">Merchant ID: TT-POS-882910</p>
+                        <p className="mt-2 text-xs font-medium text-emerald-300">
+                          Scan to pay <span className="text-base font-black text-white">{currencySymbol}{finalPayable.toFixed(2)}</span>
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-1 justify-center sm:justify-start text-[9px] font-bold text-gray-300">
+                          <span className="rounded bg-white/10 px-1.5 py-0.5">Google Pay</span>
+                          <span className="rounded bg-white/10 px-1.5 py-0.5">PhonePe</span>
+                          <span className="rounded bg-white/10 px-1.5 py-0.5">Paytm</span>
+                          <span className="rounded bg-white/10 px-1.5 py-0.5">BHIM</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mode 2: Interactive POS Card Terminal UI */}
+                {paymentMethod === "Card" && (
+                  <div className="mt-3 rounded-2xl border border-[#2d3b37] bg-[#1a2321] p-4 text-white shadow-md">
+                    <div className="flex items-center justify-between border-b border-[#2d3b37] pb-2 text-[10px]">
+                      <span className="flex items-center gap-1.5 font-mono font-bold text-indigo-400">
+                        <CreditCard size={13} className="text-indigo-400" />
+                        POS SMART TERMINAL #TT-CARD-09
+                      </span>
+                      <span className="rounded bg-indigo-950 px-1.5 py-0.5 text-indigo-300 font-bold border border-indigo-800">
+                        INSERT OR TAP
+                      </span>
+                    </div>
+
+                    <div className="my-3 space-y-3">
+                      <div className="flex items-center justify-between rounded-xl bg-white/5 p-2.5 border border-white/10 text-xs">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-11 items-center justify-center rounded bg-gradient-to-r from-amber-600 to-amber-700 text-[9px] font-bold text-white shadow-2xs">
+                            CHIP
+                          </div>
+                          <div>
+                            <p className="font-mono font-bold text-white">•••• •••• •••• 4092</p>
+                            <p className="text-[10px] text-gray-400">Visa / Mastercard Contactless</p>
+                          </div>
+                        </div>
+                        <span className="font-extrabold text-sm text-emerald-400">
+                          {currencySymbol}{finalPayable.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-gray-300">
+                        <span>Terminal Auth Code:</span>
+                        <input
+                          type="text"
+                          value={cardAuthCode}
+                          onChange={(e) => setCardAuthCode(e.target.value)}
+                          className="rounded-lg border border-white/20 bg-white/10 px-2 py-0.5 text-xs font-mono font-bold text-white outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mode 3: Cash */}
+                {paymentMethod === "Cash" && (
+                  <div className="mt-3 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="font-bold text-[#24312e]">Cash Tendered:</label>
+                      <input
+                        type="number"
+                        placeholder={String(finalPayable)}
+                        value={cashTenderedInput}
+                        onChange={(e) => setCashTenderedInput(e.target.value)}
+                        className="w-28 rounded-lg border border-[#dfe1dc] bg-white px-2.5 py-1 text-right text-xs font-bold outline-none focus:border-[#24312e]"
+                      />
+                    </div>
+                    {tenderedNum > 0 && (
+                      <div className="mt-2 flex items-center justify-between border-t border-[#e9eae6] pt-2 text-[#315a3d] font-bold">
+                        <span>Change to return:</span>
+                        <span>{currencySymbol}{changeDue.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Mode 4: Split */}
+                {paymentMethod === "Split" && (
+                  <div className="mt-3 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#24312e]">Split between guests:</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSplitCount((c) => Math.max(2, c - 1))}
+                          className="h-6 w-6 rounded bg-[#dfe1dc] font-bold text-xs hover:bg-[#d0d3cd] cursor-pointer"
+                        >
+                          -
+                        </button>
+                        <span className="font-bold text-sm text-[#24312e]">{splitCount}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSplitCount((c) => c + 1)}
+                          className="h-6 w-6 rounded bg-[#dfe1dc] font-bold text-xs hover:bg-[#d0d3cd] cursor-pointer"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-2 border-t border-[#e9eae6] pt-2 flex justify-between font-bold text-[#315a3d]">
+                      <span>Each guest pays:</span>
+                      <span>{currencySymbol}{(finalPayable / splitCount).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Failure Error Banner */}
+              {paymentError && (
+                <div className="mt-3 rounded-xl border border-red-300 bg-red-50 p-3 text-xs text-red-800 flex items-start gap-2.5">
+                  <XCircle size={17} className="text-red-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-bold text-red-900">Payment Failed</p>
+                    <p className="mt-0.5 text-red-700">{paymentError}</p>
+                    <p className="mt-1 text-[11px] text-red-600 font-medium">
+                      Table ticket remains active. Please retry payment or switch mode.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentError(null)}
+                    className="text-red-400 hover:text-red-700 cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Actions with Success and Failure Testing Controls */}
+            <div className="mt-5 pt-4 border-t border-[#e9eae6] space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold text-[#84908a] px-1">
+                <span>Testing Simulation Controls:</span>
+                <span className="text-[#24312e]">Instant POS Emulation</span>
+              </div>
+
+              {/* Success Button */}
+              <button
+                type="button"
+                disabled={isProcessingPayment}
+                onClick={handlePaymentSuccess}
+                className="w-full rounded-xl bg-[#24312e] px-4 py-3 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-xs flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Check size={16} />
+                <span>Simulate Payment Success & Print Bill</span>
+              </button>
+
+              {/* Failure Button */}
+              <button
+                type="button"
+                disabled={isProcessingPayment}
+                onClick={() => handlePaymentFailure()}
+                className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 hover:border-red-300 transition cursor-pointer shadow-2xs flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <XCircle size={15} className="text-red-600" />
+                <span>Simulate Payment Failure (Test Error State)</span>
+              </button>
+            </div>
+            </>
+          )}
+          </aside>
+        </div>
+      )}
+
+      {/* On-Screen Thermal Receipt Preview & Print Modal */}
+      {receiptModalInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="relative w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
+            <button
+              onClick={() => setReceiptModalInvoice(null)}
+              className="absolute right-4 top-4 rounded-full p-2 text-[#84908a] hover:bg-[#f0f1ed] hover:text-[#24312e] transition cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Authentic Thermal Receipt Design */}
+            <div className="rounded-2xl border border-[#e5e7e0] bg-[#fafaf7] p-5 font-mono text-xs text-[#24312e] shadow-inner">
+              <div className="text-center pb-3 border-b border-dashed border-[#ccc]">
+                {logoUrl && (
+                  <img
+                    src={logoUrl}
+                    alt="Logo"
+                    className="h-9 w-9 mx-auto object-contain rounded-lg mb-1"
+                  />
+                )}
+                <h3 className="font-bold text-base tracking-tight">{restroName}</h3>
+                <p className="text-[10px] text-[#68736e]">{branchName}</p>
+                <p className="text-[10px] text-[#84908a]">GSTIN: {gstNumber}</p>
+                <p className="text-[10px] font-bold mt-1 text-[#315a3d]">*** TAX INVOICE ***</p>
+              </div>
+
+              <div className="py-2.5 border-b border-dashed border-[#ccc] text-[10px] space-y-0.5 text-[#68736e]">
+                <div className="flex justify-between">
+                  <span>Bill No: {receiptModalInvoice.invoiceNo}</span>
+                  <span>{receiptModalInvoice.time}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{receiptModalInvoice.title} ({receiptModalInvoice.customer})</span>
+                  <span>{receiptModalInvoice.date}</span>
+                </div>
+                <div>Server: <span className="font-bold text-[#24312e]">{receiptModalInvoice.server}</span></div>
+              </div>
+
+              {/* Items */}
+              <div className="py-2.5 border-b border-dashed border-[#ccc]">
+                <table className="w-full text-[10px]">
+                  <thead>
+                    <tr className="border-b border-[#ddd] text-left">
+                      <th className="pb-1">Qty</th>
+                      <th className="pb-1">Item</th>
+                      <th className="pb-1 text-right">Rate</th>
+                      <th className="pb-1 text-right">Amt</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#eee]">
+                    {receiptModalInvoice.items && receiptModalInvoice.items.map((it: any, i: number) => (
+                      <tr key={i}>
+                        <td className="py-1">{it.qty}</td>
+                        <td className="py-1">{it.name}</td>
+                        <td className="py-1 text-right">{it.rate}</td>
+                        <td className="py-1 text-right font-bold">{it.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Calculation Summary */}
+              <div className="py-2.5 border-b border-dashed border-[#ccc] text-[10px] space-y-1">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>{currencySymbol}{Number(receiptModalInvoice.subtotal).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>GST ({receiptModalInvoice.taxRate ?? taxRate}%)</span>
+                  <span>+{currencySymbol}{Number(receiptModalInvoice.taxAmount).toFixed(2)}</span>
+                </div>
+                {receiptModalInvoice.serviceCharge > 0 && (
+                  <div className="flex justify-between">
+                    <span>Service Charge ({receiptModalInvoice.serviceCharge}%)</span>
+                    <span>+{currencySymbol}{Number(receiptModalInvoice.serviceChargeAmount).toFixed(2)}</span>
+                  </div>
+                )}
+                {receiptModalInvoice.discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-800">
+                    <span>Discount</span>
+                    <span>-{currencySymbol}{Number(receiptModalInvoice.discountAmount).toFixed(2)}</span>
+                  </div>
+                )}
+                {receiptModalInvoice.depositCredit > 0 && (
+                  <div className="flex justify-between text-amber-900">
+                    <span>Deposit Credit</span>
+                    <span>-{currencySymbol}{Number(receiptModalInvoice.depositCredit).toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Total */}
+              <div className="py-2.5 border-b-2 border-double border-[#000] flex justify-between text-sm font-black">
+                <span>TOTAL PAID</span>
+                <span>{currencySymbol}{Number(receiptModalInvoice.total).toFixed(2)}</span>
+              </div>
+
+              <div className="pt-2 text-[10px] space-y-0.5">
+                <div className="flex justify-between font-bold">
+                  <span>Status:</span>
+                  <span className="text-[#3b724c]">PAID via {receiptModalInvoice.paymentMethod}</span>
+                </div>
+                {receiptModalInvoice.cashTendered && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>Cash Tendered:</span>
+                      <span>{currencySymbol}{Number(receiptModalInvoice.cashTendered).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Change:</span>
+                      <span>{currencySymbol}{Number(receiptModalInvoice.changeDue).toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="mt-3 pt-2 text-center text-[9px] text-[#84908a] border-t border-dashed border-[#ccc]">
+                <p className="italic">"{receiptFooter}"</p>
+                <p className="mt-1 font-bold">*** VISIT AGAIN ***</p>
+              </div>
+            </div>
+
+            {/* Modal actions */}
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex-1 rounded-xl bg-[#24312e] py-3 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+              >
+                <Printer size={15} />
+                <span>Print Invoice</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setReceiptModalInvoice(null)}
+                className="rounded-xl border border-[#dfe1dc] bg-white px-4 py-3 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Bill Creation Modal */}
+      <ManualBillModal
+        isOpen={showManualBillModal}
+        onClose={() => setShowManualBillModal(false)}
+        tables={tables}
+        menuItems={menuItems}
+        soldOutItems={soldOutItems}
+        servants={servants}
+        taxRate={taxRate}
+        serviceCharge={serviceCharge}
+        currencySymbol={currencySymbol}
+        onOrderCreated={onOrderCreated}
+        onTableStatusChange={onTableStatusChange}
+        showToast={showToast}
+        role={role}
+      />
     </>
   );
 }
 
-function TeamPage() {
-  const staff = [
-    {
-      name: "Priya Shah",
-      role: "Floor server",
-      shift: "09:00 - 17:00",
-      status: "Clocked in",
-    },
-    {
-      name: "Kabir Malik",
-      role: "Head chef",
-      shift: "11:00 - 23:00",
-      status: "Clocked in",
-    },
-    {
-      name: "Neha Joshi",
-      role: "Billing",
-      shift: "12:00 - 20:00",
-      status: "On break",
-    },
-    {
-      name: "Arjun Rao",
-      role: "Server",
-      shift: "17:00 - 23:00",
-      status: "Scheduled",
-    },
-  ];
+  function AddEmployeeModal({
+    onClose,
+    onSave,
+    departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
+    onAddDepartment,
+  }: {
+    onClose: () => void;
+    onSave: (data: {
+      name: string;
+      phone: string;
+      pin: string;
+      department: string;
+      shift: string;
+    }) => Promise<void>;
+    departments?: string[];
+    onAddDepartment?: (name: string) => Promise<any>;
+  }) {
+    const [name, setName] = useState("");
+    const [phone, setPhone] = useState("");
+    const [pin, setPin] = useState("1234");
+    const [department, setDepartment] = useState(departments[0] || "Floor");
+    const [isCustomDept, setIsCustomDept] = useState(false);
+    const [customDeptInput, setCustomDeptInput] = useState("");
+    const [shift, setShift] = useState("09:00 - 17:00");
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleSubmit = async (e: FormEvent) => {
+      e.preventDefault();
+      if (!name.trim() || !phone.trim()) {
+        setError("Full Name and Phone Number are required.");
+        return;
+      }
+      if (pin.length !== 4) {
+        setError("PIN must be exactly 4 digits.");
+        return;
+      }
+      let finalDept = department;
+      if (isCustomDept) {
+        if (!customDeptInput.trim()) {
+          setError("Please specify a department name.");
+          return;
+        }
+        finalDept = customDeptInput.trim();
+        if (onAddDepartment) {
+          try {
+            await onAddDepartment(finalDept);
+          } catch {}
+        }
+      }
+      setIsSaving(true);
+      setError(null);
+      try {
+        await onSave({
+          name: name.trim(),
+          phone: phone.trim(),
+          pin: pin.trim(),
+          department: finalDept,
+          shift: shift.trim() || "09:00 - 17:00",
+        });
+        onClose();
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
+          <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
+            <div className="flex items-center gap-2">
+              <Plus size={18} className="text-[#315a3d]" />
+              <div>
+                <h3 className="display-font text-lg font-bold text-[#24312e]">
+                  Add New Employee
+                </h3>
+                <p className="text-[11px] text-[#84908a]">
+                  Register staff for attendance and shift roster
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-[#84908a] hover:text-[#24312e] cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {error && (
+            <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">Full Name</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Ramesh Singh"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-[#24312e] mb-1">Phone Number</label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="+91 98201 12345"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-[#24312e] mb-1">
+                  4-Digit PIN <span className="font-normal text-[#84908a]">(Mobile GPS Punch)</span>
+                </label>
+                <input
+                  type="text"
+                  maxLength={4}
+                  required
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-[#24312e]">Department</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomDept(!isCustomDept);
+                      setCustomDeptInput("");
+                    }}
+                    className="text-[10px] font-bold text-[#315a3d] hover:underline cursor-pointer"
+                  >
+                    {isCustomDept ? "Select existing" : "+ Add new"}
+                  </button>
+                </div>
+                {isCustomDept ? (
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="New department..."
+                    value={customDeptInput}
+                    onChange={(e) => setCustomDeptInput(e.target.value)}
+                    className="w-full rounded-xl border border-[#315a3d] bg-white p-2.5 outline-hidden font-semibold"
+                  />
+                ) : (
+                  <select
+                    value={department}
+                    onChange={(e) => {
+                      if (e.target.value === "__NEW__") {
+                        setIsCustomDept(true);
+                        setCustomDeptInput("");
+                      } else {
+                        setDepartment(e.target.value);
+                      }
+                    }}
+                    className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-semibold"
+                  >
+                    {departments.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                    <option value="__NEW__">+ Add New Department...</option>
+                  </select>
+                )}
+              </div>
+              <div>
+                <label className="block font-bold text-[#24312e] mb-1">Shift Hours</label>
+                <input
+                  type="text"
+                  placeholder="09:00 - 17:00"
+                  value={shift}
+                  onChange={(e) => setShift(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
+              >
+                {isSaving ? "Saving..." : "Add Employee"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  function EditEmployeeModal({
+    staff,
+    onClose,
+    onSave,
+    departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
+    onAddDepartment,
+  }: {
+    staff: StaffMember;
+    onClose: () => void;
+    onSave: (id: string, data: Partial<StaffMember>) => Promise<void>;
+    departments?: string[];
+    onAddDepartment?: (name: string) => Promise<any>;
+  }) {
+    const [name, setName] = useState(staff.name);
+    const [phone, setPhone] = useState(staff.phone);
+    const [pin, setPin] = useState(staff.pin);
+    const [department, setDepartment] = useState(staff.department);
+    const [isCustomDept, setIsCustomDept] = useState(false);
+    const [customDeptInput, setCustomDeptInput] = useState("");
+    const [shift, setShift] = useState(staff.shift);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const deptOptions = Array.from(new Set([...departments, staff.department])).filter(Boolean);
+
+    const handleSubmit = async (e: FormEvent) => {
+      e.preventDefault();
+      if (!name.trim() || !phone.trim()) {
+        setError("Name and Phone are required.");
+        return;
+      }
+      if (pin.length !== 4) {
+        setError("PIN must be exactly 4 digits.");
+        return;
+      }
+      let finalDept = department;
+      if (isCustomDept) {
+        if (!customDeptInput.trim()) {
+          setError("Please specify a department name.");
+          return;
+        }
+        finalDept = customDeptInput.trim();
+        if (onAddDepartment) {
+          try {
+            await onAddDepartment(finalDept);
+          } catch {}
+        }
+      }
+      setIsSaving(true);
+      setError(null);
+      try {
+        await onSave(staff.id, {
+          name: name.trim(),
+          phone: phone.trim(),
+          pin: pin.trim(),
+          department: finalDept,
+          shift,
+        });
+        onClose();
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
+          <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
+            <div className="flex items-center gap-2">
+              <Pencil size={18} className="text-[#315a3d]" />
+              <div>
+                <h3 className="display-font text-lg font-bold text-[#24312e]">
+                  Edit Employee
+                </h3>
+                <p className="text-[11px] text-[#84908a]">{staff.name}</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-[#84908a] hover:text-[#24312e] cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {error && (
+            <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">Full Name</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-[#24312e] mb-1">Phone Number</label>
+                <input
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-[#24312e] mb-1">
+                  4-Digit PIN <span className="font-normal text-[#84908a]">(Mobile GPS Punch)</span>
+                </label>
+                <input
+                  type="text"
+                  maxLength={4}
+                  required
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-[#24312e]">Department</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomDept(!isCustomDept);
+                      setCustomDeptInput("");
+                    }}
+                    className="text-[10px] font-bold text-[#315a3d] hover:underline cursor-pointer"
+                  >
+                    {isCustomDept ? "Select existing" : "+ Add new"}
+                  </button>
+                </div>
+                {isCustomDept ? (
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="New department..."
+                    value={customDeptInput}
+                    onChange={(e) => setCustomDeptInput(e.target.value)}
+                    className="w-full rounded-xl border border-[#315a3d] bg-white p-2.5 outline-hidden font-semibold"
+                  />
+                ) : (
+                  <select
+                    value={department}
+                    onChange={(e) => {
+                      if (e.target.value === "__NEW__") {
+                        setIsCustomDept(true);
+                        setCustomDeptInput("");
+                      } else {
+                        setDepartment(e.target.value);
+                      }
+                    }}
+                    className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-semibold"
+                  >
+                    {deptOptions.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                    <option value="__NEW__">+ Add New Department...</option>
+                  </select>
+                )}
+              </div>
+              <div>
+                <label className="block font-bold text-[#24312e] mb-1">Shift Hours</label>
+                <input
+                  type="text"
+                  value={shift}
+                  onChange={(e) => setShift(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
+              >
+                {isSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  function AddDashboardMemberModal({
+    onClose,
+    onSave,
+    departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
+    onAddDepartment,
+  }: {
+    onClose: () => void;
+    onSave: (data: {
+      name: string;
+      email: string;
+      password: string;
+      systemRole: "Manager" | "Server" | "Kitchen";
+      department: string;
+      phone?: string;
+    }) => Promise<void>;
+    departments?: string[];
+    onAddDepartment?: (name: string) => Promise<any>;
+  }) {
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("demo123");
+    const [systemRole, setSystemRole] = useState<"Manager" | "Server" | "Kitchen">("Server");
+    const [department, setDepartment] = useState(
+      departments.find((d) => d.toLowerCase().includes("floor")) || departments[0] || "Floor"
+    );
+    const [isCustomDept, setIsCustomDept] = useState(false);
+    const [customDeptInput, setCustomDeptInput] = useState("");
+    const [phone, setPhone] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleRoleChange = (newRole: "Manager" | "Server" | "Kitchen") => {
+      setSystemRole(newRole);
+      if (newRole === "Manager") {
+        const found = departments.find((d) => d.toLowerCase().includes("manage"));
+        setDepartment(found || "Management");
+      } else if (newRole === "Kitchen") {
+        const found = departments.find((d) => d.toLowerCase().includes("kitchen"));
+        setDepartment(found || "Kitchen");
+      } else {
+        const found = departments.find((d) => d.toLowerCase().includes("floor"));
+        setDepartment(found || "Floor");
+      }
+    };
+
+    const handleSubmit = async (e: FormEvent) => {
+      e.preventDefault();
+      if (!name.trim() || !email.trim() || !password.trim()) {
+        setError("Name, Dashboard Email, and Password are required.");
+        return;
+      }
+      let finalDept = department;
+      if (isCustomDept) {
+        if (!customDeptInput.trim()) {
+          setError("Please enter a department name.");
+          return;
+        }
+        finalDept = customDeptInput.trim();
+        if (onAddDepartment) {
+          try {
+            await onAddDepartment(finalDept);
+          } catch {}
+        }
+      }
+      setIsSaving(true);
+      setError(null);
+      try {
+        const generatedPhone = phone.trim() || `+91 98201 ${Date.now().toString().slice(-5)}`;
+        await onSave({
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
+          systemRole,
+          department: finalDept,
+          phone: generatedPhone,
+        });
+        onClose();
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
+          <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={18} className="text-[#315a3d]" />
+              <div>
+                <h3 className="display-font text-lg font-bold text-[#24312e]">
+                  Add Dashboard Access
+                </h3>
+                <p className="text-[11px] text-[#84908a]">
+                  Create station login credentials for Kitchen, Servant, or Manager
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-[#84908a] hover:text-[#24312e] cursor-pointer">
+              <X size={18} />
+            </button>
+          </div>
+
+          {error && (
+            <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">Full Name</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Chef Sanjay Kumar"
+                value={name}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setName(val);
+                  if (!email || email.includes("@tableandthyme.com")) {
+                    setEmail(val ? `${val.toLowerCase().replace(/[^a-z0-9]/g, ".")}@tableandthyme.com` : "");
+                  }
+                }}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">Station Access Role</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRoleChange("Manager")}
+                  className={`rounded-xl border p-2.5 text-center font-bold transition cursor-pointer ${
+                    systemRole === "Manager"
+                      ? "border-amber-500 bg-amber-50 text-amber-900 shadow-xs"
+                      : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+                  }`}
+                >
+                  <ShieldCheck className="mx-auto mb-1 text-amber-700" size={18} />
+                  Manager
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRoleChange("Server")}
+                  className={`rounded-xl border p-2.5 text-center font-bold transition cursor-pointer ${
+                    systemRole === "Server"
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-900 shadow-xs"
+                      : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+                  }`}
+                >
+                  <Users className="mx-auto mb-1 text-emerald-700" size={18} />
+                  Servant / Floor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRoleChange("Kitchen")}
+                  className={`rounded-xl border p-2.5 text-center font-bold transition cursor-pointer ${
+                    systemRole === "Kitchen"
+                      ? "border-purple-500 bg-purple-50 text-purple-900 shadow-xs"
+                      : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+                  }`}
+                >
+                  <ChefHat className="mx-auto mb-1 text-purple-700" size={18} />
+                  Kitchen
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-[#24312e] mb-1">
+                  Dashboard Work Email <span className="font-normal text-[#84908a]">(Login)</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="email@tableandthyme.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-[#24312e] mb-1">
+                  Dashboard Password <span className="font-normal text-[#84908a]">(Login)</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. demo123"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-[#24312e]">Department</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomDept(!isCustomDept);
+                      setCustomDeptInput("");
+                    }}
+                    className="text-[10px] font-bold text-[#315a3d] hover:underline cursor-pointer"
+                  >
+                    {isCustomDept ? "Select existing" : "+ Add new"}
+                  </button>
+                </div>
+                {isCustomDept ? (
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="New department..."
+                    value={customDeptInput}
+                    onChange={(e) => setCustomDeptInput(e.target.value)}
+                    className="w-full rounded-xl border border-[#315a3d] bg-white p-2.5 outline-hidden font-semibold"
+                  />
+                ) : (
+                  <select
+                    value={department}
+                    onChange={(e) => {
+                      if (e.target.value === "__NEW__") {
+                        setIsCustomDept(true);
+                        setCustomDeptInput("");
+                      } else {
+                        setDepartment(e.target.value);
+                      }
+                    }}
+                    className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-semibold"
+                  >
+                    {departments.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                    <option value="__NEW__">+ Add New Department...</option>
+                  </select>
+                )}
+              </div>
+              <div>
+                <label className="block font-bold text-[#24312e] mb-1">Phone (Optional)</label>
+                <input
+                  type="tel"
+                  placeholder="+91 98201 ..."
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
+              >
+                {isSaving ? "Creating Access..." : "Grant Dashboard Access"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  function EditDashboardMemberModal({
+    staff,
+    onClose,
+    onSave,
+    departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
+    onAddDepartment,
+  }: {
+    staff: StaffMember;
+    onClose: () => void;
+    onSave: (id: string, data: Partial<StaffMember>) => Promise<void>;
+    departments?: string[];
+    onAddDepartment?: (name: string) => Promise<any>;
+  }) {
+    const [name, setName] = useState(staff.name);
+    const [email, setEmail] = useState(staff.email || "");
+    const [password, setPassword] = useState(staff.password || "demo123");
+    const [systemRole, setSystemRole] = useState<"Manager" | "Server" | "Kitchen">(
+      staff.systemRole === "Manager" || staff.systemRole === "Kitchen" ? staff.systemRole : "Server"
+    );
+    const [department, setDepartment] = useState(staff.department);
+    const [isCustomDept, setIsCustomDept] = useState(false);
+    const [customDeptInput, setCustomDeptInput] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const allDepts = Array.from(new Set([...departments, staff.department])).filter(Boolean);
+
+    const handleSubmit = async (e: FormEvent) => {
+      e.preventDefault();
+      if (!name.trim() || !email.trim() || !password.trim()) {
+        setError("Name, Email, and Password are required.");
+        return;
+      }
+      let finalDept = department;
+      if (isCustomDept) {
+        if (!customDeptInput.trim()) {
+          setError("Please specify a department name.");
+          return;
+        }
+        finalDept = customDeptInput.trim();
+        if (onAddDepartment) {
+          try {
+            await onAddDepartment(finalDept);
+          } catch {}
+        }
+      }
+      setIsSaving(true);
+      setError(null);
+      try {
+        await onSave(staff.id, {
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
+          systemRole,
+          department: finalDept,
+        });
+        onClose();
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
+          <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
+            <div className="flex items-center gap-2">
+              <Pencil size={18} className="text-[#315a3d]" />
+              <div>
+                <h3 className="display-font text-lg font-bold text-[#24312e]">
+                  Edit Dashboard Access
+                </h3>
+                <p className="text-[11px] text-[#84908a]">{staff.name}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-[#84908a] hover:text-[#24312e] cursor-pointer">
+              <X size={18} />
+            </button>
+          </div>
+
+          {error && (
+            <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">Full Name</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">Station Access Role</label>
+              <select
+                value={systemRole}
+                onChange={(e) =>
+                  setSystemRole(e.target.value as "Manager" | "Server" | "Kitchen")
+                }
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-bold"
+              >
+                <option value="Manager">Manager (Full Control Desk)</option>
+                <option value="Server">Server (Servant / Floor Station)</option>
+                <option value="Kitchen">Kitchen (Kitchen Head Station)</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-[#24312e] mb-1">
+                  Dashboard Work Email <span className="font-normal text-[#84908a]">(Login)</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-[#24312e] mb-1">
+                  Dashboard Password <span className="font-normal text-[#84908a]">(Login)</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-bold text-[#24312e]">Department</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomDept(!isCustomDept);
+                    setCustomDeptInput("");
+                  }}
+                  className="text-[10px] font-bold text-[#315a3d] hover:underline cursor-pointer"
+                >
+                  {isCustomDept ? "Select existing" : "+ Add new"}
+                </button>
+              </div>
+              {isCustomDept ? (
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="New department..."
+                  value={customDeptInput}
+                  onChange={(e) => setCustomDeptInput(e.target.value)}
+                  className="w-full rounded-xl border border-[#315a3d] bg-white p-2.5 outline-hidden font-semibold"
+                />
+              ) : (
+                <select
+                  value={department}
+                  onChange={(e) => {
+                    if (e.target.value === "__NEW__") {
+                      setIsCustomDept(true);
+                      setCustomDeptInput("");
+                    } else {
+                      setDepartment(e.target.value);
+                    }
+                  }}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-semibold"
+                >
+                  {allDepts.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                  <option value="__NEW__">+ Add New Department...</option>
+                </select>
+              )}
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
+              >
+                {isSaving ? "Saving..." : "Save Credentials"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+function GeofenceModal({
+  settings,
+  onClose,
+  onSaved,
+}: {
+  settings: RestaurantSettings | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [geoLat, setGeoLat] = useState<number>(settings?.latitude || 28.5355);
+  const [geoLng, setGeoLng] = useState<number>(settings?.longitude || 77.391);
+  const [geoRadius, setGeoRadius] = useState<number>(settings?.radiusMeters || 50);
+  const [detectingGps, setDetectingGps] = useState(false);
+  const [isSavingGeo, setIsSavingGeo] = useState(false);
+
+  const handleSaveGeofence = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsSavingGeo(true);
+    try {
+      await updateRestaurantSettings({
+        latitude: geoLat,
+        longitude: geoLng,
+        radiusMeters: geoRadius,
+      });
+      onSaved();
+      onClose();
+    } catch (err) {
+      alert("Failed to save geofence: " + String(err));
+    } finally {
+      setIsSavingGeo(false);
+    }
+  };
+
+  const handleDetectGPS = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+    setDetectingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = parseFloat(pos.coords.latitude.toFixed(6));
+        const lng = parseFloat(pos.coords.longitude.toFixed(6));
+        try {
+          await updateRestaurantSettings({
+            latitude: lat,
+            longitude: lng,
+            radiusMeters: geoRadius || 50,
+          });
+          onSaved();
+          alert(`✓ Restaurant GPS successfully synced to your current coordinates (${lat}°, ${lng}°)!`);
+          onClose();
+        } catch (err) {
+          console.error("Auto save failed:", err);
+        } finally {
+          setDetectingGps(false);
+        }
+      },
+      (err) => {
+        alert("GPS Error: " + err.message + ". Please ensure location permissions are enabled in your browser.");
+        setDetectingGps(false);
+      },
+      { enableHighAccuracy: true },
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
+        <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
+          <div className="flex items-center gap-2">
+            <MapPin size={18} className="text-[#315a3d]" />
+            <h3 className="display-font text-lg font-bold text-[#24312e]">
+              Configure Restaurant Geofence
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[#84908a] hover:text-[#24312e] cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={handleSaveGeofence} className="mt-4 space-y-3 text-xs">
+          <p className="text-[#68736e] leading-relaxed">
+            Set the physical GPS location of Table & Thyme. Employees must be within the specified radius to clock in.
+          </p>
+          <button
+            type="button"
+            onClick={handleDetectGPS}
+            disabled={detectingGps}
+            className="w-full rounded-xl border border-emerald-300 bg-emerald-50 py-2.5 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Navigation size={15} />
+            {detectingGps ? "Detecting Device Coordinates..." : "Set to My Current Location"}
+          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">Latitude</label>
+              <input
+                type="number"
+                step="any"
+                required
+                value={geoLat}
+                onChange={(e) => setGeoLat(parseFloat(e.target.value))}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">Longitude</label>
+              <input
+                type="number"
+                step="any"
+                required
+                value={geoLng}
+                onChange={(e) => setGeoLng(parseFloat(e.target.value))}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block font-bold text-[#24312e] mb-1">
+              Allowed Radius (Meters)
+            </label>
+            <input
+              type="number"
+              min={10}
+              max={500}
+              required
+              value={geoRadius}
+              onChange={(e) => setGeoRadius(parseInt(e.target.value, 10) || 50)}
+              className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden"
+            />
+            <p className="mt-1 text-[10px] text-[#84908a]">
+              Recommended: 50 meters for standard restaurants; 75 meters for large properties.
+            </p>
+          </div>
+          <div className="mt-5 flex justify-end gap-2 pt-2 border-t border-[#f0f1ed]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl px-4 py-2 text-xs font-bold text-[#68736e] cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSavingGeo}
+              className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] cursor-pointer"
+            >
+              {isSavingGeo ? "Saving..." : "Save Geofence"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AnnouncementModal({
+  staffList,
+  onClose,
+  onSaved,
+}: {
+  staffList: StaffMember[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [annTitle, setAnnTitle] = useState("");
+  const [annMessage, setAnnMessage] = useState("");
+  const [annPriority, setAnnPriority] = useState<"Normal" | "Urgent">("Normal");
+  const [annTarget, setAnnTarget] = useState<"All" | "Specific">("All");
+  const [annTargetStaffId, setAnnTargetStaffId] = useState<string>("");
+  const [isPostingAnn, setIsPostingAnn] = useState(false);
+
+  const handleCreateAnnouncement = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!annTitle || !annMessage) return;
+    setIsPostingAnn(true);
+    try {
+      await createAnnouncement({
+        senderName: "Manager",
+        targetType: annTarget,
+        targetStaffId: annTarget === "Specific" ? annTargetStaffId : null,
+        title: annTitle,
+        message: annMessage,
+        priority: annPriority,
+      });
+      onSaved();
+      onClose();
+    } catch (err) {
+      alert("Failed to post announcement: " + String(err));
+    } finally {
+      setIsPostingAnn(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
+        <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
+          <h3 className="display-font text-lg font-bold text-[#24312e]">Compose Notice</h3>
+          <button
+            onClick={onClose}
+            className="text-[#84908a] hover:text-[#24312e] cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={handleCreateAnnouncement} className="mt-4 space-y-3 text-xs">
+          <div>
+            <label className="block font-bold text-[#24312e] mb-1">Notice Title</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Schedule Update / Dinner Shift"
+              value={annTitle}
+              onChange={(e) => setAnnTitle(e.target.value)}
+              className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">Target Audience</label>
+              <select
+                value={annTarget}
+                onChange={(e) => setAnnTarget(e.target.value as "All" | "Specific")}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden"
+              >
+                <option value="All">All Employees</option>
+                <option value="Specific">Specific Employee</option>
+              </select>
+            </div>
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">Priority</label>
+              <select
+                value={annPriority}
+                onChange={(e) => setAnnPriority(e.target.value as "Normal" | "Urgent")}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden"
+              >
+                <option value="Normal">Normal</option>
+                <option value="Urgent">Urgent</option>
+              </select>
+            </div>
+          </div>
+          {annTarget === "Specific" && (
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">Select Employee</label>
+              <select
+                required
+                value={annTargetStaffId}
+                onChange={(e) => setAnnTargetStaffId(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden"
+              >
+                <option value="">-- Choose Employee --</option>
+                {staffList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.department})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div>
+            <label className="block font-bold text-[#24312e] mb-1">Message</label>
+            <textarea
+              required
+              rows={3}
+              placeholder="Enter notice details for staff..."
+              value={annMessage}
+              onChange={(e) => setAnnMessage(e.target.value)}
+              className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+            />
+          </div>
+          <div className="mt-5 flex justify-end gap-2 pt-2 border-t border-[#f0f1ed]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl px-4 py-2 text-xs font-bold text-[#68736e] cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isPostingAnn}
+              className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] cursor-pointer"
+            >
+              {isPostingAnn ? "Posting..." : "Broadcast Notice"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EmployeesPage({
+  onOpenPortal,
+  departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
+  onAddDepartment,
+  onDeleteDepartment,
+}: {
+  onOpenPortal?: () => void;
+  departments?: string[];
+  onAddDepartment?: (name: string) => Promise<any>;
+  onDeleteDepartment?: (name: string) => Promise<any>;
+}) {
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [settings, setSettings] = useState<RestaurantSettings | null>(null);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [activeTab, setActiveTab] = useState<"staff" | "leaves" | "announcements">("staff");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [deptFilter, setDeptFilter] = useState("All");
+
+  const [showAddDept, setShowAddDept] = useState(false);
+  const [newDeptInput, setNewDeptInput] = useState("");
+  const [isAddingDept, setIsAddingDept] = useState(false);
+
+  // Modals
+  const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [showGeofenceModal, setShowGeofenceModal] = useState(false);
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [detectingGps, setDetectingGps] = useState(false);
+
+  const handleQuickAddDepartment = async () => {
+    const trimmed = newDeptInput.trim();
+    if (!trimmed || !onAddDepartment) return;
+    setIsAddingDept(true);
+    try {
+      await onAddDepartment(trimmed);
+      setDeptFilter(trimmed);
+      setNewDeptInput("");
+      setShowAddDept(false);
+    } catch (e) {
+      alert("Failed to add department: " + String(e));
+    } finally {
+      setIsAddingDept(false);
+    }
+  };
+
+  const loadData = () => {
+    fetchStaff().then(setStaffList).catch(() => {});
+    fetchRestaurantSettings().then(setSettings).catch(() => {});
+    fetchLeaves().then(setLeaves).catch(() => {});
+    fetchAnnouncements().then(setAnnouncements).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(loadData, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleCreateStaff = async (data: {
+    name: string;
+    phone: string;
+    pin: string;
+    department: string;
+    shift: string;
+  }) => {
+    await createStaff({
+      ...data,
+      systemRole: "None",
+      email: `${data.name.toLowerCase().replace(/[^a-z0-9]/g, ".")}@gmail.com`,
+      password: "demo123",
+    });
+    loadData();
+  };
+
+  const handleUpdateStaff = async (id: string, data: Partial<StaffMember>) => {
+    await updateStaff(id, data);
+    loadData();
+  };
+
+  const handleDeleteStaff = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to remove ${name} from employees? This action cannot be undone.`)) return;
+    try {
+      await deleteStaff(id);
+      loadData();
+    } catch (err) {
+      alert("Failed to delete employee: " + String(err));
+    }
+  };
+
+  const handleToggleAttendance = async (staffId: string, currentStatus: string) => {
+    try {
+      if (currentStatus === "Clocked in") {
+        await clockOutStaff(staffId);
+      } else {
+        await clockInStaff({ staffId, managerOverride: true });
+      }
+      loadData();
+    } catch (err) {
+      alert("Failed to update attendance: " + String(err));
+    }
+  };
+
+  const handleLeaveStatusChange = async (id: number, status: "Approved" | "Rejected") => {
+    try {
+      await updateLeaveStatus(id, status, "Manager");
+      loadData();
+    } catch (err) {
+      alert("Failed to update leave request: " + String(err));
+    }
+  };
+
+  const handleDetectGPS = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+    setDetectingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = parseFloat(pos.coords.latitude.toFixed(6));
+        const lng = parseFloat(pos.coords.longitude.toFixed(6));
+        try {
+          await updateRestaurantSettings({
+            latitude: lat,
+            longitude: lng,
+            radiusMeters: settings?.radiusMeters || 50,
+          });
+          loadData();
+          alert(`✓ Restaurant GPS successfully synced to your current coordinates (${lat}°, ${lng}°)!`);
+        } catch (err) {
+          console.error("Auto save failed:", err);
+        } finally {
+          setDetectingGps(false);
+        }
+      },
+      (err) => {
+        alert("GPS Error: " + err.message + ". Please ensure location permissions are enabled in your browser.");
+        setDetectingGps(false);
+      },
+      { enableHighAccuracy: true },
+    );
+  };
+
+  const clockedInCount = staffList.filter(
+    (s) => s.todayStatus === "Clocked in" || s.todayStatus === "On break",
+  ).length;
+  const pendingLeavesCount = leaves.filter((l) => l.status === "Pending").length;
+  const attendanceRate = staffList.length > 0 ? Math.round((clockedInCount / staffList.length) * 100) : 0;
+
+  const filteredStaff = staffList.filter((s) => {
+    const matchesQuery =
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.systemRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      s.phone.includes(searchQuery);
+    const matchesDept = deptFilter === "All" || s.department === deptFilter;
+    return matchesQuery && matchesDept;
+  });
+
+  const filterDepartments = ["All", ...departments];
+
   return (
     <>
       <SectionHeading
-        eyebrow="People and permissions"
-        title="Team"
-        description="Manage roles, shifts, attendance, and server coverage by zone."
+        eyebrow="Staff Directory"
+        title="Employees & Attendance"
+        description="Manage employee profiles, credentials, GPS geofenced attendance, leaves, and staff notices."
         action={
-          <button className="flex items-center gap-2 rounded-xl bg-[#24312e] px-4 py-3 text-sm font-bold text-white">
-            <Plus size={18} />
-            Invite staff
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {onOpenPortal && (
+              <button
+                onClick={onOpenPortal}
+                className="flex items-center gap-2 rounded-xl bg-[#f4bc83] px-4 py-3 text-sm font-bold text-[#684f37] hover:bg-[#eab074] transition shadow-xs cursor-pointer"
+              >
+                <Smartphone size={17} />
+                Open Staff Mobile Portal
+              </button>
+            )}
+            <button
+              onClick={() => setShowAddStaffModal(true)}
+              className="flex items-center gap-2 rounded-xl bg-[#24312e] px-4 py-3 text-sm font-bold text-white hover:bg-[#315a3d] transition shadow-xs cursor-pointer"
+            >
+              <Plus size={18} />
+              Add Employee
+            </button>
+          </div>
         }
       />
-      <div className="grid gap-4 sm:grid-cols-3">
+
+      {/* Top Dynamic Stat Cards */}
+      <div className="grid gap-4 sm:grid-cols-4">
         <StatCard
           label="Present today"
-          value="18 / 22"
-          change="82% attendance"
+          value={`${clockedInCount} / ${staffList.length}`}
+          change={`${attendanceRate}% shift attendance`}
           icon={Users}
           color="bg-[#e8f1e8] text-[#3b724c]"
         />
         <StatCard
-          label="Hours this week"
-          value="486h"
-          change="Across 22 staff"
-          icon={Clock3}
+          label="Total Employees"
+          value={String(staffList.length)}
+          change="Active in roster"
+          icon={UserRound}
+          color="bg-[#fff5dc] text-[#946243]"
+        />
+        <StatCard
+          label="Pending leaves"
+          value={String(pendingLeavesCount)}
+          change={pendingLeavesCount > 0 ? "Requires review" : "All requests handled"}
+          icon={CalendarDays}
           color="bg-[#fbe8dc] text-[#b7623d]"
         />
         <StatCard
-          label="Open shifts"
-          value="3"
-          change="Needs assignment"
-          icon={CalendarDays}
-          color="bg-[#fff5dc] text-[#946243]"
+          label="Geofence boundary"
+          value={`${settings?.radiusMeters || 50}m`}
+          change="GPS perimeter active"
+          icon={MapPin}
+          color="bg-[#eee8f6] text-[#72558e]"
         />
       </div>
-      <div className="mt-6 rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 sm:p-6">
-        <div className="mb-5">
-          <h2 className="display-font text-xl font-bold">Today’s staff</h2>
-          <p className="mt-1 text-xs text-[#84908a]">
-            Attendance ledger updates as team members clock in.
-          </p>
+
+      {/* Geofence Radar Information Strip */}
+      <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-4 text-xs">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e8f1e8] text-[#315a3d]">
+            <MapPin size={18} />
+          </div>
+          <div>
+            <p className="font-bold text-[#24312e]">
+              Restaurant Geofence: {settings?.latitude.toFixed(4)}° N, {settings?.longitude.toFixed(4)}° E • {settings?.radiusMeters || 50}m Radius
+            </p>
+            <p className="text-[11px] text-[#68736e]">
+              Staff can only clock in through mobile GPS when within {settings?.radiusMeters || 50} meters of restaurant coordinates.
+            </p>
+          </div>
         </div>
-        <div className="space-y-2">
-          {staff.map((person) => (
-            <div
-              key={person.name}
-              className="flex flex-wrap items-center gap-4 rounded-xl border border-[#eef0eb] bg-white p-4"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#e5c7a6] text-xs font-bold text-[#684f37]">
-                {person.name
-                  .split(" ")
-                  .map((word) => word[0])
-                  .join("")}
-              </div>
-              <div className="min-w-32 flex-1">
-                <p className="font-bold text-[#24312e]">{person.name}</p>
-                <p className="mt-1 text-xs text-[#84908a]">{person.role}</p>
-              </div>
-              <p className="text-sm text-[#68736e]">{person.shift}</p>
-              <StatusPill status={person.status} />
-              <MoreHorizontal size={17} className="text-[#84908a]" />
-            </div>
-          ))}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleDetectGPS}
+            disabled={detectingGps}
+            className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 font-bold text-emerald-900 hover:bg-emerald-100 transition shadow-2xs cursor-pointer"
+            title="Update restaurant coordinates to match your current GPS location"
+          >
+            {detectingGps ? "Detecting..." : "Sync to My GPS"}
+          </button>
+          <button
+            onClick={() => setShowGeofenceModal(true)}
+            className="rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 font-bold text-[#24312e] hover:bg-[#f0f1ed] transition shadow-2xs cursor-pointer"
+          >
+            Configure GPS Location
+          </button>
         </div>
       </div>
+
+      {/* Main Tabs (Staff Attendance, Leaves, Notices) */}
+      <div className="mt-6 rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#e9eae6] pb-4">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab("staff")}
+              className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer ${
+                activeTab === "staff"
+                  ? "bg-[#24312e] text-white shadow-xs"
+                  : "bg-white text-[#68736e] border border-[#dfe1dc] hover:text-[#24312e]"
+              }`}
+            >
+              Employees Directory ({staffList.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("leaves")}
+              className={`rounded-xl px-4 py-2 text-xs font-bold transition relative cursor-pointer ${
+                activeTab === "leaves"
+                  ? "bg-[#24312e] text-white shadow-xs"
+                  : "bg-white text-[#68736e] border border-[#dfe1dc] hover:text-[#24312e]"
+              }`}
+            >
+              Leave Requests
+              {pendingLeavesCount > 0 && (
+                <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] text-white">
+                  {pendingLeavesCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("announcements")}
+              className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer ${
+                activeTab === "announcements"
+                  ? "bg-[#24312e] text-white shadow-xs"
+                  : "bg-white text-[#68736e] border border-[#dfe1dc] hover:text-[#24312e]"
+              }`}
+            >
+              Broadcast Notices ({announcements.length})
+            </button>
+          </div>
+
+          {activeTab === "staff" && (
+            <div className="flex items-center gap-3">
+              <div className="relative w-full sm:w-64">
+                <Search size={16} className="absolute left-3 top-2.5 text-[#84908a]" />
+                <input
+                  type="text"
+                  placeholder="Search name, role, phone..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-white py-2 pl-9 pr-3 text-xs outline-hidden focus:border-[#24312e]"
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === "announcements" && (
+            <button
+              onClick={() => setShowAnnouncementModal(true)}
+              className="rounded-xl bg-[#24312e] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <Send size={14} />
+              New Broadcast Notice
+            </button>
+          )}
+        </div>
+
+        {/* TAB 1: EMPLOYEES DIRECTORY & ATTENDANCE */}
+        {activeTab === "staff" && (
+          <div className="mt-4">
+            {/* Department Filter Chips */}
+            <div className="mb-4 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-semibold text-[#84908a] mr-1">Filter Dept:</span>
+              {filterDepartments.map((dept) => (
+                <div key={dept} className="inline-flex items-center">
+                  <button
+                    onClick={() => setDeptFilter(dept)}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      deptFilter === dept
+                        ? "bg-[#315a3d] text-white"
+                        : "bg-white border border-[#dfe1dc] text-[#68736e] hover:bg-[#f0f1ed]"
+                    }`}
+                  >
+                    <span>{dept}</span>
+                    {onDeleteDepartment && dept !== "All" && !["Floor", "Kitchen", "Management"].includes(dept) && (
+                      <span
+                        role="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete department "${dept}"? Staff in this department will remain but will need a new department assigned.`)) {
+                            try {
+                              await onDeleteDepartment(dept);
+                              if (deptFilter === dept) setDeptFilter("All");
+                            } catch (err) {
+                              alert("Failed to delete department: " + String(err));
+                            }
+                          }
+                        }}
+                        className={`rounded-full p-0.5 hover:bg-rose-500 hover:text-white transition cursor-pointer ${
+                          deptFilter === dept ? "text-white/80" : "text-[#84908a]"
+                        }`}
+                        title={`Delete ${dept} department`}
+                      >
+                        <X size={11} />
+                      </span>
+                    )}
+                  </button>
+                </div>
+              ))}
+
+              {onAddDepartment && (
+                <>
+                  {!showAddDept ? (
+                    <button
+                      onClick={() => setShowAddDept(true)}
+                      className="flex items-center gap-1 rounded-lg border border-dashed border-[#315a3d]/50 bg-[#e8f1e8]/50 px-2.5 py-1 text-[11px] font-bold text-[#315a3d] hover:bg-[#e8f1e8] transition cursor-pointer"
+                      title="Add a new restaurant department"
+                    >
+                      <Plus size={13} />
+                      Add Department
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1.5 rounded-lg border border-[#315a3d] bg-white p-0.5 shadow-xs">
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Department name..."
+                        value={newDeptInput}
+                        onChange={(e) => setNewDeptInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleQuickAddDepartment();
+                          } else if (e.key === "Escape") {
+                            setShowAddDept(false);
+                          }
+                        }}
+                        className="w-32 sm:w-40 px-2 py-0.5 text-xs outline-hidden font-medium text-[#24312e]"
+                      />
+                      <button
+                        onClick={handleQuickAddDepartment}
+                        disabled={isAddingDept || !newDeptInput.trim()}
+                        className="rounded-md bg-[#315a3d] px-2 py-1 text-[11px] font-bold text-white hover:bg-[#24312e] disabled:opacity-50 transition cursor-pointer"
+                      >
+                        {isAddingDept ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowAddDept(false);
+                          setNewDeptInput("");
+                        }}
+                        className="p-1 text-[#84908a] hover:text-[#24312e] cursor-pointer"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-160 text-left text-sm">
+                <thead className="border-b border-[#e9eae6] text-[10px] font-bold uppercase tracking-[.14em] text-[#9aa39d]">
+                  <tr>
+                    <th className="pb-3">Employee</th>
+                    <th className="pb-3">Department</th>
+                    <th className="pb-3">Shift Hours</th>
+                    <th className="pb-3">Mobile PIN</th>
+                    <th className="pb-3">Today Status</th>
+                    <th className="pb-3">GPS Distance</th>
+                    <th className="pb-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStaff.map((person) => (
+                    <tr key={person.id} className="border-b border-[#f0f1ed] last:border-0 text-xs">
+                      <td className="py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e5c7a6] text-[11px] font-bold text-[#684f37]">
+                            {person.name
+                              .split(" ")
+                              .map((w) => w[0])
+                              .join("")}
+                          </div>
+                          <div>
+                            <p className="font-bold text-[#24312e]">{person.name}</p>
+                            <span className="text-[10px] text-[#84908a]">{person.phone}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 font-semibold text-[#68736e]">
+                        {person.department}
+                      </td>
+                      <td className="py-3.5 text-[#68736e]">{person.shift}</td>
+                      <td className="py-3.5">
+                        <div className="font-mono text-[11px] text-[#24312e]">
+                          <span>PIN: <strong>{person.pin}</strong></span>
+                        </div>
+                      </td>
+                      <td className="py-3.5">
+                        <StatusPill status={person.todayStatus} />
+                      </td>
+                      <td className="py-3.5 text-[#68736e]">
+                        {person.lastDistanceMeters !== null && person.lastDistanceMeters !== undefined ? (
+                          <span className="font-semibold text-emerald-700">
+                            {person.lastDistanceMeters}m (Verified)
+                          </span>
+                        ) : (
+                          <span className="text-[#a1aaa4]">--</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleToggleAttendance(person.id, person.todayStatus)}
+                            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${
+                              person.todayStatus === "Clocked in"
+                                ? "bg-stone-200 text-stone-800 hover:bg-stone-300"
+                                : "bg-[#315a3d] text-white hover:bg-[#254630]"
+                            }`}
+                            title="Manager manual punch override"
+                          >
+                            {person.todayStatus === "Clocked in" ? "Clock Out" : "Clock In"}
+                          </button>
+                          <button
+                            onClick={() => setEditingStaff(person)}
+                            className="rounded-lg border border-[#dfe1dc] bg-white p-1.5 text-stone-600 hover:text-[#315a3d] hover:border-[#315a3d] transition cursor-pointer shadow-2xs"
+                            title="Edit employee details"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStaff(person.id, person.name)}
+                            className="rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 transition cursor-pointer shadow-2xs"
+                            title="Delete employee"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: LEAVE APPLICATIONS */}
+        {activeTab === "leaves" && (
+          <div className="mt-4 overflow-x-auto">
+            {leaves.length === 0 ? (
+              <p className="text-center py-8 text-xs text-[#84908a]">
+                No leave applications submitted yet.
+              </p>
+            ) : (
+              <table className="w-full min-w-160 text-left text-sm">
+                <thead className="border-b border-[#e9eae6] text-[10px] font-bold uppercase tracking-[.14em] text-[#9aa39d]">
+                  <tr>
+                    <th className="pb-3">Staff Member</th>
+                    <th className="pb-3">Leave Type</th>
+                    <th className="pb-3">Dates</th>
+                    <th className="pb-3">Reason</th>
+                    <th className="pb-3">Status</th>
+                    <th className="pb-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaves.map((l) => (
+                    <tr key={l.id} className="border-b border-[#f0f1ed] last:border-0 text-xs">
+                      <td className="py-3.5 font-bold text-[#24312e]">
+                        {l.staffName} ({l.department})
+                      </td>
+                      <td className="py-3.5 text-[#68736e]">{l.leaveType}</td>
+                      <td className="py-3.5 text-[#68736e]">
+                        {l.startDate} to {l.endDate}
+                      </td>
+                      <td className="py-3.5 text-[#55615b] max-w-64 truncate">{l.reason}</td>
+                      <td className="py-3.5">
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                            l.status === "Approved"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : l.status === "Rejected"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {l.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 text-right">
+                        {l.status === "Pending" ? (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleLeaveStatusChange(l.id, "Approved")}
+                              className="rounded-lg bg-emerald-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-800 cursor-pointer"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleLeaveStatusChange(l.id, "Rejected")}
+                              className="rounded-lg bg-red-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-red-800 cursor-pointer"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-[#84908a]">Reviewed</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: BROADCAST NOTICES */}
+        {activeTab === "announcements" && (
+          <div className="mt-4 space-y-3">
+            {announcements.length === 0 ? (
+              <p className="text-center py-8 text-xs text-[#84908a]">
+                No broadcast notices sent yet. Click "New Broadcast Notice" above to compose one.
+              </p>
+            ) : (
+              announcements.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-start justify-between gap-4 rounded-xl border border-[#eef0eb] bg-white p-4 text-xs"
+                >
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                          item.priority === "Urgent" ? "bg-red-600 text-white" : "bg-[#315a3d] text-white"
+                        }`}
+                      >
+                        {item.priority}
+                      </span>
+                      <span className="text-[10px] text-[#84908a]">
+                        Target: {item.targetType === "All" ? "All Employees" : `Staff ID: ${item.targetStaffId}`}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-sm text-[#24312e]">{item.title}</h4>
+                    <p className="mt-1 text-[#55615b] leading-relaxed">{item.message}</p>
+                  </div>
+                  <span className="text-[10px] text-[#a1aaa4] shrink-0">
+                    From: {item.senderName}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {showAddStaffModal && (
+        <AddEmployeeModal
+          onClose={() => setShowAddStaffModal(false)}
+          onSave={handleCreateStaff}
+          departments={departments}
+          onAddDepartment={onAddDepartment}
+        />
+      )}
+
+      {editingStaff && (
+        <EditEmployeeModal
+          staff={editingStaff}
+          onClose={() => setEditingStaff(null)}
+          onSave={handleUpdateStaff}
+          departments={departments}
+          onAddDepartment={onAddDepartment}
+        />
+      )}
+
+      {showGeofenceModal && (
+        <GeofenceModal
+          settings={settings}
+          onClose={() => setShowGeofenceModal(false)}
+          onSaved={loadData}
+        />
+      )}
+
+      {showAnnouncementModal && (
+        <AnnouncementModal
+          staffList={staffList}
+          onClose={() => setShowAnnouncementModal(false)}
+          onSaved={loadData}
+        />
+      )}
     </>
   );
 }
+
+function DashboardAccessPage({
+  onOpenPortal,
+  departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
+  onAddDepartment,
+}: {
+  onOpenPortal?: () => void;
+  departments?: string[];
+  onAddDepartment?: (name: string) => Promise<any>;
+}) {
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"All" | "Manager" | "Server" | "Kitchen">("All");
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const loadData = () => {
+    fetchStaff()
+      .then((data) => {
+        setStaffList(data);
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(loadData, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 4000);
+  };
+
+  const handleRoleChange = async (staffId: string, newRole: StaffMember["systemRole"]) => {
+    try {
+      const updated = await updateStaff(staffId, { systemRole: newRole });
+      showToast(`✓ Updated ${updated.name}'s station role to "${newRole}"!`);
+      loadData();
+    } catch (err) {
+      alert("Failed to change role: " + String(err));
+    }
+  };
+
+  const handleRevokeRole = async (staffId: string, name: string) => {
+    if (!confirm(`Revoke dashboard station access for ${name}? They will no longer be able to log into the web dashboard.`)) return;
+    try {
+      await updateStaff(staffId, { systemRole: "None" });
+      showToast(`✓ Revoked dashboard access for ${name}`);
+      loadData();
+    } catch (err) {
+      alert("Failed to revoke access: " + String(err));
+    }
+  };
+
+  const handleCreateDashboardMember = async (data: {
+    name: string;
+    email: string;
+    password: string;
+    systemRole: "Manager" | "Server" | "Kitchen";
+    department: string;
+    phone?: string;
+  }) => {
+    await createStaff({
+      name: data.name,
+      email: data.email,
+      password: data.password,
+      systemRole: data.systemRole,
+      department: data.department,
+      phone: data.phone || `+91 98201 ${Date.now().toString().slice(-5)}`,
+      pin: Math.floor(1000 + Math.random() * 9000).toString(),
+      shift: "09:00 - 18:00",
+    });
+    showToast(`✓ Added ${data.name} with ${data.systemRole} dashboard access!`);
+    loadData();
+  };
+
+  const handleUpdateDashboardMember = async (id: string, data: Partial<StaffMember>) => {
+    await updateStaff(id, data);
+    showToast("✓ Dashboard credentials updated successfully!");
+    loadData();
+  };
+
+  const copyCredentials = (person: StaffMember) => {
+    const credText = `Email: ${person.email || "N/A"} | Password: ${person.password || "demo123"}`;
+    navigator.clipboard.writeText(credText);
+    setCopiedId(person.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  // Only dashboard members (exclude None)
+  const dashboardMembers = staffList.filter((s) => s.systemRole !== "None");
+
+  const managers = dashboardMembers.filter((s) => s.systemRole === "Manager");
+  const servers = dashboardMembers.filter((s) => s.systemRole === "Server");
+  const kitchens = dashboardMembers.filter((s) => s.systemRole === "Kitchen");
+
+  const filteredMembers = dashboardMembers.filter((s) => {
+    const matchesQuery =
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      s.phone.includes(searchQuery);
+    const matchesRole = roleFilter === "All" || s.systemRole === roleFilter;
+    return matchesQuery && matchesRole;
+  });
+
+  return (
+    <>
+      <SectionHeading
+        eyebrow="Access Control & Station Desks"
+        title="Dashboard Access"
+        description="Manage station logins for Kitchen, Servant, and Manager roles. Members configured here can log into the restaurant software using their email and password."
+      />
+
+      {/* Toast Notification Banner */}
+      {toastMsg && (
+        <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-300 p-3.5 text-xs font-bold text-emerald-900 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-700" />
+            <span>{toastMsg}</span>
+          </div>
+          <button onClick={() => setToastMsg(null)} className="text-emerald-700 hover:text-emerald-950 cursor-pointer">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Top Stat Cards (No Staff Only card) */}
+      <div className="grid gap-4 sm:grid-cols-4">
+        <StatCard
+          label="Managers"
+          value={String(managers.length)}
+          change="Full control desk access"
+          icon={ShieldCheck}
+          color="bg-[#fff5dc] text-[#946243]"
+        />
+        <StatCard
+          label="Servants / Floor"
+          value={String(servers.length)}
+          change="POS & Floor order access"
+          icon={Users}
+          color="bg-[#e8f1e8] text-[#3b724c]"
+        />
+        <StatCard
+          label="Kitchen Crew"
+          value={String(kitchens.length)}
+          change="KDS ticket management"
+          icon={ChefHat}
+          color="bg-[#eee8f6] text-[#72558e]"
+        />
+        <StatCard
+          label="Total Station Users"
+          value={String(dashboardMembers.length)}
+          change="Active dashboard logins"
+          icon={ShieldCheck}
+          color="bg-[#f0f5f2] text-[#24312e]"
+        />
+      </div>
+
+
+
+      {/* Dashboard Accounts Matrix */}
+      <div className="mt-6 rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#e9eae6] pb-4">
+          <div>
+            <h3 className="display-font text-base font-bold text-[#24312e]">
+              Station Login Accounts
+            </h3>
+            <p className="mt-0.5 text-xs text-[#68736e]">
+              Staff listed here have direct email and password access to the restaurant dashboard.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative w-full sm:w-64">
+              <Search size={16} className="absolute left-3 top-2.5 text-[#84908a]" />
+              <input
+                type="text"
+                placeholder="Search station members..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-white py-2 pl-9 pr-3 text-xs outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="rounded-xl bg-[#24312e] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition flex items-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <Plus size={14} />
+              Add Member
+            </button>
+          </div>
+        </div>
+
+        {/* Role Filters (No Staff Only filter) */}
+        <div className="mt-4 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-semibold text-[#84908a] mr-1">Filter by role:</span>
+          {(["All", "Manager", "Server", "Kitchen"] as const).map((r) => (
+            <button
+              key={r}
+              onClick={() => setRoleFilter(r)}
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${
+                roleFilter === r
+                  ? "bg-[#24312e] text-white"
+                  : "bg-white border border-[#dfe1dc] text-[#68736e] hover:bg-[#f0f1ed]"
+              }`}
+            >
+              {r === "All"
+                ? `All Dashboard (${dashboardMembers.length})`
+                : r === "Manager"
+                ? `Managers (${managers.length})`
+                : r === "Server"
+                ? `Servants (${servers.length})`
+                : `Kitchen (${kitchens.length})`}
+            </button>
+          ))}
+        </div>
+
+        {/* Permissions Table */}
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-160 text-left text-sm">
+            <thead className="border-b border-[#e9eae6] text-[10px] font-bold uppercase tracking-[.14em] text-[#9aa39d]">
+              <tr>
+                <th className="pb-3">Dashboard User</th>
+                <th className="pb-3">Department</th>
+                <th className="pb-3">Dashboard Access Role</th>
+                <th className="pb-3">Station Login Credentials</th>
+                <th className="pb-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-xs text-[#84908a]">
+                    No dashboard members found matching your filter. Click <strong>"Add Member"</strong> to create one.
+                  </td>
+                </tr>
+              ) : (
+                filteredMembers.map((person) => (
+                  <tr key={person.id} className="border-b border-[#f0f1ed] last:border-0 text-xs">
+                    <td className="py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e5c7a6] text-[11px] font-bold text-[#684f37]">
+                          {person.name
+                            .split(" ")
+                            .map((w) => w[0])
+                            .join("")}
+                        </div>
+                        <div>
+                          <p className="font-bold text-[#24312e]">{person.name}</p>
+                          <span className="text-[10px] text-[#84908a]">{person.phone}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 font-semibold text-[#68736e]">
+                      {person.department}
+                    </td>
+                    <td className="py-3.5">
+                      <select
+                        value={person.systemRole}
+                        onChange={(e) =>
+                          handleRoleChange(person.id, e.target.value as StaffMember["systemRole"])
+                        }
+                        className={`rounded-xl border px-3 py-1.5 text-xs font-bold outline-hidden transition cursor-pointer ${
+                          person.systemRole === "Manager"
+                            ? "border-amber-400 bg-amber-50 text-amber-900"
+                            : person.systemRole === "Server"
+                            ? "border-emerald-400 bg-emerald-50 text-emerald-900"
+                            : person.systemRole === "Kitchen"
+                            ? "border-purple-400 bg-purple-50 text-purple-900"
+                            : "border-gray-300 bg-gray-50 text-gray-700"
+                        }`}
+                      >
+                        <option value="Server">Servant / Floor Station</option>
+                        <option value="Kitchen">Kitchen Head Station</option>
+                        <option value="Manager">Manager Station</option>
+                      </select>
+                    </td>
+                    <td className="py-3.5">
+                      <div className="flex items-center gap-2">
+                        <div className="font-mono text-[11px] text-[#24312e]">
+                          <div>Email: <strong className="text-[#315a3d]">{person.email || "No email"}</strong></div>
+                          <div className="text-[10px] text-[#84908a]">Pass: {person.password || "demo123"}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyCredentials(person)}
+                          className="rounded-lg border border-[#dfe1dc] bg-white p-1 text-[#68736e] hover:text-[#24312e] transition cursor-pointer shadow-2xs"
+                          title="Copy credentials"
+                        >
+                          <Copy size={13} />
+                        </button>
+                        {copiedId === person.id && (
+                          <span className="text-[10px] text-emerald-700 font-bold">Copied!</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setEditingStaff(person)}
+                          className="rounded-lg border border-[#dfe1dc] bg-white p-1.5 text-stone-600 hover:text-[#315a3d] hover:border-[#315a3d] transition cursor-pointer shadow-2xs"
+                          title="Edit station credentials"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleRevokeRole(person.id, person.name)}
+                          className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-100 transition cursor-pointer shadow-2xs"
+                          title="Revoke station access"
+                        >
+                          Revoke Access
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Station Role Capabilities Guide Cards */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-5 shadow-xs">
+          <div className="flex items-center gap-2 text-amber-900 mb-2">
+            <ShieldCheck size={18} />
+            <h4 className="font-bold text-sm">Manager Station Capabilities</h4>
+          </div>
+          <p className="text-xs text-amber-800/90 leading-relaxed mb-3">
+            Full administrative authority over the entire restaurant ecosystem.
+          </p>
+          <ul className="text-[11px] text-amber-900 space-y-1 list-disc list-inside">
+            <li>Overview live financial & occupancy KPIs</li>
+            <li>Reservations management & deposits</li>
+            <li>Interactive floor plan & table assignment</li>
+            <li>Menu items pricing & recipe inventory</li>
+            <li>Staff directory, geofence, and permissions</li>
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-xs">
+          <div className="flex items-center gap-2 text-emerald-900 mb-2">
+            <Users size={18} />
+            <h4 className="font-bold text-sm">Servant / Floor Capabilities</h4>
+          </div>
+          <p className="text-xs text-emerald-800/90 leading-relaxed mb-3">
+            Dedicated station for front-of-house floor operations & POS ordering.
+          </p>
+          <ul className="text-[11px] text-emerald-900 space-y-1 list-disc list-inside">
+            <li>Table seating & live occupancy status</li>
+            <li>Punching new dine-in and takeaway orders</li>
+            <li>Notified when kitchen marks ticket ready</li>
+            <li>Billing checkout & split payment processing</li>
+            <li>Table cleaning & reset turnover</li>
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-5 shadow-xs">
+          <div className="flex items-center gap-2 text-purple-900 mb-2">
+            <ChefHat size={18} />
+            <h4 className="font-bold text-sm">Kitchen Head Capabilities</h4>
+            <p className="text-xs text-purple-800/90 leading-relaxed mb-3">
+              High-speed Kitchen Display System (KDS) for cooking line execution.
+            </p>
+            <ul className="text-[11px] text-purple-900 space-y-1 list-disc list-inside">
+              <li>Real-time ticket queue with prep timer</li>
+              <li>Mark ticket as Preparing, Ready, or Served</li>
+              <li>Toggle 86 / sold-out menu items instantly</li>
+              <li>One-click buzzer notification to server station</li>
+              <li>Station breakdown for Grill, Pantry, & Pass</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {showAddModal && (
+        <AddDashboardMemberModal
+          onClose={() => setShowAddModal(false)}
+          onSave={handleCreateDashboardMember}
+          departments={departments}
+          onAddDepartment={onAddDepartment}
+        />
+      )}
+
+      {editingStaff && (
+        <EditDashboardMemberModal
+          staff={editingStaff}
+          onClose={() => setEditingStaff(null)}
+          onSave={handleUpdateDashboardMember}
+          departments={departments}
+          onAddDepartment={onAddDepartment}
+        />
+      )}
+    </>
+  );
+}
+
+const TeamPage = EmployeesPage;
 
 function TimeSelectionModal({
   currentTime,
@@ -4431,12 +9129,14 @@ function BookingModal({
   onClose,
   initialTableId,
   kitchenClosed,
+  currencySymbol = "₹",
 }: {
   tables: RestaurantTable[];
   onBookingCreated: (booking: TableBooking) => void;
   onClose: () => void;
   initialTableId?: string;
   kitchenClosed?: boolean;
+  currencySymbol?: string;
 }) {
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -4576,7 +9276,7 @@ function BookingModal({
               {confirmedBooking?.tableId ? ` (Table ${confirmedBooking.tableId})` : " (Auto-allocated)"}.
             </p>
             <p className="mt-1 text-xs text-[#58715e]">
-              The ₹500 booking deposit is recorded and will be adjusted on final billing.
+              The {currencySymbol || "₹"}500 booking deposit is recorded and will be adjusted on final billing.
             </p>
             <button
               onClick={onClose}
@@ -4870,7 +9570,7 @@ function BookingModal({
               <div className="flex-1 text-xs">
                 <p className="font-bold text-[#684f37]">
                   Booking deposit{" "}
-                  <span className="float-right text-sm font-extrabold">₹500</span>
+                  <span className="float-right text-sm font-extrabold">{currencySymbol || "₹"}500</span>
                 </p>
                 <p className="mt-0.5 text-[11px] text-[#8f7055]">
                   Recorded and adjusted against guest’s final bill.
@@ -4903,6 +9603,8 @@ function NewOrderModal({
   initialTableId,
   kitchenClosed,
   role,
+  currencySymbol = "₹",
+  servants = [],
 }: {
   tables: RestaurantTable[];
   menuItems: ApiMenuItem[];
@@ -4912,6 +9614,8 @@ function NewOrderModal({
   initialTableId?: string;
   kitchenClosed?: boolean;
   role?: StaffRole;
+  currencySymbol?: string;
+  servants?: { id?: string; name: string }[];
 }) {
   const isInitialTakeaway = initialTableId === "Takeaway";
   const [orderType, setOrderType] = useState<"Dine in" | "Takeaway">(
@@ -4923,20 +9627,64 @@ function NewOrderModal({
       ? initialTableId
       : tables.find((t) => t.status === "Available")?.id || tables[0]?.id || "T01",
   );
-  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [servantName, setServantName] = useState<string>("");
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
+  const [dishSearch, setDishSearch] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const selectedItems = menuItems.filter((item) =>
-    selectedItemIds.includes(item.id),
-  );
-  const orderTotal = selectedItems.reduce((sum, item) => sum + item.price, 0);
-
-  const toggleItem = (id: string) => {
-    setSelectedItemIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+  const isDishUnavailable = (item: ApiMenuItem) => {
+    return (
+      item.available === false ||
+      (soldOutItems && soldOutItems.includes(item.name)) ||
+      (item as any).status === "Unavailable"
     );
   };
+
+  const categories = ["All", ...Array.from(new Set(menuItems.map((m) => m.category || "General")))];
+
+  const filteredMenuItems = menuItems
+    .filter((item) => {
+      const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+      const matchesSearch =
+        item.name.toLowerCase().includes(dishSearch.toLowerCase()) ||
+        (item.category && item.category.toLowerCase().includes(dishSearch.toLowerCase()));
+      return matchesCategory && matchesSearch;
+    })
+    .sort((a, b) => {
+      const aUnavail = isDishUnavailable(a);
+      const bUnavail = isDishUnavailable(b);
+      if (aUnavail === bUnavail) return 0;
+      return aUnavail ? 1 : -1;
+    });
+
+  const handleAddItem = (item: ApiMenuItem) => {
+    if (isDishUnavailable(item)) return;
+    setItemQuantities((prev) => ({
+      ...prev,
+      [item.id]: (prev[item.id] || 0) + 1,
+    }));
+  };
+
+  const handleUpdateQty = (itemId: string, delta: number) => {
+    setItemQuantities((prev) => {
+      const current = prev[itemId] || 0;
+      const next = current + delta;
+      if (next <= 0) {
+        const copy = { ...prev };
+        delete copy[itemId];
+        return copy;
+      }
+      return { ...prev, [itemId]: next };
+    });
+  };
+
+  const totalItemCount = Object.values(itemQuantities).reduce((sum, q) => sum + q, 0);
+  const orderTotal = menuItems.reduce(
+    (sum, item) => sum + item.price * (itemQuantities[item.id] || 0),
+    0,
+  );
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -4944,31 +9692,51 @@ function NewOrderModal({
       setError("Kitchen is closed. Cannot accept new orders at this time.");
       return;
     }
-    if (selectedItemIds.length === 0) {
+    if (!customer.trim()) {
+      setError("Guest name is mandatory. Please enter the customer / guest name.");
+      return;
+    }
+    if (orderType === "Dine in" && (!table || table.trim() === "" || table === "Takeaway")) {
+      setError("Assigning a table is mandatory for dine-in orders. Please select an available table.");
+      return;
+    }
+    if (orderType === "Dine in") {
+      const assignedTable = tables.find((t) => t.id === table);
+      if (assignedTable && assignedTable.status !== "Available" && assignedTable.id !== initialTableId) {
+        setError(`Table ${table} is currently ${assignedTable.status.toLowerCase()}. Please assign an available table.`);
+        return;
+      }
+    }
+    if (totalItemCount === 0) {
       setError("Please select at least one item to order.");
       return;
     }
-    const unavailableInOrder = selectedItems.filter(
-      (i) => i.available === false || soldOutItems.includes(i.name),
-    );
+
+    const selectedItems = menuItems.filter((i) => (itemQuantities[i.id] || 0) > 0);
+    const unavailableInOrder = selectedItems.filter((i) => isDishUnavailable(i));
     if (unavailableInOrder.length > 0) {
       setError(
         `Unavailable dish selected: ${unavailableInOrder.map((i) => i.name).join(", ")}. Please remove before ordering.`,
       );
       return;
     }
+
     setSubmitting(true);
     setError("");
 
     try {
+      const formattedItemList = selectedItems.map((i) => {
+        const q = itemQuantities[i.id] || 1;
+        return q > 1 ? `${q}x ${i.name}` : i.name;
+      });
+
       const order = await createOrder(
         {
-          customer:
-            customer.trim() ||
-            (orderType === "Dine in" ? `Table ${table} Guest` : "Takeaway Guest"),
+          customer: customer.trim(),
           table: orderType === "Dine in" ? table : "Takeaway",
-          itemList: selectedItems.map((i) => i.name),
+          itemList: formattedItemList,
           total: orderTotal,
+          serverName: servantName.trim() || undefined,
           orderType,
         },
         role || "Server",
@@ -4983,29 +9751,34 @@ function NewOrderModal({
   };
 
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center overflow-y-auto bg-[#24312e]/35 p-5">
-      <div className="my-auto w-full max-w-lg rounded-2xl bg-[#fbfaf7] p-6 shadow-2xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="display-font text-2xl font-bold text-[#24312e]">
-              Book New Order
-            </h2>
-            <p className="mt-1 text-xs text-[#84908a]">
-              Create and dispatch an order to the kitchen.
-            </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#24312e]/50 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto">
+      <div className="relative w-full max-w-4xl rounded-3xl bg-[#fbfaf7] border border-[#dfe1dc] shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#e9eae6] bg-white px-5 sm:px-6 py-4 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#24312e] text-[#f4bc83]">
+              <ShoppingBag size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-[#24312e]">Book New Order</h3>
+              <p className="text-xs text-[#84908a]">
+                Create and dispatch an order to the kitchen.
+              </p>
+            </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-[#84908a]"
+            className="rounded-xl p-2 text-[#84908a] hover:bg-[#f0f2ed] hover:text-[#24312e] transition cursor-pointer"
             aria-label="Close order dialog"
           >
-            <X size={19} />
+            <X size={18} />
           </button>
         </div>
 
         {kitchenClosed && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 flex items-center gap-2">
-            <AlertTriangle size={16} className="shrink-0 text-red-600" />
+          <div className="mx-5 sm:mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 flex items-center gap-2 shrink-0">
+            <AlertTriangle size={15} className="shrink-0 text-red-600" />
             <div>
               <span className="font-bold">Kitchen is Closed:</span> New orders cannot be taken until the kitchen reopens.
             </div>
@@ -5013,152 +9786,324 @@ function NewOrderModal({
         )}
 
         {error && (
-          <div className="mt-4 rounded-xl border border-[#f5c6cb] bg-[#f8d7da] p-3 text-xs text-[#721c24]">
-            {error}
+          <div className="mx-5 sm:mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 flex items-center gap-2 shrink-0">
+            <AlertTriangle size={15} className="shrink-0 text-red-600" />
+            <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={submit} className="mt-5 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setOrderType("Dine in")}
-              className={`flex items-center justify-center gap-2 rounded-xl p-3 text-sm font-bold border transition ${
-                orderType === "Dine in"
-                  ? "border-[#b7623d] bg-[#fff5ed] text-[#b7623d]"
-                  : "border-[#dfe1dc] bg-white text-[#68736e]"
-              }`}
-            >
-              <Utensils size={16} />
-              Dine in
-            </button>
-            <button
-              type="button"
-              onClick={() => setOrderType("Takeaway")}
-              className={`flex items-center justify-center gap-2 rounded-xl p-3 text-sm font-bold border transition ${
-                orderType === "Takeaway"
-                  ? "border-[#b7623d] bg-[#fff5ed] text-[#b7623d]"
-                  : "border-[#dfe1dc] bg-white text-[#68736e]"
-              }`}
-            >
-              <ShoppingBag size={16} />
-              Takeaway
-            </button>
-          </div>
+        <form onSubmit={submit} className="flex flex-col flex-1 overflow-hidden">
+          {/* Scrollable Form Content */}
+          <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+            {/* Order Type Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setOrderType("Dine in")}
+                className={`flex items-center justify-center gap-2 rounded-xl p-2.5 text-xs font-bold border transition cursor-pointer ${
+                  orderType === "Dine in"
+                    ? "border-[#24312e] bg-[#24312e] text-white shadow-xs"
+                    : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+                }`}
+              >
+                <Utensils size={14} />
+                <span>Dine in Table</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderType("Takeaway")}
+                className={`flex items-center justify-center gap-2 rounded-xl p-2.5 text-xs font-bold border transition cursor-pointer ${
+                  orderType === "Takeaway"
+                    ? "border-[#24312e] bg-[#24312e] text-white shadow-xs"
+                    : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+                }`}
+              >
+                <ShoppingBag size={14} />
+                <span>Takeaway / Counter</span>
+              </button>
+            </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-xs font-bold text-[#68736e]">
-              Customer name
-              <input
-                type="text"
-                placeholder={
-                  orderType === "Dine in" ? "e.g. Table guest" : "e.g. Rahul"
-                }
-                value={customer}
-                onChange={(e) => setCustomer(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#b7623d]"
-              />
-            </label>
-            {orderType === "Dine in" ? (
-              <label className="text-xs font-bold text-[#68736e]">
-                Assign Table
-                <select
-                  value={table}
-                  onChange={(e) => setTable(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm outline-none"
-                >
-                  {tables.map((t) => {
-                    const isAvailable = t.status === "Available" || t.id === initialTableId;
-                    return (
-                      <option key={t.id} value={t.id} disabled={!isAvailable}>
-                        {t.id} ({t.seats} seats · {t.zone}) - {t.status} {!isAvailable ? "[Unselectable]" : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
-            ) : (
-              <label className="text-xs font-bold text-[#68736e]">
-                Order channel
+            {/* Table, Guest & Servant Grid */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <label className="text-xs font-bold text-[#68736e] block mb-1">
+                  Guest Name <span className="text-red-500 font-bold">*</span>
+                </label>
                 <input
                   type="text"
-                  disabled
-                  value="Pickup Counter"
-                  className="mt-1 w-full rounded-xl border border-[#dfe1dc] bg-[#eef0eb] px-3 py-2.5 text-sm text-[#68736e]"
+                  required
+                  placeholder={
+                    orderType === "Dine in" ? "e.g. Rahul Sharma (Required)" : "e.g. Rahul (Required)"
+                  }
+                  value={customer}
+                  onChange={(e) => setCustomer(e.target.value)}
+                  className={`w-full rounded-xl border px-3 py-2 text-xs outline-none focus:border-[#24312e] ${
+                    !customer.trim() && error ? "border-red-400 bg-red-50/50" : "border-[#dfe1dc] bg-white"
+                  }`}
                 />
-              </label>
-            )}
-          </div>
+              </div>
 
-          <div>
-            <p className="mb-2 text-xs font-bold text-[#68736e]">
-              Select dishes ({selectedItemIds.length} selected):
-            </p>
-            <div className="max-h-52 overflow-y-auto rounded-xl border border-[#dfe1dc] bg-white p-2 space-y-1.5">
-              {menuItems.map((item) => {
-                const isSelected = selectedItemIds.includes(item.id);
-                const isUnavailable =
-                  item.available === false || soldOutItems.includes(item.name);
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    disabled={isUnavailable}
-                    onClick={() => toggleItem(item.id)}
-                    className={`flex w-full items-center justify-between rounded-lg p-2.5 text-left text-xs transition ${
-                      isUnavailable
-                        ? "cursor-not-allowed bg-[#f3f4f1] text-[#9ba39e] opacity-60"
-                        : isSelected
-                        ? "bg-[#e8f1e8] font-bold text-[#315a3d]"
-                        : "hover:bg-[#fbfaf7] text-[#24312e]"
+              {orderType === "Dine in" ? (
+                <div>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Assign Table <span className="text-red-500 font-bold">*</span>
+                  </label>
+                  <select
+                    required
+                    value={table}
+                    onChange={(e) => setTable(e.target.value)}
+                    className={`w-full rounded-xl border px-3 py-2 text-xs outline-none focus:border-[#24312e] cursor-pointer ${
+                      !table && error ? "border-red-400 bg-red-50/50" : "border-[#dfe1dc] bg-white"
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`h-2 w-2 rounded-full ${
-                          isUnavailable
-                            ? "bg-[#9ba39e]"
-                            : item.type === "veg"
-                            ? "bg-[#3b724c]"
-                            : "bg-[#b7623d]"
-                        }`}
-                      />
-                      <span className={isUnavailable ? "line-through text-[#84908a]" : ""}>
-                        {item.name}
-                      </span>
-                      <span className="text-[10px] text-[#84908a]">
-                        ({item.category})
-                      </span>
-                      {isUnavailable && (
-                        <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-700">
-                          Unavailable
-                        </span>
-                      )}
-                    </div>
-                    <span className={isUnavailable ? "text-[#9ba39e]" : ""}>₹{item.price}</span>
+                    <option value="" disabled>-- Select Table (Required) --</option>
+                    {tables.map((t) => {
+                      const isAvailable = t.status === "Available" || t.id === initialTableId;
+                      return (
+                        <option key={t.id} value={t.id} disabled={!isAvailable}>
+                          {t.id} ({t.seats} seats · {t.zone}) - {t.status} {!isAvailable ? "[Unselectable]" : ""}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Order Channel
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value="Pickup Counter / Takeaway"
+                    className="w-full rounded-xl border border-[#dfe1dc] bg-[#eef0eb] px-3 py-2 text-xs text-[#68736e]"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-bold text-[#68736e] block mb-1">
+                  Assign Servant / Waiter (Optional)
+                </label>
+                <select
+                  value={servantName}
+                  onChange={(e) => setServantName(e.target.value)}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e] cursor-pointer"
+                >
+                  <option value="">-- No servant assigned (Optional) --</option>
+                  {servants.map((s) => (
+                    <option key={s.id || s.name} value={s.name}>
+                      {s.name} (Floor Server)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Menu Items Selection Section */}
+            <div className="rounded-2xl border border-[#e9eae6] bg-white p-3.5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#9aa39d]">
+                  Select Menu Items
+                </span>
+                {totalItemCount > 0 && (
+                  <span className="rounded-full bg-[#e8f1e8] px-2.5 py-0.5 text-[11px] font-bold text-[#315a3d]">
+                    {totalItemCount} {totalItemCount === 1 ? "dish" : "dishes"} selected
+                  </span>
+                )}
+              </div>
+
+              {/* Dish Search & Category Filters */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search size={13} className="absolute left-2.5 top-2.5 text-[#84908a]" />
+                  <input
+                    type="text"
+                    placeholder="Search menu dishes..."
+                    value={dishSearch}
+                    onChange={(e) => setDishSearch(e.target.value)}
+                    className="w-full rounded-lg border border-[#dfe1dc] bg-[#fbfaf7] pl-7 pr-2.5 py-1.5 text-xs outline-none focus:border-[#24312e]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`rounded-lg px-2.5 py-1 font-bold whitespace-nowrap transition cursor-pointer ${
+                      selectedCategory === cat
+                        ? "bg-[#24312e] text-white"
+                        : "bg-[#f0f2ed] text-[#68736e] hover:bg-[#dfe1dc]"
+                    }`}
+                  >
+                    {cat}
                   </button>
-                );
-              })}
+                ))}
+              </div>
+
+              {/* Scrollable Dish Grid (3 columns) */}
+              <div className="max-h-[380px] overflow-y-auto pr-1">
+                {filteredMenuItems.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-[#84908a]">
+                    No dishes found matching your search.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {filteredMenuItems.map((dish) => {
+                      const unavailable = isDishUnavailable(dish);
+                      const inCartQty = itemQuantities[dish.id] || 0;
+
+                      return (
+                        <div
+                          key={dish.id}
+                          className={`group flex flex-col justify-between rounded-2xl p-2.5 text-xs border transition ${
+                            unavailable
+                              ? "bg-[#f4f5f1] border-dashed border-[#dfe1dc] opacity-65"
+                              : inCartQty > 0
+                              ? "bg-[#f2f7f3] border-[#315a3d]/50 shadow-xs ring-1 ring-[#315a3d]/20"
+                              : "bg-white border-[#eef0eb] hover:border-[#dfe1dc] hover:shadow-2xs"
+                          }`}
+                        >
+                          {/* Dish Image */}
+                          <div className="relative h-28 w-full overflow-hidden rounded-xl bg-[#e9eee5] flex items-center justify-center text-[#315a3d]">
+                            {dish.image ? (
+                              <img
+                                src={dish.image}
+                                alt={dish.name}
+                                className={`h-full w-full object-cover transition-transform duration-300 ${
+                                  unavailable ? "grayscale contrast-75" : "group-hover:scale-105"
+                                }`}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <Utensils size={28} className="text-[#315a3d]/50" />
+                            )}
+                            <div className="absolute top-2 left-2 flex items-center gap-1 rounded-md bg-white/90 backdrop-blur-xs px-1.5 py-0.5 shadow-2xs">
+                              <span
+                                className={`inline-block h-2 w-2 rounded-full ${
+                                  dish.type === "veg" ? "bg-[#3b724c]" : "bg-[#b7623d]"
+                                }`}
+                              />
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-[#24312e]">
+                                {dish.type === "veg" ? "Veg" : "Non-veg"}
+                              </span>
+                            </div>
+                            {unavailable && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
+                                <span className="flex items-center gap-1 rounded-full bg-red-600/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs">
+                                  <Ban size={10} /> Unavailable
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Dish Info */}
+                          <div className="mt-2 flex-1">
+                            <h4
+                              className={`font-bold text-xs line-clamp-1 ${
+                                unavailable
+                                  ? "text-[#84908a] line-through decoration-[#84908a]/40"
+                                  : "text-[#24312e]"
+                              }`}
+                              title={dish.name}
+                            >
+                              {dish.name}
+                            </h4>
+                            <div className="mt-0.5 flex items-center justify-between">
+                              <span className="text-[10px] text-[#84908a] line-clamp-1">{dish.category}</span>
+                              <span className="text-xs font-black text-[#24312e]">
+                                {currencySymbol || "₹"}{dish.price}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Quantity Handler */}
+                          <div className="mt-2.5 pt-2 border-t border-[#f0f1ed]">
+                            {unavailable ? (
+                              <div className="w-full text-center rounded-lg bg-gray-100 py-1 text-[11px] font-semibold text-gray-400 select-none cursor-not-allowed border border-gray-200">
+                                Unavailable
+                              </div>
+                            ) : inCartQty > 0 ? (
+                              <div className="flex items-center justify-between rounded-lg border border-[#315a3d]/40 bg-white p-0.5 shadow-2xs">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateQty(dish.id, -1)}
+                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-[#f0f2ed] text-[#24312e] hover:bg-[#dfe1dc] font-bold cursor-pointer transition"
+                                  aria-label="Decrease quantity"
+                                >
+                                  <Minus size={12} />
+                                </button>
+                                <span className="text-xs font-black text-[#315a3d] px-1">{inCartQty}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateQty(dish.id, 1)}
+                                  className="flex h-6 w-6 items-center justify-center rounded-md bg-[#24312e] text-white hover:bg-[#315a3d] font-bold cursor-pointer transition"
+                                  aria-label="Increase quantity"
+                                >
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleAddItem(dish)}
+                                className="flex w-full items-center justify-center gap-1 rounded-lg border border-[#dfe1dc] bg-[#fbfaf7] py-1 text-[11px] font-bold text-[#24312e] hover:border-[#315a3d] hover:bg-[#e8f1e8] hover:text-[#315a3d] cursor-pointer transition"
+                              >
+                                <Plus size={12} />
+                                <span>Add</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl bg-[#f0f2ed] p-3 text-sm font-bold text-[#24312e]">
-            <span>Order total:</span>
-            <span>₹{orderTotal.toLocaleString("en-IN")}</span>
-          </div>
+          {/* Sticky Modal Footer */}
+          <div className="border-t border-[#e9eae6] bg-white p-4 sm:p-5 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xs font-bold text-[#84908a]">Order Total:</span>
+              <span className="text-xl font-black text-[#24312e]">
+                {currencySymbol || "₹"}{orderTotal.toLocaleString("en-IN")}
+              </span>
+              {totalItemCount > 0 && (
+                <span className="text-xs text-[#84908a]">
+                  ({totalItemCount} {totalItemCount === 1 ? "item" : "items"})
+                </span>
+              )}
+            </div>
 
-          <button
-            type="submit"
-            disabled={submitting || selectedItemIds.length === 0 || kitchenClosed}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#24312e] px-4 py-3 text-sm font-bold text-white hover:bg-[#315a3d] disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            <ShoppingBag size={17} />
-            {kitchenClosed
-              ? "Kitchen Closed (Orders Paused)"
-              : submitting
-              ? "Booking order..."
-              : `Book Order (${selectedItemIds.length} item${selectedItemIds.length === 1 ? "" : "s"})`}
-          </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 sm:flex-none rounded-xl border border-[#dfe1dc] px-4 py-2.5 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || totalItemCount === 0 || kitchenClosed}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl bg-[#24312e] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
+              >
+                <ShoppingBag size={15} />
+                {kitchenClosed
+                  ? "Kitchen Closed"
+                  : submitting
+                  ? "Booking order..."
+                  : `Book Order (${totalItemCount} item${totalItemCount === 1 ? "" : "s"})`}
+              </button>
+            </div>
+          </div>
         </form>
       </div>
     </div>
@@ -5169,7 +10114,24 @@ function getRoleEmail(role: StaffRole) {
   return `${role.toLowerCase()}@tableandthyme.com`;
 }
 
-function LoginPage({ onLogin }: { onLogin: (role: StaffRole) => void }) {
+function LoginPage({
+  onLogin,
+  restaurantSettings,
+}: {
+  onLogin: (
+    role: StaffRole,
+    staff?: {
+      id?: string;
+      name: string;
+      email?: string;
+      phone?: string;
+      pin?: string;
+      department?: string;
+      systemRole: StaffRole;
+    }
+  ) => void;
+  restaurantSettings?: StoreSettings;
+}) {
   const [role, setRole] = useState<StaffRole>("Server");
   const [email, setEmail] = useState(getRoleEmail("Server"));
   const [password, setPassword] = useState("demo123");
@@ -5181,28 +10143,77 @@ function LoginPage({ onLogin }: { onLogin: (role: StaffRole) => void }) {
     setError("");
   };
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setError("");
+
+    try {
+      const user = await loginWebStaff(email.trim(), password);
+      if (user && user.id) {
+        if (!user.systemRole || user.systemRole === "None") {
+          setError("This employee does not have dashboard station access. Only staff with Manager, Servant, or Kitchen access can log in here.");
+          return;
+        }
+        const mappedRole: StaffRole =
+          user.systemRole === "Kitchen"
+            ? "Kitchen"
+            : user.systemRole === "Manager"
+            ? "Manager"
+            : "Server";
+        onLogin(mappedRole, {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          pin: user.pin,
+          department: user.department,
+          systemRole: mappedRole,
+        });
+        return;
+      }
+    } catch {
+      // Fall through to preset / demo credentials check
+    }
+
     const expectedEmail = getRoleEmail(role);
     if (
       email.trim().toLowerCase() !== expectedEmail ||
       password !== "demo123"
     ) {
-      setError("Use the demo credentials shown below.");
+      setError("Invalid email or password. Use your station credentials or the demo accounts below.");
       return;
     }
-    onLogin(role);
+
+    const demoNames: Record<StaffRole, string> = {
+      Manager: "Priya Shah",
+      Kitchen: "Chef Sunita",
+      Server: "Aarav Rao",
+    };
+    onLogin(role, {
+      name: demoNames[role] || `${role} Operator`,
+      email: expectedEmail,
+      department: role === "Manager" ? "Management" : role === "Kitchen" ? "Kitchen" : "Floor Service",
+      systemRole: role,
+    });
   };
 
   return (
     <div className="paper-grid flex min-h-screen items-center justify-center bg-[#f7f4ef] p-5">
       <div className="grid w-full max-w-4xl overflow-hidden rounded-3xl border border-[#dfe1dc] bg-[#fbfaf7] shadow-[0_20px_70px_rgba(36,49,46,.1)] md:grid-cols-[.85fr_1.15fr]">
         <div className="bg-[#24312e] p-8 text-white sm:p-10">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f4bc83] text-[#684f37]">
-            <ChefHat size={22} />
-          </div>
+          {restaurantSettings?.logoUrl ? (
+            <img
+              src={restaurantSettings.logoUrl}
+              alt={restaurantSettings.restaurantName || "Logo"}
+              className="h-12 w-12 rounded-xl object-contain border border-white/20 bg-white p-1 shadow-xs"
+            />
+          ) : (
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f4bc83] text-[#684f37]">
+              <ChefHat size={22} />
+            </div>
+          )}
           <p className="mt-10 text-[10px] font-bold uppercase tracking-[.2em] text-[#f4bc83]">
-            Table & Thyme
+            {restaurantSettings?.restaurantName || "Table & Thyme"}
           </p>
           <h1 className="display-font mt-3 text-4xl font-bold leading-tight">
             A calmer shift starts with a clear service desk.
@@ -5296,16 +10307,16 @@ function LoginPage({ onLogin }: { onLogin: (role: StaffRole) => void }) {
           </form>
           <div className="mt-6 rounded-xl border border-[#e0e2dc] bg-[#f7f7f3] p-4 text-xs text-[#68736e]">
             <p className="font-bold text-[#24312e]">
-              Frontend demo credentials
+              Station Operator Credentials
             </p>
             <p className="mt-2">
-              Server: <strong>server@tableandthyme.com</strong>
+              Manager: <strong>manager@tableandthyme.com</strong> (Priya Shah)
             </p>
             <p className="mt-1">
-              Kitchen: <strong>kitchen@tableandthyme.com</strong>
+              Kitchen: <strong>kitchen@tableandthyme.com</strong> (Chef Sunita)
             </p>
             <p className="mt-1">
-              Manager: <strong>manager@tableandthyme.com</strong>
+              Server / Servant: <strong>server@tableandthyme.com</strong> (Aarav Rao)
             </p>
             <p className="mt-1">
               Password: <strong>demo123</strong>
@@ -5323,12 +10334,16 @@ function CustomerWebsite({
   soldOutItems,
   onOrderCreated,
   kitchenClosed,
+  restaurantSettings,
+  currencySymbol = "₹",
 }: {
   onBack: () => void;
   menuItems: ApiMenuItem[];
   soldOutItems: string[];
   onOrderCreated: (order: Order) => void;
   kitchenClosed?: boolean;
+  restaurantSettings?: StoreSettings;
+  currencySymbol?: string;
 }) {
   const [category, setCategory] = useState("All");
   const [cart, setCart] = useState<string[]>([]);
@@ -5360,6 +10375,7 @@ function CustomerWebsite({
         table: "Table T08",
         itemList: cart,
         total: cartTotal,
+        source: "website",
       });
       onOrderCreated(order);
       setCart([]);
@@ -5374,11 +10390,22 @@ function CustomerWebsite({
     <div className="min-h-screen bg-[#fbfaf7] text-[#24312e]">
       <header className="border-b border-[#e4e5df] bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5">
-          <div>
-            <p className="display-font text-xl font-bold">Table & Thyme</p>
-            <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#84908a]">
-              Table T08 · Digital menu
-            </p>
+          <div className="flex items-center gap-3">
+            {restaurantSettings?.logoUrl ? (
+              <img
+                src={restaurantSettings.logoUrl}
+                alt="Logo"
+                className="h-10 w-10 rounded-xl object-contain border border-[#dfe1dc] bg-white p-0.5"
+              />
+            ) : null}
+            <div>
+              <p className="display-font text-xl font-bold">
+                {restaurantSettings?.restaurantName || "Table & Thyme"}
+              </p>
+              <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#84908a]">
+                Table T08 · Digital menu
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -5472,7 +10499,7 @@ function CustomerWebsite({
                 </p>
                 <div className="mt-4 flex items-center justify-between">
                   <span className="font-extrabold text-[#24312e]">
-                    ₹{item.price}
+                    {currencySymbol || "₹"}{item.price}
                   </span>
                   <button
                     onClick={() => setCart((prev) => [...prev, item.name])}
@@ -5495,7 +10522,7 @@ function CustomerWebsite({
               />
             </label>
             <div className="text-sm font-bold text-[#24312e]">
-              {cart.length} items · ₹{cartTotal.toLocaleString("en-IN")}
+              {cart.length} items · {currencySymbol || "₹"}{cartTotal.toLocaleString("en-IN")}
             </div>
             <button
               onClick={submitOrder}
@@ -5534,7 +10561,175 @@ function CustomerWebsite({
 
 export default function RestaurantApp() {
   const [role, setRole] = useState<StaffRole | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    id?: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    pin?: string;
+    department?: string;
+    systemRole: StaffRole;
+  } | null>(null);
+  const [stationPreferences, setStationPreferences] = useState<StationDisplayPreferences>(() => {
+    try {
+      const saved = localStorage.getItem("restro-station-preferences");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      ticketDensity: "comfortable",
+      tableAlerts: true,
+    };
+  });
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>({
+    restaurantName: "Table & Thyme",
+    branchName: "Downtown branch",
+    currencySymbol: "₹",
+    taxRate: 5.0,
+    serviceCharge: 5.0,
+    receiptFooter: "Thank you for dining with Table & Thyme!",
+    estimatedPrepTimeMinutes: 20,
+    tableTurnTimeMinutes: 60,
+    logoUrl: "",
+    isCurrencyLocked: false,
+    gstNumber: "07AAAAA0000A1Z5",
+  });
+
+  useEffect(() => {
+    fetchRestaurantSettings()
+      .then((data) => {
+        if (data) {
+          setStoreSettings({
+            restaurantName: data.restaurantName || "Table & Thyme",
+            branchName: data.branchName || "Downtown branch",
+            currencySymbol: data.currencySymbol || "₹",
+            taxRate: data.taxRate !== undefined ? data.taxRate : 5.0,
+            serviceCharge: data.serviceCharge !== undefined ? data.serviceCharge : 5.0,
+            receiptFooter: data.receiptFooter || "Thank you for dining with Table & Thyme!",
+            estimatedPrepTimeMinutes: data.estimatedPrepTimeMinutes || 20,
+            tableTurnTimeMinutes: data.tableTurnTimeMinutes || 60,
+            logoUrl: data.logoUrl || "",
+            isCurrencyLocked: Boolean(data.isCurrencyLocked),
+            gstNumber: data.gstNumber || "07AAAAA0000A1Z5",
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (storeSettings.restaurantName) {
+      document.title = `${storeSettings.restaurantName}${storeSettings.branchName ? ` · ${storeSettings.branchName}` : ""}`;
+    }
+  }, [storeSettings.restaurantName, storeSettings.branchName]);
+
+  const handleUpdatePreferences = (nextPrefs: StationDisplayPreferences) => {
+    setStationPreferences(nextPrefs);
+    try {
+      localStorage.setItem("restro-station-preferences", JSON.stringify(nextPrefs));
+    } catch {}
+  };
+
+  const handleUpdateStoreSettings = async (updated: StoreSettings) => {
+    setStoreSettings(updated);
+    try {
+      const result = await updateRestaurantSettings(updated);
+      if (result) {
+        setStoreSettings((prev) => ({
+          ...prev,
+          restaurantName: result.restaurantName || prev.restaurantName,
+          branchName: result.branchName || prev.branchName,
+          currencySymbol: result.currencySymbol || prev.currencySymbol,
+          taxRate: result.taxRate !== undefined ? result.taxRate : prev.taxRate,
+          serviceCharge: result.serviceCharge !== undefined ? result.serviceCharge : prev.serviceCharge,
+          receiptFooter: result.receiptFooter || prev.receiptFooter,
+          estimatedPrepTimeMinutes: result.estimatedPrepTimeMinutes || prev.estimatedPrepTimeMinutes,
+          tableTurnTimeMinutes: result.tableTurnTimeMinutes || prev.tableTurnTimeMinutes,
+          logoUrl: result.logoUrl !== undefined ? result.logoUrl : prev.logoUrl,
+          isCurrencyLocked: result.isCurrencyLocked !== undefined ? result.isCurrencyLocked : prev.isCurrencyLocked,
+          gstNumber: result.gstNumber || prev.gstNumber,
+        }));
+      }
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const [departments, setDepartments] = useState<string[]>([
+    "Floor",
+    "Kitchen",
+    "Bar",
+    "Cleaning",
+    "Utility",
+    "Management",
+  ]);
+
+  const loadDepartments = async () => {
+    try {
+      const data = await fetchDepartments();
+      if (Array.isArray(data) && data.length > 0) {
+        setDepartments(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch departments", e);
+    }
+  };
+
+  useEffect(() => {
+    loadDepartments();
+  }, []);
+
+  const handleAddDepartment = async (name: string): Promise<string[]> => {
+    const trimmed = name.trim();
+    if (!trimmed) return departments;
+    try {
+      const updated = await createDepartment(trimmed);
+      setDepartments(updated);
+      return updated;
+    } catch (e) {
+      alert("Failed to add department: " + String(e));
+      throw e;
+    }
+  };
+
+  const handleDeleteDepartment = async (name: string): Promise<string[]> => {
+    try {
+      const updated = await deleteDepartment(name);
+      setDepartments(updated);
+      return updated;
+    } catch (e) {
+      alert("Failed to delete department: " + String(e));
+      throw e;
+    }
+  };
+
   const [activeNav, setActiveNav] = useState<Page>("Overview");
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+
+  useEffect(() => {
+    fetchStaff()
+      .then((data) => {
+        if (Array.isArray(data)) setStaffList(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  const servantStaff = staffList.filter((s) => {
+    const dept = (s.department || "").toLowerCase();
+    const sysRole = (s.systemRole || "").toLowerCase();
+    return (
+      dept.includes("floor") ||
+      dept.includes("server") ||
+      dept.includes("servant") ||
+      dept.includes("waiter") ||
+      sysRole.includes("server") ||
+      sysRole.includes("servant")
+    );
+  });
+
+  const availableServants = servantStaff.length > 0 ? servantStaff : [
+    { id: "staff_103", name: "Arjun Rao", department: "Floor", systemRole: "Server" as const },
+    { id: "staff_104", name: "Neha Joshi", department: "Floor", systemRole: "Server" as const },
+  ];
   const [orders, setOrders] = useState<Order[]>(() => {
     const savedOrders = window.localStorage.getItem("table-thyme-orders");
     if (!savedOrders) return initialOrders;
@@ -5563,6 +10758,9 @@ export default function RestaurantApp() {
   const [kitchenClosed, setKitchenClosed] = useState<boolean>(false);
   const [selectedTableForBooking, setSelectedTableForBooking] = useState<string | undefined>();
   const [selectedTableForOrder, setSelectedTableForOrder] = useState<string | undefined>();
+  const [showEmployeePortal, setShowEmployeePortal] = useState(false);
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const handleOpenBooking = (tableId?: string) => {
     setSelectedTableForBooking(tableId);
@@ -5736,6 +10934,13 @@ export default function RestaurantApp() {
     fetchTables().then(setTables).catch(() => {});
   };
 
+  const handleOrderUpdated = (updatedOrder: Order) => {
+    setOrders((current) =>
+      current.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)),
+    );
+    fetchTables().then(setTables).catch(() => {});
+  };
+
   const handleAddTable = async (newTable: {
     id: string;
     seats: number;
@@ -5799,8 +11004,26 @@ export default function RestaurantApp() {
   if (!role)
     return (
       <LoginPage
-        onLogin={(nextRole) => {
+        restaurantSettings={storeSettings}
+        onLogin={(nextRole, staff) => {
           setRole(nextRole);
+          const defaultId = nextRole === "Kitchen" ? "staff_102" : nextRole === "Server" ? "staff_103" : "staff_101";
+          const user = staff ? {
+            id: staff.id || defaultId,
+            name: staff.name,
+            email: staff.email,
+            phone: staff.phone,
+            pin: staff.pin,
+            department: staff.department,
+            systemRole: staff.systemRole || nextRole,
+          } : {
+            id: defaultId,
+            name: nextRole === "Kitchen" ? "Chef Sunita" : nextRole === "Server" ? "Aarav Rao" : "Priya Shah",
+            email: `${nextRole.toLowerCase()}@tableandthyme.com`,
+            systemRole: nextRole,
+            department: nextRole === "Kitchen" ? "Kitchen" : nextRole === "Server" ? "Floor Service" : "Management",
+          };
+          setCurrentUser(user);
           setActiveNav(nextRole === "Kitchen" ? "Kitchen" : "Overview");
         }}
       />
@@ -5813,19 +11036,29 @@ export default function RestaurantApp() {
         soldOutItems={soldOutItems}
         onOrderCreated={handleOrderCreated}
         kitchenClosed={kitchenClosed}
+        restaurantSettings={storeSettings}
+        currencySymbol={storeSettings.currencySymbol || "₹"}
       />
     );
+
   const visibleNavGroups = getNavGroups(role);
+  const allowedPages = role ? roleNavGroups[role] : [];
+  const safeActiveNav = (role && allowedPages.includes(activeNav))
+    ? activeNav
+    : (allowedPages[0] || "Overview");
+
   const pageProps = {
     onBook: handleOpenBooking,
     onOrder: handleOpenNewOrder,
   };
   const page =
-    activeNav === "Overview" ? (
+    safeActiveNav === "Overview" ? (
       <OverviewPage
+        userName={currentUser?.name}
         onBook={handleOpenBooking}
         onOrder={handleOpenNewOrder}
         onWebsite={() => setShowWebsite(true)}
+        onNavigate={(page) => setActiveNav(page)}
         role={role}
         tables={tables}
         orders={orders}
@@ -5833,16 +11066,18 @@ export default function RestaurantApp() {
         onTableStatusChange={handleTableStatusChange}
         kitchenClosed={kitchenClosed}
         onToggleKitchenClosed={handleToggleKitchenClosed}
+        currencySymbol={storeSettings.currencySymbol || "₹"}
       />
-    ) : activeNav === "Reservations" ? (
+    ) : safeActiveNav === "Reservations" ? (
       <ReservationsPage
         bookings={bookings}
         onStatusChange={handleBookingStatusChange}
         onCancelBooking={handleCancelBooking}
         onBook={() => handleOpenBooking()}
         kitchenClosed={kitchenClosed}
+        currencySymbol={storeSettings.currencySymbol || "₹"}
       />
-    ) : activeNav === "Floor plan" ? (
+    ) : safeActiveNav === "Floor plan" ? (
       <FloorPlanPage
         tables={tables}
         bookings={bookings}
@@ -5855,15 +11090,16 @@ export default function RestaurantApp() {
         onDeleteTable={handleDeleteTable}
         kitchenClosed={kitchenClosed}
       />
-    ) : activeNav === "Orders" ? (
+    ) : safeActiveNav === "Orders" ? (
       <OrdersPage
         orders={orders}
         onStatusChange={handleStatusChange}
         onOrder={() => handleOpenNewOrder()}
         kitchenClosed={kitchenClosed}
         role={role}
+        currencySymbol={storeSettings.currencySymbol || "₹"}
       />
-    ) : activeNav === "Kitchen" ? (
+    ) : safeActiveNav === "Kitchen" ? (
       <KitchenPage
         orders={orders}
         menuItems={menuItems}
@@ -5875,35 +11111,101 @@ export default function RestaurantApp() {
         onToggleKitchenClosed={handleToggleKitchenClosed}
         role={role}
       />
-    ) : activeNav === "Menu" ? (
+    ) : safeActiveNav === "Menu" ? (
       <MenuPage
         menuItems={menuItems}
         onMenuItemsChange={setMenuItems}
         soldOutItems={soldOutItems}
         setSoldOutItems={setSoldOutItems}
         canManage={role === "Manager"}
+        currencySymbol={storeSettings.currencySymbol || "₹"}
       />
-    ) : activeNav === "Inventory" ? (
-      <InventoryPage />
-    ) : activeNav === "Billing" ? (
-      <BillingPage />
+    ) : safeActiveNav === "Inventory" ? (
+      <InventoryPage
+        currencySymbol={storeSettings.currencySymbol || "₹"}
+        role={role}
+        currentUser={currentUser}
+      />
+    ) : safeActiveNav === "Billing" ? (
+      <BillingPage
+        tables={tables}
+        orders={orders}
+        bookings={bookings}
+        menuItems={menuItems}
+        soldOutItems={soldOutItems}
+        restaurantSettings={storeSettings}
+        currencySymbol={storeSettings.currencySymbol || "₹"}
+        role={role}
+        servants={availableServants}
+        onTableStatusChange={handleTableStatusChange}
+        onOrderStatusChange={handleStatusChange}
+        onBookingStatusChange={handleBookingStatusChange}
+        onOrderCreated={handleOrderCreated}
+        onOrderUpdated={handleOrderUpdated}
+        onOrdersChange={setOrders}
+        onNavigateSettings={() => setActiveNav("Settings")}
+        onNavigateTransactions={() => setActiveNav("Transactions")}
+      />
+    ) : safeActiveNav === "Transactions" ? (
+      <TransactionsPage
+        currencySymbol={storeSettings.currencySymbol || "₹"}
+        role={role}
+        restaurantSettings={storeSettings}
+        onNavigateBilling={() => setActiveNav("Billing")}
+      />
+    ) : safeActiveNav === "Dashboard access" ? (
+      <DashboardAccessPage
+        onOpenPortal={() => setShowEmployeePortal(true)}
+        departments={departments}
+        onAddDepartment={handleAddDepartment}
+      />
+    ) : safeActiveNav === "Employees" || safeActiveNav === "Team" ? (
+      <EmployeesPage
+        onOpenPortal={() => setShowEmployeePortal(true)}
+        departments={departments}
+        onAddDepartment={handleAddDepartment}
+        onDeleteDepartment={handleDeleteDepartment}
+      />
+    ) : safeActiveNav === "Settings" ? (
+      <SettingsPage
+        currentUser={currentUser}
+        onUpdateCurrentUser={(updated) => {
+          setCurrentUser((prev) => (prev ? { ...prev, ...updated, systemRole: prev.systemRole } : null));
+        }}
+        stationPreferences={stationPreferences}
+        onUpdatePreferences={handleUpdatePreferences}
+        restaurantSettings={storeSettings}
+        onUpdateRestaurantSettings={handleUpdateStoreSettings}
+        departments={departments}
+        onAddDepartment={handleAddDepartment}
+        onDeleteDepartment={handleDeleteDepartment}
+      />
     ) : (
-      <TeamPage />
+      <div className="p-8 text-center text-[#84908a]">Page not available for this role.</div>
     );
+
   return (
-    <div className="paper-grid min-h-screen lg:flex">
-      <aside className="flex w-full flex-col border-b border-[#dfe1dc] bg-[#fbfaf7] lg:min-h-screen lg:w-64 lg:border-b-0 lg:border-r">
-        <div className="flex items-center justify-between px-6 py-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#24312e] text-[#f4bc83]">
-              <ChefHat size={21} />
-            </div>
-            <div>
-              <p className="display-font text-lg font-bold text-[#24312e]">
-                Table & Thyme
+    <div className="paper-grid min-h-screen lg:h-screen lg:overflow-hidden lg:flex">
+      <aside className="flex w-full flex-col border-b border-[#dfe1dc] bg-[#fbfaf7] lg:h-screen lg:w-64 lg:shrink-0 lg:overflow-y-auto sidebar-scroll lg:border-b-0 lg:border-r">
+        <div className="flex shrink-0 items-center justify-between px-6 py-6">
+          <div className="flex items-center gap-3 min-w-0">
+            {storeSettings.logoUrl ? (
+              <img
+                src={storeSettings.logoUrl}
+                alt={storeSettings.restaurantName || "Logo"}
+                className="h-10 w-10 rounded-xl object-contain border border-[#dfe1dc] bg-white p-0.5 shadow-2xs shrink-0"
+              />
+            ) : (
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#24312e] text-[#f4bc83] shrink-0">
+                <ChefHat size={21} />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="display-font text-lg font-bold text-[#24312e] truncate max-w-[130px]" title={storeSettings.restaurantName}>
+                {storeSettings.restaurantName || "Table & Thyme"}
               </p>
-              <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-[#84908a]">
-                Restaurant OS
+              <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-[#84908a] truncate">
+                {storeSettings.branchName || "Restaurant OS"}
               </p>
             </div>
           </div>
@@ -5924,7 +11226,7 @@ export default function RestaurantApp() {
                 <button
                   key={label}
                   onClick={() => setActiveNav(label)}
-                  className={`flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${activeNav === label ? "bg-[#e6eee5] text-[#315a3d]" : "text-[#74807a] hover:bg-[#f0f1ed]"}`}
+                  className={`flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${safeActiveNav === label ? "bg-[#e6eee5] text-[#315a3d]" : "text-[#74807a] hover:bg-[#f0f1ed]"}`}
                 >
                   <NavIcon size={18} strokeWidth={1.8} />
                   <span>{label}</span>
@@ -5933,34 +11235,66 @@ export default function RestaurantApp() {
             </div>
           ))}
         </nav>
-        <div className="mt-auto hidden border-t border-[#e4e5df] p-4 lg:block">
-          <button className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#74807a] hover:bg-[#f0f1ed]">
+        <div className="mt-auto shrink-0 hidden border-t border-[#e4e5df] p-4 lg:block sticky bottom-0 bg-[#fbfaf7]">
+          <button
+            onClick={() => setActiveNav("Settings")}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition cursor-pointer ${
+              safeActiveNav === "Settings"
+                ? "bg-[#e6eee5] text-[#315a3d]"
+                : "text-[#74807a] hover:bg-[#f0f1ed]"
+            }`}
+          >
             <Settings2 size={18} />
             Settings
           </button>
-          <div className="mt-4 flex items-center gap-3 rounded-xl bg-[#f0f1ed] p-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e5c7a6] text-xs font-bold text-[#684f37]">
-              AR
+          <div
+            onClick={() => setActiveNav("Settings")}
+            className="mt-4 flex items-center gap-3 rounded-xl bg-[#f0f1ed] p-3 cursor-pointer hover:bg-[#e7eae4] transition"
+            title="Click to view profile & settings"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f4bc83] text-xs font-bold text-[#684f37]">
+              {currentUser?.name
+                ? currentUser.name
+                    .split(" ")
+                    .map((w) => w[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase()
+                : role === "Kitchen"
+                ? "CS"
+                : role === "Server"
+                ? "AR"
+                : "PS"}
             </div>
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-[#24312e]">
-                Aarav Rao
+                {currentUser?.name || (role === "Kitchen" ? "Chef Sunita" : role === "Server" ? "Aarav Rao" : "Priya Shah")}
               </p>
-              <p className="text-[11px] text-[#84908a]">{role}</p>
+              <p className="truncate text-[11px] text-[#84908a]">
+                {currentUser?.department
+                  ? `${currentUser.department} (${role})`
+                  : role === "Kitchen"
+                  ? "Kitchen Lead (Kitchen)"
+                  : role === "Server"
+                  ? "Floor Server (Server)"
+                  : "General Manager (Manager)"}
+              </p>
             </div>
             <ChevronDown className="ml-auto text-[#84908a]" size={15} />
           </div>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:px-12 lg:py-10">
+      <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:h-screen lg:overflow-y-auto lg:px-12 lg:py-10">
         <header className="mb-8 flex items-center justify-between border-b border-[#e4e5df] pb-5">
           <div className="flex items-center gap-3 text-xs font-semibold text-[#84908a]">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e8f1e8] text-[#3b724c]">
               <UserRound size={16} />
             </div>
             <span>
-              Downtown branch <span className="mx-1 text-[#c0c5c1]">/</span>{" "}
-              {activeNav}
+              <span className="font-bold text-[#24312e]">{storeSettings.restaurantName || "Table & Thyme"}</span>
+              {storeSettings.branchName ? ` · ${storeSettings.branchName}` : ""}{" "}
+              <span className="mx-1 text-[#c0c5c1]">/</span>{" "}
+              {safeActiveNav}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -5971,11 +11305,31 @@ export default function RestaurantApp() {
               </div>
             )}
             <button
-              className="relative rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 text-[#68736e]"
+              onClick={() => setActiveNav("Settings")}
+              className={`rounded-xl border border-[#dfe1dc] p-3 transition cursor-pointer ${
+                safeActiveNav === "Settings"
+                  ? "bg-[#24312e] text-white shadow-xs"
+                  : "bg-[#fbfaf7] text-[#68736e] hover:bg-white hover:text-[#24312e]"
+              }`}
+              aria-label="Settings"
+              title="Station & User Settings"
+            >
+              <Settings2 size={18} />
+            </button>
+            <button
+              onClick={() => setShowNotificationCenter(true)}
+              className="relative rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 text-[#68736e] hover:bg-white hover:text-[#24312e] transition cursor-pointer"
               aria-label="Notifications"
+              title="Notifications"
             >
               <Bell size={18} />
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#b7623d]" />
+              {unreadNotificationCount > 0 ? (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b7623d] px-1 text-[9px] font-bold text-white shadow-xs">
+                  {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                </span>
+              ) : (
+                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              )}
             </button>
             {(role === "Server" || role === "Manager") && (
               <>
@@ -6008,7 +11362,10 @@ export default function RestaurantApp() {
               </>
             )}
             <button
-              onClick={() => setRole(null)}
+              onClick={() => {
+                setRole(null);
+                setCurrentUser(null);
+              }}
               className="hidden items-center gap-2 rounded-xl border border-[#dfe1dc] px-3 py-2.5 text-xs font-bold text-[#68736e] sm:flex hover:bg-white"
             >
               <LogOut size={16} />
@@ -6052,6 +11409,7 @@ export default function RestaurantApp() {
           initialTableId={selectedTableForBooking}
           kitchenClosed={kitchenClosed}
           onBookingCreated={handleBookingCreated}
+          currencySymbol={storeSettings.currencySymbol || "₹"}
           onClose={() => {
             setShowBooking(false);
             setSelectedTableForBooking(undefined);
@@ -6066,11 +11424,25 @@ export default function RestaurantApp() {
           initialTableId={selectedTableForOrder}
           kitchenClosed={kitchenClosed}
           role={role || undefined}
+          currencySymbol={storeSettings.currencySymbol || "₹"}
+          servants={availableServants}
           onOrderCreated={handleOrderCreated}
           onClose={() => {
             setShowNewOrder(false);
             setSelectedTableForOrder(undefined);
           }}
+        />
+      )}
+      {showEmployeePortal && (
+        <EmployeePortal onBackToApp={() => setShowEmployeePortal(false)} />
+      )}
+      {showNotificationCenter && role && (
+        <NotificationCenterModal
+          isOpen={showNotificationCenter}
+          onClose={() => setShowNotificationCenter(false)}
+          role={role as any}
+          onNavigate={(p) => setActiveNav(p as Page)}
+          onUnreadCountChange={(cnt) => setUnreadNotificationCount(cnt)}
         />
       )}
     </div>

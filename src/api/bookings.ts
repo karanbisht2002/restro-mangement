@@ -100,3 +100,45 @@ export async function cancelBooking(id: string): Promise<void> {
   });
   if (!response.ok) throw new Error("Unable to cancel booking.");
 }
+
+export type BookingStats = {
+  todayBookings: number;
+  todayExpectedGuests: number;
+  todayDeposit: number;
+  totalBookings: number;
+  totalExpectedGuests: number;
+  totalDeposit: number;
+  activeBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+};
+
+export async function fetchBookingStats(): Promise<BookingStats> {
+  const response = await fetch("/api/bookings/stats");
+  if (!response.ok) throw new Error("Unable to load booking stats.");
+  const result = (await response.json()) as {
+    data: {
+      today_bookings: number;
+      today_expected_guests: number;
+      today_deposit: number;
+      total_bookings: number;
+      total_expected_guests: number;
+      total_deposit: number;
+      active_bookings: number;
+      completed_bookings: number;
+      cancelled_bookings: number;
+    };
+  };
+  const d = result.data;
+  return {
+    todayBookings: d.today_bookings,
+    todayExpectedGuests: d.today_expected_guests,
+    todayDeposit: d.today_deposit,
+    totalBookings: d.total_bookings,
+    totalExpectedGuests: d.total_expected_guests,
+    totalDeposit: d.total_deposit,
+    activeBookings: d.active_bookings,
+    completedBookings: d.completed_bookings,
+    cancelledBookings: d.cancelled_bookings,
+  };
+}

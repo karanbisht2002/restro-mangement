@@ -9,5 +9,9 @@ export const managerPages: Page[] = [
   "Menu",
   "Inventory",
   "Billing",
+  "Transactions",
+  "Employees",
+  "Dashboard access",
   "Team",
+  "Settings",
 ];

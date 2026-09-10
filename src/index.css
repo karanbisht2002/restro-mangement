@@ -29,3 +29,18 @@ button {
     linear-gradient(90deg, rgba(36, 49, 46, 0.035) 1px, transparent 1px);
   background-size: 32px 32px;
 }
+
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(36, 49, 46, 0.15) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(36, 49, 46, 0.15);
+  border-radius: 9999px;
+}

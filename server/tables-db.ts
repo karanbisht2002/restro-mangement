@@ -7,6 +7,7 @@ import {
   type RestaurantTable,
   type TableStatus,
 } from "./schemas/table";
+import { createNotification } from "./notifications-db";
 
 const tableColumns = `
   id, seats, zone, status,
@@ -68,7 +69,40 @@ tablesDbRouter.patch("/:id/status", async (request: Request, response: Response)
       response.status(404).json({ error: "Table not found." });
       return;
     }
-    response.json({ data: result.rows[0] });
+
+    const updatedTable = result.rows[0];
+
+    if (targetStatus === "Needs cleaning") {
+      // 1. Manager notification (goes to Employee activities tab as requested)
+      createNotification({
+        targetRole: "Manager",
+        category: "employee",
+        type: "table_needs_cleaning",
+        title: `Table ${updatedTable.id} Needs Cleaning`,
+        summary: `Table ${updatedTable.id} (${updatedTable.zone}) is vacated and needs sanitizing and reset.`,
+        details: {
+          tableId: updatedTable.id,
+          zone: updatedTable.zone,
+          seats: updatedTable.seats,
+          serverName: updatedTable.serverName,
+        },
+      }).catch((err) => console.error("Notification error:", err));
+
+      // 2. Server notification
+      createNotification({
+        targetRole: "Server",
+        category: "station",
+        type: "table_needs_cleaning",
+        title: `Table ${updatedTable.id} Needs Cleaning`,
+        summary: `Table ${updatedTable.id} is vacated. Please clean and prepare for the next party.`,
+        details: {
+          tableId: updatedTable.id,
+          zone: updatedTable.zone,
+        },
+      }).catch((err) => console.error("Notification error:", err));
+    }
+
+    response.json({ data: updatedTable });
   } catch (error) {
     response
       .status(500)

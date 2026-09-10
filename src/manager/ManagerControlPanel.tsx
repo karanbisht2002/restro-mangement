@@ -2,14 +2,17 @@ import { useState } from "react";
 import {
   CalendarCheck,
   ChefHat,
+  Megaphone,
   Plus,
-  Settings2,
+  Send,
   Table2,
   Users,
   Utensils,
+  X,
 } from "lucide-react";
 import type { RestaurantTable } from "../api/tables";
 import type { TableBooking } from "../api/bookings";
+import { broadcastNotice } from "../api/notifications";
 
 interface ManagerControlPanelProps {
   onBookTable: (tableId?: string) => void;
@@ -32,12 +35,39 @@ export default function ManagerControlPanel({
   kitchenClosed = false,
   onToggleKitchenClosed,
 }: ManagerControlPanelProps) {
-  const [serverLive, setServerLive] = useState(true);
-  const [kitchenAccepting, setKitchenAccepting] = useState(true);
-  const [zone, setZone] = useState("Main floor");
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastTarget, setBroadcastTarget] = useState<"All" | "Kitchen" | "Server">("All");
+  const [broadcastTitle, setBroadcastTitle] = useState("");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastPriority, setBroadcastPriority] = useState<"Normal" | "Urgent">("Normal");
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [broadcastSuccess, setBroadcastSuccess] = useState(false);
 
   const availableTables = tables.filter((t) => t.status === "Available");
   const occupiedTables = tables.filter((t) => t.status === "Occupied");
+
+  const handleSendBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastTitle.trim() || !broadcastMessage.trim()) return;
+    setBroadcasting(true);
+    const res = await broadcastNotice({
+      targetRole: broadcastTarget,
+      title: broadcastTitle.trim(),
+      message: broadcastMessage.trim(),
+      priority: broadcastPriority,
+      sentBy: "Manager",
+    });
+    setBroadcasting(false);
+    if (res.success) {
+      setBroadcastSuccess(true);
+      setTimeout(() => {
+        setBroadcastSuccess(false);
+        setShowBroadcastModal(false);
+        setBroadcastTitle("");
+        setBroadcastMessage("");
+      }, 1200);
+    }
+  };
 
   return (
     <section className="mt-8 rounded-2xl border border-[#dfe1dc] bg-[#24312e] p-5 text-white sm:p-6 shadow-xl">
@@ -54,6 +84,14 @@ export default function ManagerControlPanel({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowBroadcastModal(true)}
+            className="flex items-center gap-1.5 rounded-full border border-[#f4bc83]/40 bg-[#3a4d45] px-3.5 py-1.5 text-xs font-bold text-[#f4bc83] transition hover:bg-[#465d53] shadow-sm"
+            title="Broadcast announcement to Kitchen, Server, or all staff"
+          >
+            <Megaphone size={14} />
+            Broadcast Notice
+          </button>
           {onToggleKitchenClosed && (
             <button
               onClick={onToggleKitchenClosed}
@@ -285,63 +323,120 @@ export default function ManagerControlPanel({
         )}
       </div>
 
-      {/* Shift Controls */}
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <button
-          onClick={() => setServerLive(!serverLive)}
-          className="rounded-xl border border-[#41504a] bg-[#30403a] p-3.5 text-left transition hover:border-[#f4bc83]"
-        >
-          <div className="flex items-center justify-between">
-            <Users size={18} className="text-[#f4bc83]" />
-            <span
-              className={`h-2.5 w-2.5 rounded-full ${serverLive ? "bg-[#9ac49f]" : "bg-[#d98865]"}`}
-            />
-          </div>
-          <p className="mt-3 text-xs font-bold">Server service</p>
-          <p className="mt-0.5 text-[11px] text-[#aab8b0]">
-            {serverLive
-              ? "Accepting table assignments"
-              : "Paused for reassignment"}
-          </p>
-        </button>
+      {/* Broadcast Notice Modal */}
+      {showBroadcastModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-[#44554e] bg-[#24312e] p-6 text-white shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-[#3b4b45] pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#374941] text-[#f4bc83]">
+                  <Megaphone size={18} />
+                </div>
+                <div>
+                  <h3 className="display-font text-lg font-bold text-white">Broadcast Announcement</h3>
+                  <p className="text-xs text-[#aab8b0]">Send instant notification to staff panels</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBroadcastModal(false)}
+                className="rounded-lg p-1.5 text-[#aab8b0] hover:bg-[#34443e] hover:text-white transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-        <button
-          onClick={() => setKitchenAccepting(!kitchenAccepting)}
-          className="rounded-xl border border-[#41504a] bg-[#30403a] p-3.5 text-left transition hover:border-[#f4bc83]"
-        >
-          <div className="flex items-center justify-between">
-            <ChefHat size={18} className="text-[#f4bc83]" />
-            <span
-              className={`h-2.5 w-2.5 rounded-full ${kitchenAccepting ? "bg-[#9ac49f]" : "bg-[#d98865]"}`}
-            />
-          </div>
-          <p className="mt-3 text-xs font-bold">Kitchen intake</p>
-          <p className="mt-0.5 text-[11px] text-[#aab8b0]">
-            {kitchenAccepting
-              ? "Receiving new kitchen tickets"
-              : "Paused for kitchen maintenance"}
-          </p>
-        </button>
+            {broadcastSuccess ? (
+              <div className="py-8 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#3b724c]/30 text-[#9ac49f]">
+                  ✓
+                </div>
+                <h4 className="text-base font-bold text-white">Announcement Broadcasted!</h4>
+                <p className="mt-1 text-xs text-[#aab8b0]">
+                  Delivered to {broadcastTarget === "All" ? "all staff panels" : `${broadcastTarget} panel`} successfully.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSendBroadcast} className="mt-4 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#aab8b0] mb-1.5">
+                      Target Audience
+                    </label>
+                    <select
+                      value={broadcastTarget}
+                      onChange={(e) => setBroadcastTarget(e.target.value as any)}
+                      className="w-full rounded-xl border border-[#44554e] bg-[#1a2522] px-3 py-2 text-xs font-semibold text-white focus:border-[#f4bc83] focus:outline-none"
+                    >
+                      <option value="All">All Panels (Kitchen & Server)</option>
+                      <option value="Kitchen">Kitchen Station Only</option>
+                      <option value="Server">Servant / Waitstaff Only</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#aab8b0] mb-1.5">
+                      Priority Level
+                    </label>
+                    <select
+                      value={broadcastPriority}
+                      onChange={(e) => setBroadcastPriority(e.target.value as any)}
+                      className="w-full rounded-xl border border-[#44554e] bg-[#1a2522] px-3 py-2 text-xs font-semibold text-white focus:border-[#f4bc83] focus:outline-none"
+                    >
+                      <option value="Normal">Normal Notice</option>
+                      <option value="Urgent">🚨 Urgent Alert</option>
+                    </select>
+                  </div>
+                </div>
 
-        <label className="rounded-xl border border-[#41504a] bg-[#30403a] p-3.5 text-left">
-          <div className="flex items-center justify-between">
-            <Table2 size={18} className="text-[#f4bc83]" />
-            <Settings2 size={15} className="text-[#aab8b0]" />
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#aab8b0] mb-1.5">
+                    Notice Headline
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g., Rush Hour Prep / 86 Butter Chicken"
+                    value={broadcastTitle}
+                    onChange={(e) => setBroadcastTitle(e.target.value)}
+                    className="w-full rounded-xl border border-[#44554e] bg-[#1a2522] px-3.5 py-2 text-xs text-white placeholder-[#6f8279] focus:border-[#f4bc83] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#aab8b0] mb-1.5">
+                    Message Details
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="Enter message text that will be shown in the notification drawer..."
+                    value={broadcastMessage}
+                    onChange={(e) => setBroadcastMessage(e.target.value)}
+                    className="w-full resize-none rounded-xl border border-[#44554e] bg-[#1a2522] px-3.5 py-2 text-xs text-white placeholder-[#6f8279] focus:border-[#f4bc83] focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2.5 pt-2 border-t border-[#3b4b45]">
+                  <button
+                    type="button"
+                    onClick={() => setShowBroadcastModal(false)}
+                    className="rounded-xl border border-[#44554e] px-4 py-2 text-xs font-bold text-[#aab8b0] hover:bg-[#34443e] hover:text-white transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={broadcasting || !broadcastTitle.trim() || !broadcastMessage.trim()}
+                    className="flex items-center gap-2 rounded-xl bg-[#f4bc83] px-5 py-2 text-xs font-bold text-[#24312e] hover:bg-[#e6ab6e] transition disabled:opacity-50"
+                  >
+                    <Send size={13} />
+                    {broadcasting ? "Sending..." : "Dispatch Broadcast"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
-          <span className="mt-3 block text-xs font-bold">
-            Active server zone
-          </span>
-          <select
-            value={zone}
-            onChange={(event) => setZone(event.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-[#52625b] bg-[#24312e] px-2 py-1.5 text-xs font-bold text-white outline-none"
-          >
-            <option>Main floor</option>
-            <option>Garden patio</option>
-            <option>Private dining</option>
-          </select>
-        </label>
-      </div>
+        </div>
+      )}
     </section>
   );
 }

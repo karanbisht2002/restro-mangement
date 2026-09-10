@@ -7,7 +7,7 @@ function normalizeOrder(order: ApiOrder): Order {
     ...order,
     total:
       typeof order.total === "number"
-        ? `₹${order.total.toLocaleString("en-IN")}`
+        ? String(order.total)
         : order.total,
   };
 }
@@ -25,8 +25,10 @@ export async function createOrder(
     table: string;
     itemList: string[];
     total: number;
+    serverName?: string;
     orderType?: "Dine in" | "Takeaway";
     notes?: string;
+    source?: "website" | "manager" | "server";
   },
   role?: StaffRole,
 ): Promise<Order> {
@@ -35,6 +37,7 @@ export async function createOrder(
     headers: {
       "Content-Type": "application/json",
       ...(role ? { "x-staff-role": role } : {}),
+      ...(input.source ? { "x-order-source": input.source } : {}),
     },
     body: JSON.stringify({ ...input, role }),
   });
@@ -73,6 +76,32 @@ export async function updateOrderStatus(
     throw new Error(
       errJson?.error || `Unable to update order status (${response.status}).`,
     );
+  }
+  const result = (await response.json()) as { data: ApiOrder };
+  return normalizeOrder(result.data);
+}
+
+export async function updateOrder(
+  id: string,
+  updates: Partial<{
+    status: OrderStatus;
+    itemList: string[];
+    total: number;
+    customer: string;
+    serverName: string;
+  }>,
+): Promise<Order> {
+  const cleanId = encodeURIComponent(id.trim());
+  const response = await fetch(`/api/orders/${cleanId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updates),
+  });
+  if (!response.ok) {
+    const errJson = await response.json().catch(() => null);
+    throw new Error(errJson?.error || "Unable to update order.");
   }
   const result = (await response.json()) as { data: ApiOrder };
   return normalizeOrder(result.data);

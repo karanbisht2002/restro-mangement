@@ -8,6 +8,7 @@ import {
   type TableBooking,
 } from "./schemas/booking";
 import { isKitchenClosed } from "./kitchen-db";
+import { createNotification } from "./notifications-db";
 
 const bookingColumns = `
   id, customer, phone,
@@ -67,6 +68,39 @@ bookingsDbRouter.get("/", async (request: Request, response: Response) => {
     response
       .status(503)
       .json({ error: "Database unavailable.", details: String(error) });
+  }
+});
+
+bookingsDbRouter.get("/stats", async (_request: Request, response: Response) => {
+  try {
+    const result = await pool.query<{
+      today_bookings: number;
+      today_expected_guests: number;
+      today_deposit: number;
+      total_bookings: number;
+      total_expected_guests: number;
+      total_deposit: number;
+      active_bookings: number;
+      completed_bookings: number;
+      cancelled_bookings: number;
+    }>(`
+      SELECT
+        COUNT(CASE WHEN booking_date = CURRENT_DATE THEN 1 END)::int AS today_bookings,
+        COALESCE(SUM(CASE WHEN booking_date = CURRENT_DATE AND status NOT IN ('Cancelled', 'No show') THEN guests ELSE 0 END), 0)::int AS today_expected_guests,
+        COALESCE(SUM(CASE WHEN booking_date = CURRENT_DATE AND status NOT IN ('Cancelled', 'No show') THEN deposit ELSE 0 END), 0)::float AS today_deposit,
+        COUNT(*)::int AS total_bookings,
+        COALESCE(SUM(CASE WHEN status NOT IN ('Cancelled', 'No show') THEN guests ELSE 0 END), 0)::int AS total_expected_guests,
+        COALESCE(SUM(CASE WHEN status NOT IN ('Cancelled', 'No show') THEN deposit ELSE 0 END), 0)::float AS total_deposit,
+        COUNT(CASE WHEN status IN ('Booked', 'Arrived', 'Seated') THEN 1 END)::int AS active_bookings,
+        COUNT(CASE WHEN status = 'Completed' THEN 1 END)::int AS completed_bookings,
+        COUNT(CASE WHEN status IN ('Cancelled', 'No show') THEN 1 END)::int AS cancelled_bookings
+      FROM table_bookings
+    `);
+    response.json({ data: result.rows[0] });
+  } catch (error) {
+    response
+      .status(500)
+      .json({ error: "Failed to fetch booking stats.", details: String(error) });
   }
 });
 
@@ -148,6 +182,44 @@ bookingsDbRouter.post("/", async (request: Request, response: Response) => {
         [booking.tableId],
       );
     }
+
+    // 1. Notify Manager (Customer activities tab)
+    createNotification({
+      targetRole: "Manager",
+      category: "customer",
+      type: "table_booked",
+      title: `Table Booked: ${booking.customer}`,
+      summary: `${booking.customer} reserved for ${booking.guests} guest${booking.guests > 1 ? "s" : ""} on ${booking.bookingDate} at ${booking.bookingTime}${booking.tableId ? ` (${booking.tableId})` : ""}`,
+      details: {
+        bookingId,
+        customer: booking.customer,
+        phone: booking.phone,
+        guests: booking.guests,
+        date: booking.bookingDate,
+        time: booking.bookingTime,
+        tableId: booking.tableId,
+        deposit: booking.deposit,
+        specialRequests: booking.specialRequests,
+      },
+    }).catch((err) => console.error("Error creating booking notification for manager:", err));
+
+    // 2. Notify Server
+    createNotification({
+      targetRole: "Server",
+      category: "customer",
+      type: "table_booked",
+      title: `New Reservation: ${booking.customer}`,
+      summary: `Party of ${booking.guests} booked for ${booking.bookingDate} at ${booking.bookingTime}${booking.tableId ? ` (${booking.tableId})` : ""}`,
+      details: {
+        bookingId,
+        customer: booking.customer,
+        phone: booking.phone,
+        guests: booking.guests,
+        date: booking.bookingDate,
+        time: booking.bookingTime,
+        tableId: booking.tableId,
+      },
+    }).catch((err) => console.error("Error creating booking notification for server:", err));
 
     response.status(201).json({ data: result.rows[0] });
   } catch (error) {

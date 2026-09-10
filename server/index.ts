@@ -8,6 +8,11 @@ import { ordersDbRouter } from "./orders-db";
 import { bookingsDbRouter } from "./bookings-db";
 import { tablesDbRouter } from "./tables-db";
 import { kitchenDbRouter } from "./kitchen-db";
+import { overviewDbRouter } from "./overview-db";
+import { teamDbRouter } from "./team-db";
+import { transactionsDbRouter } from "./transactions-db";
+import { inventoryDbRouter } from "./inventory-db";
+import { notificationsDbRouter } from "./notifications-db";
 
 const app = express();
 const port = Number(process.env.PORT) || 4000;
@@ -19,6 +24,11 @@ app.use("/api/orders", ordersDbRouter);
 app.use("/api/bookings", bookingsDbRouter);
 app.use("/api/tables", tablesDbRouter);
 app.use("/api/kitchen", kitchenDbRouter);
+app.use("/api/overview", overviewDbRouter);
+app.use("/api/team", teamDbRouter);
+app.use("/api/transactions", transactionsDbRouter);
+app.use("/api/inventory", inventoryDbRouter);
+app.use("/api/notifications", notificationsDbRouter);
 
 app.get("/api/health", async (_request, response) => {
   try {

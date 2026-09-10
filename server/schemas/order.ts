@@ -4,6 +4,8 @@ export const orderStatuses = [
   "Ready",
   "Notified",
   "Served",
+  "Paid",
+  "Cancelled",
 ] as const;
 
 export type OrderStatus = (typeof orderStatuses)[number];
@@ -19,6 +21,7 @@ export type Order = {
   itemList: string[];
   total: number;
   status: OrderStatus;
+  serverName?: string;
   orderType?: OrderType;
   notes?: string;
   createdAt: string;
@@ -30,6 +33,7 @@ export type OrderInput = {
   table: string;
   itemList: string[];
   total: number;
+  serverName?: string;
   orderType?: OrderType;
   notes?: string;
 };
@@ -76,6 +80,7 @@ export function validateOrderInput(body: unknown): {
       table: input.table!.trim(),
       itemList: input.itemList!.map((item) => item.trim()),
       total: Number(input.total!.toFixed(2)),
+      serverName: typeof input.serverName === "string" ? input.serverName.trim() : undefined,
       orderType: input.orderType ?? (input.table!.toLowerCase().includes("takeaway") ? "Takeaway" : "Dine in"),
       notes: typeof input.notes === "string" ? input.notes.trim() : "",
     },

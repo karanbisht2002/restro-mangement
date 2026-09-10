@@ -7,7 +7,11 @@ export type Page =
   | "Menu"
   | "Inventory"
   | "Billing"
-  | "Team";
+  | "Transactions"
+  | "Employees"
+  | "Dashboard access"
+  | "Team"
+  | "Settings";
 
 export type StaffRole = "Manager" | "Server" | "Kitchen";
 export type OrderStatus =
@@ -15,7 +19,9 @@ export type OrderStatus =
   | "Preparing"
   | "Ready"
   | "Notified"
-  | "Served";
+  | "Served"
+  | "Paid"
+  | "Cancelled";
 
 export type Order = {
   id: string;
@@ -25,4 +31,26 @@ export type Order = {
   itemList: string[];
   total: string;
   status: OrderStatus;
+  serverName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
+
+export type TransactionRecord = {
+  id: string;
+  invoiceNo: string;
+  sessionTitle: string;
+  customer: string;
+  servant: string;
+  amount: number;
+  paymentMode: string;
+  status: "Success" | "Failed";
+  failureReason?: string;
+  items: any[];
+  taxAmount: number;
+  serviceChargeAmount: number;
+  discountAmount: number;
+  depositCredit: number;
+  createdAt: string;
+};
+

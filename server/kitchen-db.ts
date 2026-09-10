@@ -27,8 +27,8 @@ export function getKitchenStatusData() {
 
 export const kitchenDbRouter: Router = createRouter();
 
-// GET /api/kitchen/status
-kitchenDbRouter.get("/status", (_request: Request, response: Response) => {
+// GET /api/kitchen & GET /api/kitchen/status
+kitchenDbRouter.get(["/", "/status"], (_request: Request, response: Response) => {
   response.json({
     data: getKitchenStatusData(),
   });
