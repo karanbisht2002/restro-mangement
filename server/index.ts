@@ -19,7 +19,16 @@ import { payuPaymentsRouter } from "./payments-payu";
 
 const app = express();
 const port = Number(process.env.PORT) || 4000;
+const host = process.env.HOST || "127.0.0.1";
 
+app.disable("x-powered-by");
+app.set("trust proxy", 1);
+app.use((_request, response, next) => {
+  response.setHeader("X-Content-Type-Options", "nosniff");
+  response.setHeader("X-Frame-Options", "SAMEORIGIN");
+  response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 app.use("/api/items", itemsDbRouter);
@@ -75,10 +84,10 @@ if (useHttps) {
     },
     app,
   ).listen(port, () =>
-    console.log(`API listening on ${protocol}://localhost:${port}`),
+    console.log(`API listening on ${protocol}://${host}:${port}`),
   );
 } else {
-  app.listen(port, () =>
-    console.log(`API listening on ${protocol}://localhost:${port}`),
+  app.listen(port, host, () =>
+    console.log(`API listening on ${protocol}://${host}:${port}`),
   );
 }

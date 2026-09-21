@@ -19,7 +19,9 @@ interface PayUCredentials {
 async function getPayUCredentials(): Promise<PayUCredentials> {
   let merchantKey = process.env.PAYU_MERCHANT_KEY || "";
   let merchantSalt = process.env.PAYU_MERCHANT_SALT || "";
-  let testMode = process.env.PAYU_TEST_MODE ? process.env.PAYU_TEST_MODE !== "false" : true;
+  let testMode = process.env.PAYU_TEST_MODE
+    ? process.env.PAYU_TEST_MODE !== "false"
+    : true;
   let reservationDeposit = 500;
   let currencySymbol = "₹";
 
@@ -28,16 +30,21 @@ async function getPayUCredentials(): Promise<PayUCredentials> {
       `SELECT payu_merchant_key, payu_merchant_salt, payu_test_mode, reservation_deposit, currency_symbol 
        FROM restaurant_settings 
        WHERE id = 'default' 
-       LIMIT 1`
+       LIMIT 1`,
     );
     if (res.rows.length > 0) {
       const row = res.rows[0];
-      if (row.payu_merchant_key) merchantKey = String(row.payu_merchant_key).trim();
-      if (row.payu_merchant_salt) merchantSalt = String(row.payu_merchant_salt).trim();
+      if (row.payu_merchant_key)
+        merchantKey = String(row.payu_merchant_key).trim();
+      if (row.payu_merchant_salt)
+        merchantSalt = String(row.payu_merchant_salt).trim();
       if (row.payu_test_mode !== null && row.payu_test_mode !== undefined) {
         testMode = Boolean(row.payu_test_mode);
       }
-      if (row.reservation_deposit !== null && row.reservation_deposit !== undefined) {
+      if (
+        row.reservation_deposit !== null &&
+        row.reservation_deposit !== undefined
+      ) {
         reservationDeposit = Number(row.reservation_deposit);
       }
       if (row.currency_symbol) currencySymbol = row.currency_symbol;
@@ -144,7 +151,8 @@ payuPaymentsRouter.post("/init", async (req, res) => {
       origin: clientOrigin,
     } = req.body;
 
-    const { merchantKey, merchantSalt, testMode, reservationDeposit } = await getPayUCredentials();
+    const { merchantKey, merchantSalt, testMode, reservationDeposit } =
+      await getPayUCredentials();
 
     const finalAmount = (
       typeof amount === "number" && amount >= 0 ? amount : reservationDeposit
@@ -152,7 +160,8 @@ payuPaymentsRouter.post("/init", async (req, res) => {
 
     const firstname = (guestName || "Guest").trim().split(" ")[0] || "Guest";
     const userEmail = (email || "guest@tableandthyme.in").trim();
-    const userPhone = (phone || "9999999999").replace(/\D/g, "").slice(-10) || "9999999999";
+    const userPhone =
+      (phone || "9999999999").replace(/\D/g, "").slice(-10) || "9999999999";
     const productinfo = "Table Reservation Deposit";
 
     const udf1 = String(bookingDate || "").trim();
@@ -169,10 +178,14 @@ payuPaymentsRouter.post("/init", async (req, res) => {
       ? "https://test.payu.in/_payment"
       : "https://secure.payu.in/_payment";
 
+    const configuredOrigin = process.env.APP_URL?.replace(/\/+$/, "");
     const resolvedOrigin =
+      configuredOrigin ||
       clientOrigin ||
       (req.headers.origin as string) ||
-      (req.headers.referer ? new URL(req.headers.referer).origin : "http://localhost:5173");
+      (req.headers.referer
+        ? new URL(req.headers.referer).origin
+        : "http://localhost:5173");
 
     const callbackUrl = `${resolvedOrigin}/api/payments/callback?origin=${encodeURIComponent(resolvedOrigin)}`;
 
@@ -256,11 +269,17 @@ payuPaymentsRouter.post("/init", async (req, res) => {
         udf4,
         udf5,
       },
-      message: "PayU test intent generated. Real PayU transactions execute when Merchant Key & Salt are saved in Dashboard Settings.",
+      message:
+        "PayU test intent generated. Real PayU transactions execute when Merchant Key & Salt are saved in Dashboard Settings.",
     });
   } catch (err: any) {
     console.error("PayU initialization error:", err);
-    res.status(500).json({ success: false, error: err.message || "Failed to initialize PayU payment" });
+    res
+      .status(500)
+      .json({
+        success: false,
+        error: err.message || "Failed to initialize PayU payment",
+      });
   }
 });
 
@@ -274,7 +293,9 @@ payuPaymentsRouter.post("/verify", async (req, res) => {
     const resolvedTxnId = txnid || paymentId;
 
     if (!resolvedTxnId) {
-      return res.status(400).json({ success: false, error: "Transaction ID (txnid) is required" });
+      return res
+        .status(400)
+        .json({ success: false, error: "Transaction ID (txnid) is required" });
     }
 
     res.json({
@@ -328,7 +349,7 @@ payuPaymentsRouter.post("/callback", async (req, res) => {
       // Check if booking already recorded for this transaction
       const existing = await pool.query(
         "SELECT id FROM table_bookings WHERE payu_payment_id = $1 LIMIT 1",
-        [payuId]
+        [payuId],
       );
 
       let savedBookingId = bookingId;
@@ -351,7 +372,7 @@ payuPaymentsRouter.post("/callback", async (req, res) => {
             depositAmount,
             specialRequests || "",
             payuId,
-          ]
+          ],
         );
         savedBookingId = insertRes.rows[0].id;
       } else {
@@ -359,32 +380,39 @@ payuPaymentsRouter.post("/callback", async (req, res) => {
       }
 
       return res.redirect(
-        `${origin}/?booking_success=true&booking_id=${encodeURIComponent(savedBookingId)}&txnid=${encodeURIComponent(payuId)}&customer=${encodeURIComponent(customer)}&date=${encodeURIComponent(bookingDate || "")}&time=${encodeURIComponent(bookingTime || "")}&guests=${guestsCount}&deposit=${depositAmount}#reservation`
+        `${origin}/?booking_success=true&booking_id=${encodeURIComponent(savedBookingId)}&txnid=${encodeURIComponent(payuId)}&customer=${encodeURIComponent(customer)}&date=${encodeURIComponent(bookingDate || "")}&time=${encodeURIComponent(bookingTime || "")}&guests=${guestsCount}&deposit=${depositAmount}#reservation`,
       );
     } else {
-      const errorMsg = error_Message || req.body.field9 || "Payment was cancelled or failed on PayU.";
+      const errorMsg =
+        error_Message ||
+        req.body.field9 ||
+        "Payment was cancelled or failed on PayU.";
       return res.redirect(
-        `${origin}/?booking_error=${encodeURIComponent(errorMsg)}#reservation`
+        `${origin}/?booking_error=${encodeURIComponent(errorMsg)}#reservation`,
       );
     }
   } catch (err: any) {
     console.error("PayU callback error:", err);
-    const origin = req.query.origin ? String(req.query.origin) : "http://localhost:5173";
+    const origin = req.query.origin
+      ? String(req.query.origin)
+      : "http://localhost:5173";
     return res.redirect(
-      `${origin}/?booking_error=${encodeURIComponent("Failed to finalize PayU reservation.")}#reservation`
+      `${origin}/?booking_error=${encodeURIComponent("Failed to finalize PayU reservation.")}#reservation`,
     );
   }
 });
 
 // Also support GET /callback in case of browser fallbacks
 payuPaymentsRouter.get("/callback", async (req, res) => {
-  const origin = req.query.origin ? String(req.query.origin) : "http://localhost:5173";
+  const origin = req.query.origin
+    ? String(req.query.origin)
+    : "http://localhost:5173";
   if (req.query.status === "success") {
     return res.redirect(
-      `${origin}/?booking_success=true&txnid=${encodeURIComponent(String(req.query.txnid || ""))}&deposit=500#reservation`
+      `${origin}/?booking_success=true&txnid=${encodeURIComponent(String(req.query.txnid || ""))}&deposit=500#reservation`,
     );
   }
   return res.redirect(
-    `${origin}/?booking_error=${encodeURIComponent(String(req.query.msg || "PayU transaction finished."))}#reservation`
+    `${origin}/?booking_error=${encodeURIComponent(String(req.query.msg || "PayU transaction finished."))}#reservation`,
   );
 });

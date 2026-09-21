@@ -71,7 +71,12 @@ import TableOrderPage from "./components/TableOrderPage";
 import WebsiteCmsPage from "./manager/WebsiteCmsPage";
 import { BlogPostPage } from "./components/BlogPostPage";
 
-export type AppRoute = "landing" | "dashboard" | "employee" | "orderfromtable" | "blog";
+export type AppRoute =
+  | "landing"
+  | "dashboard"
+  | "employee"
+  | "orderfromtable"
+  | "blog";
 
 export function getRouteFromPath(pathname: string): AppRoute {
   const clean = (pathname || "").toLowerCase().replace(/\/+$/, "") || "/";
@@ -86,10 +91,7 @@ export function getRouteFromPath(pathname: string): AppRoute {
   ) {
     return "employee";
   }
-  if (
-    clean === "/orderfromtable" ||
-    clean.startsWith("/orderfromtable/")
-  ) {
+  if (clean === "/orderfromtable" || clean.startsWith("/orderfromtable/")) {
     return "orderfromtable";
   }
   if (
@@ -111,7 +113,10 @@ import { fetchTransactions, recordTransaction } from "./api/transactions";
 import type { TransactionRecord } from "./types";
 import { fetchOverviewMetrics, type OverviewData } from "./api/overview";
 
-export function formatMoney(amount: number | string, symbol: string = "₹"): string {
+export function formatMoney(
+  amount: number | string,
+  symbol: string = "₹",
+): string {
   if (typeof amount === "number") {
     return `${symbol}${amount.toLocaleString()}`;
   }
@@ -136,7 +141,12 @@ import ServantControlPanel from "./servant/ServantControlPanel";
 import { managerPages } from "./manager/permissions";
 import { serverPages } from "./servant/permissions";
 import type { Order, OrderStatus, Page, StaffRole } from "./types";
-import { createOrder, fetchOrders, updateOrderStatus, updateOrder } from "./api/orders";
+import {
+  createOrder,
+  fetchOrders,
+  updateOrderStatus,
+  updateOrder,
+} from "./api/orders";
 import {
   createMenuItem,
   fetchMenuItems,
@@ -235,12 +245,12 @@ const roleNavGroups: Record<StaffRole, Page[]> = {
 };
 
 function getNavGroups(role: StaffRole) {
+  const allowedPages = roleNavGroups[role];
+
   return navGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter(({ label }) =>
-        roleNavGroups[role].includes(label),
-      ),
+      items: group.items.filter(({ label }) => allowedPages.includes(label)),
     }))
     .filter((group) => group.items.length > 0);
 }
@@ -300,16 +310,76 @@ const initialOrders: Order[] = [
   },
 ];
 const initialTables: RestaurantTable[] = [
-  { id: "T01", seats: 2, zone: "Window", status: "Available", serverName: "Priya S." },
-  { id: "T02", seats: 4, zone: "Family", status: "Occupied", serverName: "Aarav R." },
-  { id: "T03", seats: 4, zone: "Family", status: "Needs cleaning", serverName: "Aarav R." },
-  { id: "T04", seats: 6, zone: "Garden", status: "Available", serverName: "Vikram K." },
-  { id: "T05", seats: 2, zone: "Window", status: "Booked", serverName: "Priya S." },
-  { id: "T06", seats: 8, zone: "Family", status: "Occupied", serverName: "Aarav R." },
-  { id: "T07", seats: 4, zone: "Garden", status: "Available", serverName: "Vikram K." },
-  { id: "T08", seats: 6, zone: "Smoking", status: "Occupied", serverName: "Priya S." },
-  { id: "T09", seats: 2, zone: "Window", status: "Available", serverName: "Priya S." },
-  { id: "T10", seats: 4, zone: "Family", status: "Booked", serverName: "Aarav R." },
+  {
+    id: "T01",
+    seats: 2,
+    zone: "Window",
+    status: "Available",
+    serverName: "Priya S.",
+  },
+  {
+    id: "T02",
+    seats: 4,
+    zone: "Family",
+    status: "Occupied",
+    serverName: "Aarav R.",
+  },
+  {
+    id: "T03",
+    seats: 4,
+    zone: "Family",
+    status: "Needs cleaning",
+    serverName: "Aarav R.",
+  },
+  {
+    id: "T04",
+    seats: 6,
+    zone: "Garden",
+    status: "Available",
+    serverName: "Vikram K.",
+  },
+  {
+    id: "T05",
+    seats: 2,
+    zone: "Window",
+    status: "Booked",
+    serverName: "Priya S.",
+  },
+  {
+    id: "T06",
+    seats: 8,
+    zone: "Family",
+    status: "Occupied",
+    serverName: "Aarav R.",
+  },
+  {
+    id: "T07",
+    seats: 4,
+    zone: "Garden",
+    status: "Available",
+    serverName: "Vikram K.",
+  },
+  {
+    id: "T08",
+    seats: 6,
+    zone: "Smoking",
+    status: "Occupied",
+    serverName: "Priya S.",
+  },
+  {
+    id: "T09",
+    seats: 2,
+    zone: "Window",
+    status: "Available",
+    serverName: "Priya S.",
+  },
+  {
+    id: "T10",
+    seats: 4,
+    zone: "Family",
+    status: "Booked",
+    serverName: "Aarav R.",
+  },
 ];
 
 const initialReservations: TableBooking[] = [
@@ -382,8 +452,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Small plates",
     price: 420,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80",
-    description: "Steamed bao filled with roasted wild mushrooms and truffle aioli.",
+    image:
+      "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Steamed bao filled with roasted wild mushrooms and truffle aioli.",
     available: true,
     preparationTimeMinutes: 12,
     allergens: ["gluten", "soy"],
@@ -397,8 +469,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Small plates",
     price: 480,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=800&q=80",
-    description: "Cottage cheese cubes marinated in Kashmiri chili and mustard oil, roasted over charcoal.",
+    image:
+      "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Cottage cheese cubes marinated in Kashmiri chili and mustard oil, roasted over charcoal.",
     available: true,
     preparationTimeMinutes: 15,
     allergens: ["dairy"],
@@ -412,8 +486,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Small plates",
     price: 390,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
-    description: "Wok-tossed lotus stem glazed in hot honey, garlic chili oil, and toasted sesame.",
+    image:
+      "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Wok-tossed lotus stem glazed in hot honey, garlic chili oil, and toasted sesame.",
     available: true,
     preparationTimeMinutes: 10,
     allergens: ["sesame", "soy"],
@@ -427,8 +503,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Small plates",
     price: 620,
     type: "non-veg",
-    image: "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=800&q=80",
-    description: "Tender hand-minced lamb skewers perfumed with smoked cloves, mace, and mint chutney.",
+    image:
+      "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Tender hand-minced lamb skewers perfumed with smoked cloves, mace, and mint chutney.",
     available: true,
     preparationTimeMinutes: 18,
     allergens: ["dairy"],
@@ -442,8 +520,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Small plates",
     price: 650,
     type: "non-veg",
-    image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80",
-    description: "Golden crisp butterflied prawns tossed in sriracha tobanjan glaze and scallions.",
+    image:
+      "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Golden crisp butterflied prawns tossed in sriracha tobanjan glaze and scallions.",
     available: true,
     preparationTimeMinutes: 14,
     allergens: ["crustacean", "egg"],
@@ -459,8 +539,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Mains",
     price: 680,
     type: "non-veg",
-    image: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=800&q=80",
-    description: "Smoked chicken tikka in silky slow-reduced tomato gravy balanced with fresh citrus zest and fenugreek.",
+    image:
+      "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Smoked chicken tikka in silky slow-reduced tomato gravy balanced with fresh citrus zest and fenugreek.",
     available: true,
     preparationTimeMinutes: 20,
     allergens: ["dairy"],
@@ -474,8 +556,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Mains",
     price: 590,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1633964913295-ceb43826e7c9?auto=format&fit=crop&w=800&q=80",
-    description: "Creamy aged carnaroli rice with wild porcini, parmesan crisp, and white truffle oil.",
+    image:
+      "https://images.unsplash.com/photo-1633964913295-ceb43826e7c9?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Creamy aged carnaroli rice with wild porcini, parmesan crisp, and white truffle oil.",
     available: true,
     preparationTimeMinutes: 22,
     allergens: ["dairy"],
@@ -489,8 +573,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Mains",
     price: 490,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80",
-    description: "Black lentils simmered overnight over clay oven embers with churned white butter.",
+    image:
+      "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Black lentils simmered overnight over clay oven embers with churned white butter.",
     available: true,
     preparationTimeMinutes: 15,
     allergens: ["dairy"],
@@ -504,8 +590,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Mains",
     price: 890,
     type: "non-veg",
-    image: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=800&q=80",
-    description: "Crispy skin Atlantic salmon over sweet edamame puree, grilled asparagus, and lemon butter.",
+    image:
+      "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Crispy skin Atlantic salmon over sweet edamame puree, grilled asparagus, and lemon butter.",
     available: true,
     preparationTimeMinutes: 25,
     allergens: ["fish", "dairy"],
@@ -519,8 +607,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Mains",
     price: 640,
     type: "non-veg",
-    image: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80",
-    description: "Fragrant aged basmati rice dum-cooked with tender spiced chicken, saffron, and browned onions.",
+    image:
+      "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Fragrant aged basmati rice dum-cooked with tender spiced chicken, saffron, and browned onions.",
     available: true,
     preparationTimeMinutes: 25,
     allergens: ["dairy"],
@@ -534,8 +624,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Mains",
     price: 560,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1587740896339-96a76170508d?auto=format&fit=crop&w=800&q=80",
-    description: "Handmade pasta pillows filled with whipped ricotta and baby spinach in sage brown butter.",
+    image:
+      "https://images.unsplash.com/photo-1587740896339-96a76170508d?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Handmade pasta pillows filled with whipped ricotta and baby spinach in sage brown butter.",
     available: true,
     preparationTimeMinutes: 18,
     allergens: ["gluten", "dairy", "egg"],
@@ -551,8 +643,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Sides & Breads",
     price: 120,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1626074353765-517a681e40be?auto=format&fit=crop&w=800&q=80",
-    description: "Blistered clay-oven flatbread brushed with roasted garlic butter and fresh cilantro.",
+    image:
+      "https://images.unsplash.com/photo-1626074353765-517a681e40be?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Blistered clay-oven flatbread brushed with roasted garlic butter and fresh cilantro.",
     available: true,
     preparationTimeMinutes: 6,
     allergens: ["gluten", "dairy"],
@@ -566,8 +660,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Sides & Breads",
     price: 290,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=800&q=80",
-    description: "Skin-on hand-cut potatoes tossed in aromatic white truffle oil, shaved parmesan, and rosemary.",
+    image:
+      "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Skin-on hand-cut potatoes tossed in aromatic white truffle oil, shaved parmesan, and rosemary.",
     available: true,
     preparationTimeMinutes: 8,
     allergens: ["dairy"],
@@ -581,8 +677,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Sides & Breads",
     price: 110,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80",
-    description: "Multi-layered flaky whole wheat bread cooked golden brown in tandoor with ghee.",
+    image:
+      "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Multi-layered flaky whole wheat bread cooked golden brown in tandoor with ghee.",
     available: true,
     preparationTimeMinutes: 6,
     allergens: ["gluten", "dairy"],
@@ -598,8 +696,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Desserts",
     price: 380,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80",
-    description: "Silky baked cheesecake with a deeply caramelized top, Madagascar vanilla, and berry coulis.",
+    image:
+      "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Silky baked cheesecake with a deeply caramelized top, Madagascar vanilla, and berry coulis.",
     available: true,
     preparationTimeMinutes: 5,
     allergens: ["dairy", "egg"],
@@ -613,8 +713,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Desserts",
     price: 420,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80",
-    description: "Warm chocolate cake with molten ganache center made with 70% dark chocolate and vanilla bean gelato.",
+    image:
+      "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Warm chocolate cake with molten ganache center made with 70% dark chocolate and vanilla bean gelato.",
     available: true,
     preparationTimeMinutes: 12,
     allergens: ["dairy", "gluten", "egg"],
@@ -628,8 +730,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Desserts",
     price: 280,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1505394033641-40c6ad1178d7?auto=format&fit=crop&w=800&q=80",
-    description: "Traditional slow-churned Indian ice cream infused with saffron strands, crushed pistachios, and green cardamom.",
+    image:
+      "https://images.unsplash.com/photo-1505394033641-40c6ad1178d7?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Traditional slow-churned Indian ice cream infused with saffron strands, crushed pistachios, and green cardamom.",
     available: true,
     preparationTimeMinutes: 5,
     allergens: ["dairy", "nuts"],
@@ -645,8 +749,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Beverages",
     price: 280,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80",
-    description: "Handcrafted spritz of blood orange, fresh yuzu, elderflower tonic, and bruised thyme sprig.",
+    image:
+      "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Handcrafted spritz of blood orange, fresh yuzu, elderflower tonic, and bruised thyme sprig.",
     available: true,
     preparationTimeMinutes: 4,
     allergens: [],
@@ -660,8 +766,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Beverages",
     price: 180,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80",
-    description: "Hand-muddled Persian limes, fresh mint leaves, rock salt, and chilled sparkling soda.",
+    image:
+      "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80",
+    description:
+      "Hand-muddled Persian limes, fresh mint leaves, rock salt, and chilled sparkling soda.",
     available: true,
     preparationTimeMinutes: 3,
     allergens: [],
@@ -675,8 +783,10 @@ const fallbackMenuItems: ApiMenuItem[] = [
     category: "Beverages",
     price: 310,
     type: "veg",
-    image: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=800&q=80",
-    description: "18-hour cold steeped Arabica single-origin coffee poured over botanical tonic and orange peel.",
+    image:
+      "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=800&q=80",
+    description:
+      "18-hour cold steeped Arabica single-origin coffee poured over botanical tonic and orange peel.",
     available: true,
     preparationTimeMinutes: 3,
     allergens: [],
@@ -711,25 +821,28 @@ const inventory = [
 ];
 
 function StatusPill({ status }: { status: string }) {
-  const tone = status === "Notified"
-    ? "bg-[#fff5ed] text-[#b7623d] border border-[#fbd3bf]"
-    : status === "Cancelled"
-    ? "bg-[#fdeded] text-[#b73d3d] border border-[#fbd2d2]"
-    : status === "Completed"
-    ? "bg-[#eee8f6] text-[#72558e] border border-[#e0d4ee]"
-    : [
-        "Ready",
-        "Available",
-        "Arrived",
-        "Clocked in",
-        "In stock",
-      ].includes(status)
-      ? "bg-[#e8f1e8] text-[#3b724c]"
-      : ["Preparing", "Booked"].includes(status)
-        ? "bg-[#fbe8dc] text-[#b7623d]"
-        : ["Needs cleaning", "No show", "Low stock", "On break"].includes(status)
-          ? "bg-[#f4e9e1] text-[#946243]"
-          : "bg-[#eceeea] text-[#68736e]";
+  const tone =
+    status === "Notified"
+      ? "bg-[#fff5ed] text-[#b7623d] border border-[#fbd3bf]"
+      : status === "Cancelled"
+        ? "bg-[#fdeded] text-[#b73d3d] border border-[#fbd2d2]"
+        : status === "Completed"
+          ? "bg-[#eee8f6] text-[#72558e] border border-[#e0d4ee]"
+          : [
+                "Ready",
+                "Available",
+                "Arrived",
+                "Clocked in",
+                "In stock",
+              ].includes(status)
+            ? "bg-[#e8f1e8] text-[#3b724c]"
+            : ["Preparing", "Booked"].includes(status)
+              ? "bg-[#fbe8dc] text-[#b7623d]"
+              : ["Needs cleaning", "No show", "Low stock", "On break"].includes(
+                    status,
+                  )
+                ? "bg-[#f4e9e1] text-[#946243]"
+                : "bg-[#eceeea] text-[#68736e]";
   return (
     <span className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${tone}`}>
       {status}
@@ -760,7 +873,9 @@ function SectionHeading({
           {title}
         </h1>
         {description && (
-          <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-[#84908a]">{description}</p>
+          <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-[#84908a]">
+            {description}
+          </p>
         )}
       </div>
       {action && (
@@ -789,7 +904,9 @@ function StatCard({
     <article className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-3.5 sm:p-5 shadow-[0_3px_12px_rgba(36,49,46,.025)]">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-xs sm:text-sm font-medium text-[#84908a] truncate">{label}</p>
+          <p className="text-xs sm:text-sm font-medium text-[#84908a] truncate">
+            {label}
+          </p>
           <p className="mt-1 sm:mt-3 text-xl sm:text-3xl font-bold tracking-tight text-[#24312e] truncate">
             {value}
           </p>
@@ -835,7 +952,9 @@ function OverviewPage({
   userName?: string;
   currencySymbol?: string;
 }) {
-  const [overviewMetrics, setOverviewMetrics] = useState<OverviewData | null>(null);
+  const [overviewMetrics, setOverviewMetrics] = useState<OverviewData | null>(
+    null,
+  );
 
   useEffect(() => {
     fetchOverviewMetrics()
@@ -847,17 +966,24 @@ function OverviewPage({
   const occupiedCount = tables.filter((t) => t.status === "Occupied").length;
   const totalTables = tables.length || overviewMetrics?.tables?.total || 1;
   const activeOrdersCount = orders.filter(
-    (o) => o.status !== "Served" && o.status !== "Paid" && o.status !== "Cancelled"
+    (o) =>
+      o.status !== "Served" && o.status !== "Paid" && o.status !== "Cancelled",
   ).length;
 
   // Dynamic Revenue calculation (strictly today's revenue from API, resets to 0 at midnight)
-  const todayRevenue = overviewMetrics?.revenue ? overviewMetrics.revenue.today : 0;
+  const todayRevenue = overviewMetrics?.revenue
+    ? overviewMetrics.revenue.today
+    : 0;
 
   // Dynamic greeting & date
   const now = new Date();
   const currentHour = now.getHours();
   const greeting =
-    currentHour < 12 ? "Good morning" : currentHour < 17 ? "Good afternoon" : "Good evening";
+    currentHour < 12
+      ? "Good morning"
+      : currentHour < 17
+        ? "Good afternoon"
+        : "Good evening";
   const formattedDate = now.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -904,7 +1030,11 @@ function OverviewPage({
                   ? "bg-[#f0f1ed] text-[#84908a] opacity-50 cursor-not-allowed"
                   : "bg-[#fbfaf7] text-[#315a3d] hover:bg-white"
               }`}
-              title={kitchenClosed ? "Kitchen is closed. Cannot book tables." : undefined}
+              title={
+                kitchenClosed
+                  ? "Kitchen is closed. Cannot book tables."
+                  : undefined
+              }
             >
               <CalendarCheck size={16} className="sm:w-[18px] sm:h-[18px]" />
               <span>Book table</span>
@@ -917,7 +1047,11 @@ function OverviewPage({
                   ? "bg-[#74807a] opacity-50 cursor-not-allowed"
                   : "bg-[#24312e] hover:bg-[#315a3d]"
               }`}
-              title={kitchenClosed ? "Kitchen is closed. Cannot place new orders." : undefined}
+              title={
+                kitchenClosed
+                  ? "Kitchen is closed. Cannot place new orders."
+                  : undefined
+              }
             >
               <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
               <span>New order</span>
@@ -925,7 +1059,9 @@ function OverviewPage({
           </div>
         }
       />
-      <section className={`grid gap-3 sm:gap-4 ${role === "Server" ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3"}`}>
+      <section
+        className={`grid gap-3 sm:gap-4 ${role === "Server" ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3"}`}
+      >
         {/* Hide Today's earning in Server panel */}
         {role !== "Server" && (
           <StatCard
@@ -973,7 +1109,9 @@ function OverviewPage({
           kitchenClosed={kitchenClosed}
         />
       )}
-      <section className={`mt-8 grid gap-6 ${role === "Server" ? "" : "xl:grid-cols-[1.35fr_1fr]"}`}>
+      <section
+        className={`mt-8 grid gap-6 ${role === "Server" ? "" : "xl:grid-cols-[1.35fr_1fr]"}`}
+      >
         {/* Hide Revenue overview chart in Server panel */}
         {role !== "Server" && (
           <article className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 sm:p-6 shadow-xs">
@@ -999,15 +1137,16 @@ function OverviewPage({
                 >
                   {/* Real data tooltip on hover */}
                   <div className="pointer-events-none absolute -top-8 z-20 hidden whitespace-nowrap rounded-md bg-[#24312e] px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover:block transition-all">
-                    {formatMoney(Number(item.revenue || 0), currencySymbol)} • {item.orderCount || 0} orders
+                    {formatMoney(Number(item.revenue || 0), currencySymbol)} •{" "}
+                    {item.orderCount || 0} orders
                   </div>
                   <div
                     className={`w-full max-w-12 rounded-t-lg transition-all duration-300 ${
                       item.isToday
                         ? "bg-[#b7623d]"
                         : Number(item.revenue || 0) > 0
-                        ? "bg-[#729e7b]"
-                        : "bg-[#d8ded6]"
+                          ? "bg-[#729e7b]"
+                          : "bg-[#d8ded6]"
                     }`}
                     style={{ height: `${item.heightPercent}%` }}
                   />
@@ -1021,7 +1160,9 @@ function OverviewPage({
               <span className="h-2 w-2 rounded-full bg-[#b7623d]" />
               Today is pacing{" "}
               <strong className="text-[#3b724c]">
-                {pacingPercent >= 0 ? `+${pacingPercent}% ahead` : `${pacingPercent}% behind`}
+                {pacingPercent >= 0
+                  ? `+${pacingPercent}% ahead`
+                  : `${pacingPercent}% behind`}
               </strong>{" "}
               of your daily average
             </div>
@@ -1039,10 +1180,26 @@ function OverviewPage({
           </div>
           <div className="mt-7 grid grid-cols-2 gap-3">
             {[
-              { label: "Floor plan", Icon: Table2, action: () => onNavigate?.("Floor plan") },
-              { label: "Add menu item", Icon: Plus, action: () => onNavigate?.("Menu") },
-              { label: "Staff schedule", Icon: CalendarDays, action: () => onNavigate?.("Employees") },
-              { label: "View reports", Icon: FileText, action: () => onNavigate?.("Transactions") },
+              {
+                label: "Floor plan",
+                Icon: Table2,
+                action: () => onNavigate?.("Floor plan"),
+              },
+              {
+                label: "Add menu item",
+                Icon: Plus,
+                action: () => onNavigate?.("Menu"),
+              },
+              {
+                label: "Staff schedule",
+                Icon: CalendarDays,
+                action: () => onNavigate?.("Employees"),
+              },
+              {
+                label: "View reports",
+                Icon: FileText,
+                action: () => onNavigate?.("Transactions"),
+              },
             ].map(({ label, Icon, action }) => (
               <button
                 key={label}
@@ -1122,24 +1279,42 @@ function ReservationsPage({
 }) {
   const totalGuests = bookings.reduce((sum, b) => sum + (b.guests || 0), 0);
   const totalDeposit = bookings.reduce(
-    (sum, b) => sum + (typeof b.deposit === "number" ? b.deposit : defaultDeposit),
+    (sum, b) =>
+      sum + (typeof b.deposit === "number" ? b.deposit : defaultDeposit),
     0,
   );
 
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
-  const [filterTab, setFilterTab] = useState<"Active" | "All" | "Completed" | "Cancelled">("Active");
-  const [sortOrder, setSortOrder] = useState<"newest" | "date_asc" | "date_desc">("newest");
+  const [filterTab, setFilterTab] = useState<
+    "Active" | "All" | "Completed" | "Cancelled"
+  >("Active");
+  const [sortOrder, setSortOrder] = useState<
+    "newest" | "date_asc" | "date_desc"
+  >("newest");
   const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
 
-  const activeBookingsCount = bookings.filter((b) => b.status === "Booked" || b.status === "Arrived" || b.status === "Seated").length;
-  const completedBookingsCount = bookings.filter((b) => b.status === "Completed").length;
-  const cancelledBookingsCount = bookings.filter((b) => b.status === "Cancelled" || b.status === "No show").length;
+  const activeBookingsCount = bookings.filter(
+    (b) =>
+      b.status === "Booked" || b.status === "Arrived" || b.status === "Seated",
+  ).length;
+  const completedBookingsCount = bookings.filter(
+    (b) => b.status === "Completed",
+  ).length;
+  const cancelledBookingsCount = bookings.filter(
+    (b) => b.status === "Cancelled" || b.status === "No show",
+  ).length;
 
   const displayedBookings = [...bookings]
     .filter((b) => {
-      if (filterTab === "Active") return b.status === "Booked" || b.status === "Arrived" || b.status === "Seated";
+      if (filterTab === "Active")
+        return (
+          b.status === "Booked" ||
+          b.status === "Arrived" ||
+          b.status === "Seated"
+        );
       if (filterTab === "Completed") return b.status === "Completed";
-      if (filterTab === "Cancelled") return b.status === "Cancelled" || b.status === "No show";
+      if (filterTab === "Cancelled")
+        return b.status === "Cancelled" || b.status === "No show";
       return true;
     })
     .sort((a, b) => {
@@ -1150,14 +1325,18 @@ function ReservationsPage({
         return (b.id || "").localeCompare(a.id || "");
       }
       if (sortOrder === "date_asc") {
-        return ((a.bookingDate || "") + " " + (a.bookingTime || "")).localeCompare(
-          (b.bookingDate || "") + " " + (b.bookingTime || "")
-        );
+        return (
+          (a.bookingDate || "") +
+          " " +
+          (a.bookingTime || "")
+        ).localeCompare((b.bookingDate || "") + " " + (b.bookingTime || ""));
       }
       if (sortOrder === "date_desc") {
-        return ((b.bookingDate || "") + " " + (b.bookingTime || "")).localeCompare(
-          (a.bookingDate || "") + " " + (a.bookingTime || "")
-        );
+        return (
+          (b.bookingDate || "") +
+          " " +
+          (b.bookingTime || "")
+        ).localeCompare((a.bookingDate || "") + " " + (a.bookingTime || ""));
       }
       return 0;
     });
@@ -1184,7 +1363,11 @@ function ReservationsPage({
                 ? "bg-[#e2e4dd] text-[#84908a] cursor-not-allowed opacity-60"
                 : "bg-[#24312e] text-white hover:bg-[#315a3d]"
             }`}
-            title={kitchenClosed ? "Kitchen is closed - new reservations disabled" : "New reservation"}
+            title={
+              kitchenClosed
+                ? "Kitchen is closed - new reservations disabled"
+                : "New reservation"
+            }
           >
             <Plus size={18} />
             {kitchenClosed ? "Kitchen Closed" : "New reservation"}
@@ -1195,7 +1378,8 @@ function ReservationsPage({
         <div className="mb-5 flex items-center gap-3 rounded-xl border border-[#f5c6cb] bg-[#f8d7da] p-3 text-xs font-semibold text-[#721c24] shadow-xs">
           <AlertTriangle size={16} className="shrink-0 text-[#721c24]" />
           <span>
-            <strong>Kitchen is currently closed.</strong> New table reservations are disabled until the kitchen reopens.
+            <strong>Kitchen is currently closed.</strong> New table reservations
+            are disabled until the kitchen reopens.
           </span>
         </div>
       )}
@@ -1244,10 +1428,22 @@ function ReservationsPage({
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[#e9eae6] pb-3">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 max-w-full">
             {[
-              { id: "Active", label: "Active Bookings", count: activeBookingsCount },
+              {
+                id: "Active",
+                label: "Active Bookings",
+                count: activeBookingsCount,
+              },
               { id: "All", label: "All Reservations", count: bookings.length },
-              { id: "Completed", label: "Completed", count: completedBookingsCount },
-              { id: "Cancelled", label: "Cancelled", count: cancelledBookingsCount },
+              {
+                id: "Completed",
+                label: "Completed",
+                count: completedBookingsCount,
+              },
+              {
+                id: "Cancelled",
+                label: "Cancelled",
+                count: cancelledBookingsCount,
+              },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1261,7 +1457,9 @@ function ReservationsPage({
                 <span>{tab.label}</span>
                 <span
                   className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                    filterTab === tab.id ? "bg-white/20 text-white" : "bg-[#f0f1ec] text-[#68736e]"
+                    filterTab === tab.id
+                      ? "bg-white/20 text-white"
+                      : "bg-[#f0f1ec] text-[#68736e]"
                   }`}
                 >
                   {tab.count}
@@ -1279,7 +1477,9 @@ function ReservationsPage({
             >
               <option value="newest">🕒 Newest Booked First (Default)</option>
               <option value="date_asc">📅 Booking Date (Soonest First)</option>
-              <option value="date_desc">📅 Booking Date (Furthest First)</option>
+              <option value="date_desc">
+                📅 Booking Date (Furthest First)
+              </option>
             </select>
           </div>
         </div>
@@ -1287,8 +1487,12 @@ function ReservationsPage({
         {displayedBookings.length === 0 ? (
           <div className="py-12 text-center text-[#84908a]">
             <CalendarCheck size={36} className="mx-auto text-[#cbd5e1] mb-2" />
-            <p className="font-bold text-sm text-[#24312e]">No {filterTab.toLowerCase()} reservations</p>
-            <p className="text-xs mt-1">Bookings will appear here as guests reserve tables.</p>
+            <p className="font-bold text-sm text-[#24312e]">
+              No {filterTab.toLowerCase()} reservations
+            </p>
+            <p className="text-xs mt-1">
+              Bookings will appear here as guests reserve tables.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -1299,8 +1503,12 @@ function ReservationsPage({
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-bold text-[#24312e]">{booking.customer}</p>
-                    {(booking.payuPaymentId || booking.paymentId || booking.stripePaymentId) && (
+                    <p className="font-bold text-[#24312e]">
+                      {booking.customer}
+                    </p>
+                    {(booking.payuPaymentId ||
+                      booking.paymentId ||
+                      booking.stripePaymentId) && (
                       <span
                         className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800"
                         title={`PayU Reference: ${booking.payuPaymentId || booking.paymentId || booking.stripePaymentId}`}
@@ -1311,8 +1519,11 @@ function ReservationsPage({
                     )}
                   </div>
                   <p className="mt-0.5 text-xs text-[#84908a]">
-                    Deposit {currencySymbol || "₹"}{booking.deposit ?? defaultDeposit} • {booking.source}
-                    {booking.specialRequests ? ` • "${booking.specialRequests}"` : ""}
+                    Deposit {currencySymbol || "₹"}
+                    {booking.deposit ?? defaultDeposit} • {booking.source}
+                    {booking.specialRequests
+                      ? ` • "${booking.specialRequests}"`
+                      : ""}
                   </p>
                   {(booking.phone || booking.email) && (
                     <p className="mt-0.5 text-[11px] text-[#84908a] flex flex-wrap items-center gap-2">
@@ -1322,11 +1533,17 @@ function ReservationsPage({
                   )}
                 </div>
                 <div className="text-sm text-[#68736e] flex flex-col sm:flex-row sm:items-center gap-1.5">
-                  <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-extrabold w-fit ${
-                    booking.bookingDate === todayStr ? "bg-[#e8f1e8] text-[#3b724c]" : "bg-[#f0f1ec] text-[#68736e]"
-                  }`}>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-extrabold w-fit ${
+                      booking.bookingDate === todayStr
+                        ? "bg-[#e8f1e8] text-[#3b724c]"
+                        : "bg-[#f0f1ec] text-[#68736e]"
+                    }`}
+                  >
                     <CalendarCheck size={11} />
-                    {booking.bookingDate === todayStr ? "Today" : booking.bookingDate}
+                    {booking.bookingDate === todayStr
+                      ? "Today"
+                      : booking.bookingDate}
                   </span>
                   <span className="flex items-center text-xs font-semibold text-[#24312e]">
                     <Clock3 className="mr-1 inline text-[#84908a]" size={13} />
@@ -1348,82 +1565,82 @@ function ReservationsPage({
                     </span>
                   )}
                 </div>
-              <div className="flex items-center gap-2">
-                <StatusPill status={booking.status} />
+                <div className="flex items-center gap-2">
+                  <StatusPill status={booking.status} />
 
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveDropdownId(
-                        activeDropdownId === booking.id ? null : booking.id,
-                      );
-                    }}
-                    className="flex items-center gap-1.5 rounded-lg border border-[#dfe1dc] bg-white px-2.5 py-1 text-xs font-semibold text-[#24312e] hover:bg-[#f2f4ef] transition shadow-2xs"
-                    aria-label="Change status"
-                  >
-                    <span>Action</span>
-                    <ChevronDown size={13} className="text-[#84908a]" />
-                  </button>
-
-                  {activeDropdownId === booking.id && (
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute right-0 top-8 z-30 w-36 rounded-xl border border-[#dfe1dc] bg-white p-1.5 shadow-xl animate-in fade-in"
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveDropdownId(
+                          activeDropdownId === booking.id ? null : booking.id,
+                        );
+                      }}
+                      className="flex items-center gap-1.5 rounded-lg border border-[#dfe1dc] bg-white px-2.5 py-1 text-xs font-semibold text-[#24312e] hover:bg-[#f2f4ef] transition shadow-2xs"
+                      aria-label="Change status"
                     >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onStatusChange(booking.id, "Arrived");
-                          setActiveDropdownId(null);
-                        }}
-                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
-                          booking.status === "Arrived"
-                            ? "bg-[#e8f1e8] font-bold text-[#3b724c]"
-                            : "text-[#24312e] hover:bg-[#e8f1e8] hover:text-[#3b724c]"
-                        }`}
-                      >
-                        <CheckCircle2 size={14} className="text-[#3b724c]" />
-                        <span>Arrived</span>
-                      </button>
+                      <span>Action</span>
+                      <ChevronDown size={13} className="text-[#84908a]" />
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onStatusChange(booking.id, "Completed");
-                          setActiveDropdownId(null);
-                        }}
-                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
-                          booking.status === "Completed"
-                            ? "bg-[#eee8f6] font-bold text-[#72558e]"
-                            : "text-[#24312e] hover:bg-[#eee8f6] hover:text-[#72558e]"
-                        }`}
+                    {activeDropdownId === booking.id && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-8 z-30 w-36 rounded-xl border border-[#dfe1dc] bg-white p-1.5 shadow-xl animate-in fade-in"
                       >
-                        <Check size={14} className="text-[#72558e]" />
-                        <span>Completed</span>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onStatusChange(booking.id, "Arrived");
+                            setActiveDropdownId(null);
+                          }}
+                          className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
+                            booking.status === "Arrived"
+                              ? "bg-[#e8f1e8] font-bold text-[#3b724c]"
+                              : "text-[#24312e] hover:bg-[#e8f1e8] hover:text-[#3b724c]"
+                          }`}
+                        >
+                          <CheckCircle2 size={14} className="text-[#3b724c]" />
+                          <span>Arrived</span>
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onStatusChange(booking.id, "Cancelled");
-                          setActiveDropdownId(null);
-                        }}
-                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
-                          booking.status === "Cancelled"
-                            ? "bg-red-50 font-bold text-red-600"
-                            : "text-red-600 hover:bg-red-50"
-                        }`}
-                      >
-                        <Ban size={14} className="text-red-600" />
-                        <span>Canceled</span>
-                      </button>
-                    </div>
-                  )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onStatusChange(booking.id, "Completed");
+                            setActiveDropdownId(null);
+                          }}
+                          className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
+                            booking.status === "Completed"
+                              ? "bg-[#eee8f6] font-bold text-[#72558e]"
+                              : "text-[#24312e] hover:bg-[#eee8f6] hover:text-[#72558e]"
+                          }`}
+                        >
+                          <Check size={14} className="text-[#72558e]" />
+                          <span>Completed</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onStatusChange(booking.id, "Cancelled");
+                            setActiveDropdownId(null);
+                          }}
+                          className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
+                            booking.status === "Cancelled"
+                              ? "bg-red-50 font-bold text-red-600"
+                              : "text-red-600 hover:bg-red-50"
+                          }`}
+                        >
+                          <Ban size={14} className="text-red-600" />
+                          <span>Canceled</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
             ))}
           </div>
         )}
@@ -1431,8 +1648,6 @@ function ReservationsPage({
     </>
   );
 }
-
-
 
 function formatTime12h(hours: number, minutes: number): string {
   const meridiem = hours >= 12 ? "PM" : "AM";
@@ -1465,7 +1680,9 @@ export function getUpcomingBookingForTable(
   const activeBookings = bookings.filter(
     (b) =>
       b.tableId === tableId &&
-      (b.status === "Booked" || b.status === "Arrived" || b.status === "Seated"),
+      (b.status === "Booked" ||
+        b.status === "Arrived" ||
+        b.status === "Seated"),
   );
   if (activeBookings.length === 0) return null;
 
@@ -1473,7 +1690,9 @@ export function getUpcomingBookingForTable(
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const parsed = activeBookings.map((b) => {
-    const bookingDateStr = b.bookingDate ? b.bookingDate.slice(0, 10) : todayStr;
+    const bookingDateStr = b.bookingDate
+      ? b.bookingDate.slice(0, 10)
+      : todayStr;
     const cleanTime = (b.bookingTime || "").trim();
     const match = cleanTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
     let hours = 12;
@@ -1490,9 +1709,19 @@ export function getUpcomingBookingForTable(
     const scheduledDate =
       parts.length === 3 && !parts.some(isNaN)
         ? new Date(parts[0], parts[1] - 1, parts[2], hours, minutes, 0, 0)
-        : new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+        : new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+            hours,
+            minutes,
+            0,
+            0,
+          );
 
-    const diffMinutes = Math.round((scheduledDate.getTime() - nowMs) / (60 * 1000));
+    const diffMinutes = Math.round(
+      (scheduledDate.getTime() - nowMs) / (60 * 1000),
+    );
     return { booking: b, diffMinutes, hours, minutes, scheduledDate };
   });
 
@@ -1501,8 +1730,10 @@ export function getUpcomingBookingForTable(
   // 2. Active dining window (-180 to +30 min)
   // 3. Upcoming (>30 min)
   parsed.sort((a, b) => {
-    const aPriority = a.booking.status === "Arrived" || a.booking.status === "Seated";
-    const bPriority = b.booking.status === "Arrived" || b.booking.status === "Seated";
+    const aPriority =
+      a.booking.status === "Arrived" || a.booking.status === "Seated";
+    const bPriority =
+      b.booking.status === "Arrived" || b.booking.status === "Seated";
     if (aPriority && !bPriority) return -1;
     if (!aPriority && bPriority) return 1;
 
@@ -1533,9 +1764,15 @@ export function getUpcomingBookingForTable(
 
   const startTimeDisplay = formatTime12h(hours, minutes);
   const endDate = new Date(scheduledDate.getTime() + 60 * 60 * 1000);
-  const endTimeDisplay = formatTime12h(endDate.getHours(), endDate.getMinutes());
+  const endTimeDisplay = formatTime12h(
+    endDate.getHours(),
+    endDate.getMinutes(),
+  );
   const availableTillDate = new Date(scheduledDate.getTime() - 30 * 60 * 1000);
-  const availableTillDisplay = formatTime12h(availableTillDate.getHours(), availableTillDate.getMinutes());
+  const availableTillDisplay = formatTime12h(
+    availableTillDate.getHours(),
+    availableTillDate.getMinutes(),
+  );
   const slotDisplay = `${startTimeDisplay} – ${endTimeDisplay}`;
 
   let timeDisplay = startTimeDisplay;
@@ -1595,8 +1832,22 @@ function AddTableModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const zones = ["Main floor", "Window", "Family", "Garden", "Bar", "Terrace", "Private dining"];
-  const servers = ["Priya S.", "Aarav R.", "Vikram K.", "Ananya P.", "Rahul M."];
+  const zones = [
+    "Main floor",
+    "Window",
+    "Family",
+    "Garden",
+    "Bar",
+    "Terrace",
+    "Private dining",
+  ];
+  const servers = [
+    "Priya S.",
+    "Aarav R.",
+    "Vikram K.",
+    "Ananya P.",
+    "Rahul M.",
+  ];
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -1637,7 +1888,9 @@ function AddTableModal({
             </div>
             <div>
               <h3 className="text-lg font-bold text-white">Add New Table</h3>
-              <p className="text-xs text-[#aab8b0]">Persists directly to database floor layout</p>
+              <p className="text-xs text-[#aab8b0]">
+                Persists directly to database floor layout
+              </p>
             </div>
           </div>
           <button
@@ -1657,7 +1910,9 @@ function AddTableModal({
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4 text-xs">
           <div>
-            <label className="mb-1 block font-bold text-[#dfe1dc]">Table Number / ID</label>
+            <label className="mb-1 block font-bold text-[#dfe1dc]">
+              Table Number / ID
+            </label>
             <input
               type="text"
               required
@@ -1669,7 +1924,9 @@ function AddTableModal({
           </div>
 
           <div>
-            <label className="mb-1 block font-bold text-[#dfe1dc]">Seating Capacity</label>
+            <label className="mb-1 block font-bold text-[#dfe1dc]">
+              Seating Capacity
+            </label>
             <div className="flex gap-2">
               {[2, 4, 6, 8, 10].map((num) => (
                 <button
@@ -1700,7 +1957,9 @@ function AddTableModal({
           </div>
 
           <div>
-            <label className="mb-1 block font-bold text-[#dfe1dc]">Dining Zone</label>
+            <label className="mb-1 block font-bold text-[#dfe1dc]">
+              Dining Zone
+            </label>
             <select
               value={zone}
               onChange={(e) => setZone(e.target.value)}
@@ -1715,7 +1974,9 @@ function AddTableModal({
           </div>
 
           <div>
-            <label className="mb-1 block font-bold text-[#dfe1dc]">Assigned Server</label>
+            <label className="mb-1 block font-bold text-[#dfe1dc]">
+              Assigned Server
+            </label>
             <select
               value={serverName}
               onChange={(e) => setServerName(e.target.value)}
@@ -1730,22 +1991,26 @@ function AddTableModal({
           </div>
 
           <div>
-            <label className="mb-1 block font-bold text-[#dfe1dc]">Initial Status</label>
+            <label className="mb-1 block font-bold text-[#dfe1dc]">
+              Initial Status
+            </label>
             <div className="grid grid-cols-3 gap-2">
-              {(["Available", "Booked", "Occupied"] as TableStatus[]).map((st) => (
-                <button
-                  type="button"
-                  key={st}
-                  onClick={() => setStatus(st)}
-                  className={`rounded-xl py-2 font-bold text-center transition ${
-                    status === st
-                      ? "bg-[#f4bc83] text-[#24312e]"
-                      : "border border-[#3e4f48] bg-[#273632] text-white hover:bg-[#31433e]"
-                  }`}
-                >
-                  {st}
-                </button>
-              ))}
+              {(["Available", "Booked", "Occupied"] as TableStatus[]).map(
+                (st) => (
+                  <button
+                    type="button"
+                    key={st}
+                    onClick={() => setStatus(st)}
+                    className={`rounded-xl py-2 font-bold text-center transition ${
+                      status === st
+                        ? "bg-[#f4bc83] text-[#24312e]"
+                        : "border border-[#3e4f48] bg-[#273632] text-white hover:bg-[#31433e]"
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ),
+              )}
             </div>
           </div>
 
@@ -1813,13 +2078,19 @@ function DeleteTableModal({
             <Trash2 size={20} />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white">Delete Table {table.id}?</h3>
-            <p className="text-xs text-[#aab8b0]">This table will be removed from floor plan.</p>
+            <h3 className="text-base font-bold text-white">
+              Delete Table {table.id}?
+            </h3>
+            <p className="text-xs text-[#aab8b0]">
+              This table will be removed from floor plan.
+            </p>
           </div>
         </div>
 
         <p className="mt-3 text-xs text-[#cbd5e1] leading-relaxed">
-          Table <strong className="text-white">{table.id}</strong> ({table.seats} seats, {table.zone}) will be removed. Any existing booking records will remain preserved with unassigned seating.
+          Table <strong className="text-white">{table.id}</strong> (
+          {table.seats} seats, {table.zone}) will be removed. Any existing
+          booking records will remain preserved with unassigned seating.
         </p>
 
         {error && (
@@ -1871,6 +2142,8 @@ function FloorPlanPage({
   onAddTable,
   onDeleteTable,
   kitchenClosed = false,
+  isDemoAccount = false,
+  onDemoAction,
 }: {
   tables: RestaurantTable[];
   bookings?: TableBooking[];
@@ -1888,12 +2161,20 @@ function FloorPlanPage({
   }) => Promise<void>;
   onDeleteTable?: (id: string) => Promise<void>;
   kitchenClosed?: boolean;
+  isDemoAccount?: boolean;
+  onDemoAction?: (action: string) => void;
 }) {
-  const [selectedTableId, setSelectedTableId] = useState(tables[0]?.id || "T01");
-  const [statusFilter, setStatusFilter] = useState<"All" | "Available" | "Booked" | "Occupied" | "Needs cleaning">("All");
+  const [selectedTableId, setSelectedTableId] = useState(
+    tables[0]?.id || "T01",
+  );
+  const [statusFilter, setStatusFilter] = useState<
+    "All" | "Available" | "Booked" | "Occupied" | "Needs cleaning"
+  >("All");
   const [selectedZone, setSelectedZone] = useState<string>("All zones");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [tableToDelete, setTableToDelete] = useState<RestaurantTable | null>(null);
+  const [tableToDelete, setTableToDelete] = useState<RestaurantTable | null>(
+    null,
+  );
 
   const selected = tables.find((t) => t.id === selectedTableId) || tables[0];
   const zones = Array.from(new Set(tables.map((t) => t.zone).filter(Boolean)));
@@ -1941,8 +2222,12 @@ function FloorPlanPage({
     return matchesStatus && matchesZone;
   });
 
-  const selectedUpcoming = selected ? getUpcomingBookingForTable(selected.id, bookings) : null;
-  const selectedEffective = selected ? getEffectiveStatus(selected) : "Available";
+  const selectedUpcoming = selected
+    ? getUpcomingBookingForTable(selected.id, bookings)
+    : null;
+  const selectedEffective = selected
+    ? getEffectiveStatus(selected)
+    : "Available";
 
   return (
     <>
@@ -1954,8 +2239,24 @@ function FloorPlanPage({
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             {role === "Manager" && onAddTable && (
               <button
-                onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#315a3d] px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-[#254630] transition cursor-pointer"
+                onClick={() => {
+                  if (isDemoAccount) {
+                    onDemoAction?.("Adding tables");
+                    return;
+                  }
+                  setShowAddModal(true);
+                }}
+                aria-disabled={isDemoAccount}
+                title={
+                  isDemoAccount
+                    ? "This feature is disabled for the demo account"
+                    : "Add table"
+                }
+                className={`flex items-center gap-1.5 sm:gap-2 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-sm transition ${
+                  isDemoAccount
+                    ? "cursor-not-allowed bg-[#84908a] opacity-60"
+                    : "cursor-pointer bg-[#315a3d] hover:bg-[#254630]"
+                }`}
               >
                 <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
                 Add table
@@ -1969,7 +2270,11 @@ function FloorPlanPage({
                   ? "border-[#dfe1dc] bg-[#e2e4dd] text-[#84908a] cursor-not-allowed opacity-60"
                   : "border-[#dfe1dc] bg-[#fbfaf7] text-[#315a3d] hover:bg-white"
               }`}
-              title={kitchenClosed ? "Kitchen is closed - table booking disabled" : "Book table"}
+              title={
+                kitchenClosed
+                  ? "Kitchen is closed - table booking disabled"
+                  : "Book table"
+              }
             >
               <CalendarCheck size={16} className="sm:w-[18px] sm:h-[18px]" />
               {kitchenClosed ? "Kitchen Closed" : "Book table"}
@@ -1982,7 +2287,11 @@ function FloorPlanPage({
                   ? "bg-[#e2e4dd] text-[#84908a] cursor-not-allowed opacity-60"
                   : "bg-[#24312e] text-white hover:bg-[#315a3d]"
               }`}
-              title={kitchenClosed ? "Kitchen is closed - new orders disabled" : "New order"}
+              title={
+                kitchenClosed
+                  ? "Kitchen is closed - new orders disabled"
+                  : "New order"
+              }
             >
               <Utensils size={16} className="sm:w-[18px] sm:h-[18px]" />
               {kitchenClosed ? "Kitchen Closed" : "New order"}
@@ -1995,7 +2304,8 @@ function FloorPlanPage({
         <div className="mb-5 flex items-center gap-3 rounded-xl border border-[#f5c6cb] bg-[#f8d7da] p-3 text-xs font-semibold text-[#721c24] shadow-xs">
           <AlertTriangle size={16} className="shrink-0 text-[#721c24]" />
           <span>
-            <strong>Kitchen is currently closed.</strong> Table bookings and dining orders are disabled until the kitchen reopens.
+            <strong>Kitchen is currently closed.</strong> Table bookings and
+            dining orders are disabled until the kitchen reopens.
           </span>
         </div>
       )}
@@ -2009,22 +2319,29 @@ function FloorPlanPage({
               {
                 id: "Available",
                 label: "Available",
-                count: tables.filter((t) => getEffectiveStatus(t) === "Available").length,
+                count: tables.filter(
+                  (t) => getEffectiveStatus(t) === "Available",
+                ).length,
               },
               {
                 id: "Booked",
                 label: "Booked",
-                count: tables.filter((t) => getEffectiveStatus(t) === "Booked").length,
+                count: tables.filter((t) => getEffectiveStatus(t) === "Booked")
+                  .length,
               },
               {
                 id: "Occupied",
                 label: "Occupied",
-                count: tables.filter((t) => getEffectiveStatus(t) === "Occupied").length,
+                count: tables.filter(
+                  (t) => getEffectiveStatus(t) === "Occupied",
+                ).length,
               },
               {
                 id: "Needs cleaning",
                 label: "Needs cleaning",
-                count: tables.filter((t) => getEffectiveStatus(t) === "Needs cleaning").length,
+                count: tables.filter(
+                  (t) => getEffectiveStatus(t) === "Needs cleaning",
+                ).length,
               },
             ] as const
           ).map((tab) => (
@@ -2040,7 +2357,9 @@ function FloorPlanPage({
               <span className="whitespace-nowrap">{tab.label}</span>
               <span
                 className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                  statusFilter === tab.id ? "bg-white/20 text-white" : "bg-[#f0f1ec] text-[#68736e]"
+                  statusFilter === tab.id
+                    ? "bg-white/20 text-white"
+                    : "bg-[#f0f1ec] text-[#68736e]"
                 }`}
               >
                 {tab.count}
@@ -2075,19 +2394,40 @@ function FloorPlanPage({
             <div className="flex flex-wrap gap-4">
               <span className="flex items-center gap-1.5 whitespace-nowrap">
                 <i className="h-2.5 w-2.5 rounded-full bg-[#9ac49f]" />
-                Available ({tables.filter((t) => getEffectiveStatus(t) === "Available").length})
+                Available (
+                {
+                  tables.filter((t) => getEffectiveStatus(t) === "Available")
+                    .length
+                }
+                )
               </span>
               <span className="flex items-center gap-1.5 whitespace-nowrap">
                 <i className="h-2.5 w-2.5 rounded-full bg-[#e5bd7e]" />
-                Booked ({tables.filter((t) => getEffectiveStatus(t) === "Booked").length})
+                Booked (
+                {
+                  tables.filter((t) => getEffectiveStatus(t) === "Booked")
+                    .length
+                }
+                )
               </span>
               <span className="flex items-center gap-1.5 whitespace-nowrap">
                 <i className="h-2.5 w-2.5 rounded-full bg-[#d98865]" />
-                Occupied ({tables.filter((t) => getEffectiveStatus(t) === "Occupied").length})
+                Occupied (
+                {
+                  tables.filter((t) => getEffectiveStatus(t) === "Occupied")
+                    .length
+                }
+                )
               </span>
               <span className="flex items-center gap-1.5 whitespace-nowrap">
                 <i className="h-2.5 w-2.5 rounded-full bg-[#aab1ac]" />
-                Needs cleaning ({tables.filter((t) => getEffectiveStatus(t) === "Needs cleaning").length})
+                Needs cleaning (
+                {
+                  tables.filter(
+                    (t) => getEffectiveStatus(t) === "Needs cleaning",
+                  ).length
+                }
+                )
               </span>
             </div>
             <span className="text-[11px] text-[#84908a]">
@@ -2098,8 +2438,12 @@ function FloorPlanPage({
           {filteredTables.length === 0 ? (
             <div className="py-16 text-center text-[#84908a]">
               <Table2 size={40} className="mx-auto text-[#cbd5e1] mb-2" />
-              <p className="font-bold text-sm text-[#24312e]">No tables match this filter</p>
-              <p className="text-xs mt-1">Try selecting a different status tab or zone.</p>
+              <p className="font-bold text-sm text-[#24312e]">
+                No tables match this filter
+              </p>
+              <p className="text-xs mt-1">
+                Try selecting a different status tab or zone.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4">
@@ -2121,7 +2465,9 @@ function FloorPlanPage({
                     key={table.id}
                     onClick={() => setSelectedTableId(table.id)}
                     className={`relative flex min-h-[148px] flex-col items-center justify-center rounded-2xl border-2 p-3 transition hover:-translate-y-1 ${
-                      selected?.id === table.id ? "ring-2 ring-[#24312e] ring-offset-2" : ""
+                      selected?.id === table.id
+                        ? "ring-2 ring-[#24312e] ring-offset-2"
+                        : ""
                     } ${tableColor}`}
                   >
                     {/* Arrived banner: Guest has arrived! */}
@@ -2137,13 +2483,23 @@ function FloorPlanPage({
                     {effective === "Occupied" && upcoming && (
                       <span className="absolute top-2 left-2 right-2 rounded-md bg-[#b7623d] text-white text-[8.5px] font-extrabold py-0.5 px-1.5 flex items-center justify-center gap-1 shadow-sm whitespace-nowrap">
                         <Users size={9} />
-                        {upcoming.isArrived ? "Arrived: " : "Dining: "}{upcoming.booking.customer}
+                        {upcoming.isArrived ? "Arrived: " : "Dining: "}
+                        {upcoming.booking.customer}
                       </span>
                     )}
 
-                    <div className={effective === "Booked" || (effective === "Occupied" && upcoming) ? "mt-4 flex flex-col items-center" : "flex flex-col items-center"}>
+                    <div
+                      className={
+                        effective === "Booked" ||
+                        (effective === "Occupied" && upcoming)
+                          ? "mt-4 flex flex-col items-center"
+                          : "flex flex-col items-center"
+                      }
+                    >
                       <Table2 size={27} />
-                      <strong className="mt-1 text-base font-extrabold tracking-tight">{table.id}</strong>
+                      <strong className="mt-1 text-base font-extrabold tracking-tight">
+                        {table.id}
+                      </strong>
                       <span className="text-[11px] font-semibold opacity-85">
                         {table.seats} seats • {table.zone}
                       </span>
@@ -2153,7 +2509,8 @@ function FloorPlanPage({
                         <div className="mt-1 flex flex-col items-center text-center">
                           {effective === "Occupied" ? (
                             <span className="rounded bg-black/10 px-1.5 py-0.5 text-[9.5px] font-extrabold text-[#946243] whitespace-nowrap">
-                              {upcoming.booking.customer} ({upcoming.startTimeDisplay})
+                              {upcoming.booking.customer} (
+                              {upcoming.startTimeDisplay})
                             </span>
                           ) : effective === "Booked" ? (
                             <span className="rounded bg-amber-500/15 border border-amber-600/30 px-1.5 py-0.2 text-[9px] font-bold text-[#87632e] whitespace-nowrap">
@@ -2182,9 +2539,24 @@ function FloorPlanPage({
             </p>
             {selected && role === "Manager" && onDeleteTable && (
               <button
-                onClick={() => setTableToDelete(selected)}
-                className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-950/40 px-2 py-1 text-[11px] font-bold text-red-300 hover:bg-red-900/60 transition"
-                title="Delete this table from floor plan"
+                onClick={() => {
+                  if (isDemoAccount) {
+                    onDemoAction?.("Deleting tables");
+                    return;
+                  }
+                  setTableToDelete(selected);
+                }}
+                aria-disabled={isDemoAccount}
+                className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-bold transition ${
+                  isDemoAccount
+                    ? "cursor-not-allowed border-white/10 bg-white/10 text-[#84908a] opacity-60"
+                    : "cursor-pointer border-red-500/30 bg-red-950/40 text-red-300 hover:bg-red-900/60"
+                }`}
+                title={
+                  isDemoAccount
+                    ? "This feature is disabled for the demo account"
+                    : "Delete this table from floor plan"
+                }
               >
                 <Trash2 size={13} />
                 Delete
@@ -2194,8 +2566,12 @@ function FloorPlanPage({
 
           <div className="mt-4 flex items-center justify-between">
             <div>
-              <h2 className="display-font text-3xl font-extrabold text-white">{selected?.id || "None"}</h2>
-              <p className="text-xs text-[#aab8b0]">{selected?.zone} • {selected?.seats} seats</p>
+              <h2 className="display-font text-3xl font-extrabold text-white">
+                {selected?.id || "None"}
+              </h2>
+              <p className="text-xs text-[#aab8b0]">
+                {selected?.zone} • {selected?.seats} seats
+              </p>
             </div>
             <QrCode className="text-[#f4bc83]" size={28} />
           </div>
@@ -2206,17 +2582,26 @@ function FloorPlanPage({
               <div className="flex items-center justify-between text-xs font-bold text-[#f4bc83]">
                 <span className="flex items-center gap-1.5 whitespace-nowrap">
                   <Clock3 size={15} className="text-[#f4bc83]" />
-                  {selectedUpcoming.isArrived ? "Customer Arrived & Seated" : "Dining Session Active"} ({selectedUpcoming.startTimeDisplay})
+                  {selectedUpcoming.isArrived
+                    ? "Customer Arrived & Seated"
+                    : "Dining Session Active"}{" "}
+                  ({selectedUpcoming.startTimeDisplay})
                 </span>
                 <span className="rounded-md bg-[#d98865]/30 border border-[#d98865]/50 px-2 py-0.5 text-[10px] font-extrabold text-[#f4bc83] whitespace-nowrap">
                   Occupied
                 </span>
               </div>
               <p className="mt-1.5 text-xs">
-                Guest: <strong className="text-white">{selectedUpcoming.booking.customer}</strong> ({selectedUpcoming.booking.guests} guests)
+                Guest:{" "}
+                <strong className="text-white">
+                  {selectedUpcoming.booking.customer}
+                </strong>{" "}
+                ({selectedUpcoming.booking.guests} guests)
               </p>
               {selectedUpcoming.booking.phone && (
-                <p className="text-[11px] text-[#f4bc83]/80">Phone: {selectedUpcoming.booking.phone}</p>
+                <p className="text-[11px] text-[#f4bc83]/80">
+                  Phone: {selectedUpcoming.booking.phone}
+                </p>
               )}
               {selectedUpcoming.booking.specialRequests && (
                 <p className="mt-1 text-[11px] italic text-[#f4bc83]/70">
@@ -2241,13 +2626,22 @@ function FloorPlanPage({
 
               <div className="mt-2.5 space-y-1 text-xs">
                 <p className="font-semibold text-white">
-                  Table booked for <span className="font-extrabold text-[#f4bc83]">{selectedUpcoming.slotDisplay}</span>
+                  Table booked for{" "}
+                  <span className="font-extrabold text-[#f4bc83]">
+                    {selectedUpcoming.slotDisplay}
+                  </span>
                 </p>
                 <p className="text-[11px] text-[#cbd5e1]">
-                  Guest: <strong className="text-white">{selectedUpcoming.booking.customer}</strong> ({selectedUpcoming.booking.guests} guests)
+                  Guest:{" "}
+                  <strong className="text-white">
+                    {selectedUpcoming.booking.customer}
+                  </strong>{" "}
+                  ({selectedUpcoming.booking.guests} guests)
                 </p>
                 {selectedUpcoming.booking.phone && (
-                  <p className="text-[11px] text-[#aab8b0]">Phone: {selectedUpcoming.booking.phone}</p>
+                  <p className="text-[11px] text-[#aab8b0]">
+                    Phone: {selectedUpcoming.booking.phone}
+                  </p>
                 )}
                 {selectedUpcoming.booking.specialRequests && (
                   <p className="text-[11px] italic text-[#aab8b0]">
@@ -2260,8 +2654,12 @@ function FloorPlanPage({
                 <div className="mt-3 flex gap-2">
                   <button
                     onClick={() => {
-                      onBookingStatusChange(selectedUpcoming.booking.id, "Arrived");
-                      if (selected) onTableStatusChange(selected.id, "Occupied");
+                      onBookingStatusChange(
+                        selectedUpcoming.booking.id,
+                        "Arrived",
+                      );
+                      if (selected)
+                        onTableStatusChange(selected.id, "Occupied");
                     }}
                     className="flex-1 rounded-lg bg-[#9ac49f] py-2 text-xs font-bold text-[#24312e] hover:bg-[#88b68d] transition shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
                   >
@@ -2278,45 +2676,55 @@ function FloorPlanPage({
             <div>
               <div className="flex justify-between items-center">
                 <span className="text-[#aab8b0]">Table Status</span>
-                <span className={`font-extrabold uppercase tracking-wide whitespace-nowrap ${
-                  selectedEffective === "Occupied"
-                    ? "text-[#d98865]"
-                    : selectedEffective === "Available"
-                      ? "text-[#9ac49f]"
-                      : "text-[#f4bc83]"
-                }`}>
+                <span
+                  className={`font-extrabold uppercase tracking-wide whitespace-nowrap ${
+                    selectedEffective === "Occupied"
+                      ? "text-[#d98865]"
+                      : selectedEffective === "Available"
+                        ? "text-[#9ac49f]"
+                        : "text-[#f4bc83]"
+                  }`}
+                >
                   {selectedEffective}
                 </span>
               </div>
 
               {/* Status Pills: 4 core states in 2x2 grid, always on same line */}
               <div className="mt-2.5 grid grid-cols-2 gap-2">
-                {(["Available", "Occupied", "Booked", "Needs cleaning"] as const).map(
-                  (status) => (
-                    <button
-                      key={status}
-                      onClick={() => {
-                        if (!selected) return;
-                        onTableStatusChange(selected.id, status);
-                        if (selectedUpcoming) {
-                          if (status === "Occupied") onBookingStatusChange?.(selectedUpcoming.booking.id, "Arrived");
-                          else if (status === "Available") onBookingStatusChange?.(selectedUpcoming.booking.id, "Completed");
-                        }
-                      }}
-                      className={`rounded-lg py-2 px-2 text-center text-[10px] font-bold transition whitespace-nowrap flex items-center justify-center ${
-                        selectedEffective === status
-                          ? status === "Occupied"
-                            ? "bg-[#d98865] text-white shadow-sm"
-                            : status === "Available"
-                              ? "bg-[#9ac49f] text-[#24312e] shadow-sm"
-                              : "bg-[#f4bc83] text-[#24312e] shadow-sm"
-                          : "bg-white/10 text-white hover:bg-white/20"
-                      }`}
-                    >
-                      <span className="whitespace-nowrap">{status}</span>
-                    </button>
-                  ),
-                )}
+                {(
+                  ["Available", "Occupied", "Booked", "Needs cleaning"] as const
+                ).map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => {
+                      if (!selected) return;
+                      onTableStatusChange(selected.id, status);
+                      if (selectedUpcoming) {
+                        if (status === "Occupied")
+                          onBookingStatusChange?.(
+                            selectedUpcoming.booking.id,
+                            "Arrived",
+                          );
+                        else if (status === "Available")
+                          onBookingStatusChange?.(
+                            selectedUpcoming.booking.id,
+                            "Completed",
+                          );
+                      }
+                    }}
+                    className={`rounded-lg py-2 px-2 text-center text-[10px] font-bold transition whitespace-nowrap flex items-center justify-center ${
+                      selectedEffective === status
+                        ? status === "Occupied"
+                          ? "bg-[#d98865] text-white shadow-sm"
+                          : status === "Available"
+                            ? "bg-[#9ac49f] text-[#24312e] shadow-sm"
+                            : "bg-[#f4bc83] text-[#24312e] shadow-sm"
+                        : "bg-white/10 text-white hover:bg-white/20"
+                    }`}
+                  >
+                    <span className="whitespace-nowrap">{status}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -2326,7 +2734,10 @@ function FloorPlanPage({
                 onClick={() => {
                   onTableStatusChange(selected.id, "Available");
                   if (selectedUpcoming) {
-                    onBookingStatusChange?.(selectedUpcoming.booking.id, "Completed");
+                    onBookingStatusChange?.(
+                      selectedUpcoming.booking.id,
+                      "Completed",
+                    );
                   }
                 }}
                 className="w-full rounded-xl border border-[#9ac49f]/40 bg-[#9ac49f]/15 py-2 text-xs font-bold text-[#9ac49f] hover:bg-[#9ac49f]/25 transition flex items-center justify-center gap-1.5 whitespace-nowrap"
@@ -2347,7 +2758,9 @@ function FloorPlanPage({
               </div>
               <div className="flex justify-between">
                 <span className="text-[#aab8b0]">Assigned Server</span>
-                <span className="font-semibold">{selected?.serverName || "Priya S."}</span>
+                <span className="font-semibold">
+                  {selected?.serverName || "Priya S."}
+                </span>
               </div>
             </div>
           </div>
@@ -2368,7 +2781,11 @@ function FloorPlanPage({
                     ? "bg-white/10 text-[#84908a] cursor-not-allowed opacity-50"
                     : "bg-[#9ac49f] text-[#24312e] hover:bg-[#88b68d]"
                 }`}
-                title={kitchenClosed ? "Kitchen is closed - cannot take new orders" : "Take order"}
+                title={
+                  kitchenClosed
+                    ? "Kitchen is closed - cannot take new orders"
+                    : "Take order"
+                }
               >
                 <Utensils size={14} />
                 {kitchenClosed ? "Kitchen Closed" : "Take order"}
@@ -2381,7 +2798,11 @@ function FloorPlanPage({
                     ? "bg-white/10 text-[#84908a] cursor-not-allowed opacity-50"
                     : "bg-[#f4bc83] text-[#24312e] hover:bg-[#eab074]"
                 }`}
-                title={kitchenClosed ? "Kitchen is closed - cannot book tables" : "Book table"}
+                title={
+                  kitchenClosed
+                    ? "Kitchen is closed - cannot book tables"
+                    : "Book table"
+                }
               >
                 <CalendarCheck size={14} />
                 {kitchenClosed ? "Kitchen Closed" : "Book table"}
@@ -2422,7 +2843,11 @@ function OrdersPage({
   currencySymbol = "₹",
 }: {
   orders: Order[];
-  onStatusChange: (id: string, status: OrderStatus, actingRole?: StaffRole) => void;
+  onStatusChange: (
+    id: string,
+    status: OrderStatus,
+    actingRole?: StaffRole,
+  ) => void;
   onOrder?: () => void;
   kitchenClosed?: boolean;
   role?: StaffRole;
@@ -2444,7 +2869,11 @@ function OrdersPage({
                 ? "bg-[#e2e4dd] text-[#84908a] cursor-not-allowed opacity-60"
                 : "bg-[#24312e] text-white hover:bg-[#315a3d]"
             }`}
-            title={kitchenClosed ? "Kitchen is closed - new orders disabled" : "New order"}
+            title={
+              kitchenClosed
+                ? "Kitchen is closed - new orders disabled"
+                : "New order"
+            }
           >
             <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
             {kitchenClosed ? "Kitchen Closed" : "New order"}
@@ -2455,7 +2884,9 @@ function OrdersPage({
         <div className="mb-5 flex items-center gap-3 rounded-xl border border-[#f5c6cb] bg-[#f8d7da] p-3 text-xs font-semibold text-[#721c24] shadow-xs">
           <AlertTriangle size={16} className="shrink-0 text-[#721c24]" />
           <span>
-            <strong>Kitchen is currently closed.</strong> New orders are disabled until the kitchen reopens. Active tickets can still be managed and served.
+            <strong>Kitchen is currently closed.</strong> New orders are
+            disabled until the kitchen reopens. Active tickets can still be
+            managed and served.
           </span>
         </div>
       )}
@@ -2528,7 +2959,8 @@ function OrdersPage({
                             </span>
                           </p>
                           <p className="mt-1 text-xs text-[#68736e]">
-                            {order.items} • {formatMoney(order.total, currencySymbol)}
+                            {order.items} •{" "}
+                            {formatMoney(order.total, currencySymbol)}
                           </p>
                         </div>
                         <StatusPill status={order.status} />
@@ -2545,7 +2977,10 @@ function OrdersPage({
                         {order.status === "Queued" && (
                           <div className="flex w-full items-center justify-between rounded-xl bg-[#f7f8f6] px-3 py-2 text-xs">
                             <span className="flex items-center gap-1.5 font-medium text-[#68736e]">
-                              <Clock3 size={13} className="shrink-0 text-[#84908a]" />
+                              <Clock3
+                                size={13}
+                                className="shrink-0 text-[#84908a]"
+                              />
                               In kitchen queue
                             </span>
                             <span className="shrink-0 rounded-md border border-[#e2e4dd] bg-white px-2 py-0.5 text-[11px] font-semibold text-[#84908a] shadow-2xs">
@@ -2670,7 +3105,11 @@ function KitchenPage({
   orders: Order[];
   menuItems: ApiMenuItem[];
   onMenuItemsChange?: (items: ApiMenuItem[]) => void;
-  onStatusChange: (id: string, status: OrderStatus, actingRole?: StaffRole) => void;
+  onStatusChange: (
+    id: string,
+    status: OrderStatus,
+    actingRole?: StaffRole,
+  ) => void;
   soldOutItems: string[];
   setSoldOutItems: (items: string[]) => void;
   kitchenClosed?: boolean;
@@ -2692,7 +3131,8 @@ function KitchenPage({
   const moveTicket = (id: string, nextStatus: OrderStatus) =>
     onStatusChange(id, nextStatus, role || "Kitchen");
   const toggleSoldOut = async (item: ApiMenuItem) => {
-    const isCurrentlySoldOut = item.available === false || soldOutItems.includes(item.name);
+    const isCurrentlySoldOut =
+      item.available === false || soldOutItems.includes(item.name);
     const newAvailable = isCurrentlySoldOut;
     try {
       await updateMenuItem(item.id, { available: newAvailable });
@@ -2708,7 +3148,9 @@ function KitchenPage({
     }
     if (onMenuItemsChange) {
       onMenuItemsChange(
-        menuItems.map((i) => (i.id === item.id ? { ...i, available: newAvailable } : i)),
+        menuItems.map((i) =>
+          i.id === item.id ? { ...i, available: newAvailable } : i,
+        ),
       );
     }
   };
@@ -2735,7 +3177,11 @@ function KitchenPage({
                     ? "border-red-500/50 bg-red-950/80 text-red-200 hover:bg-red-900"
                     : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f2f3ef]"
                 }`}
-                title={kitchenClosed ? "Kitchen is closed. Click to reopen." : "Kitchen is open. Click to close."}
+                title={
+                  kitchenClosed
+                    ? "Kitchen is closed. Click to reopen."
+                    : "Kitchen is open. Click to close."
+                }
               >
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${
@@ -2750,7 +3196,9 @@ function KitchenPage({
       />
       <div className="mb-6 grid gap-2.5 sm:gap-3 grid-cols-3">
         <div className="rounded-xl border border-[#e0e2dc] bg-[#fbfaf7] p-3 sm:p-4">
-          <p className="text-[11px] sm:text-xs text-[#84908a] truncate">Open tickets</p>
+          <p className="text-[11px] sm:text-xs text-[#84908a] truncate">
+            Open tickets
+          </p>
           <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-[#24312e] truncate">
             {active.length}
           </p>
@@ -2759,14 +3207,20 @@ function KitchenPage({
           </p>
         </div>
         <div className="rounded-xl border border-[#e0e2dc] bg-[#fbfaf7] p-3 sm:p-4">
-          <p className="text-[11px] sm:text-xs text-[#84908a] truncate">Average prep</p>
-          <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-[#24312e] truncate">14 min</p>
+          <p className="text-[11px] sm:text-xs text-[#84908a] truncate">
+            Average prep
+          </p>
+          <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-[#24312e] truncate">
+            14 min
+          </p>
           <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] font-bold text-[#b7623d] truncate">
             2 min slower
           </p>
         </div>
         <div className="rounded-xl border border-[#e0e2dc] bg-[#fbfaf7] p-3 sm:p-4">
-          <p className="text-[11px] sm:text-xs text-[#84908a] truncate">Sold-out items</p>
+          <p className="text-[11px] sm:text-xs text-[#84908a] truncate">
+            Sold-out items
+          </p>
           <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-[#24312e] truncate">
             {soldOutItems.length}
           </p>
@@ -2797,9 +3251,12 @@ function KitchenPage({
           <div className="flex items-center gap-3">
             <span className="h-3 w-3 shrink-0 rounded-full bg-red-500 animate-ping" />
             <div>
-              <strong className="block font-bold text-red-300">Kitchen is closed.</strong>
+              <strong className="block font-bold text-red-300">
+                Kitchen is closed.
+              </strong>
               <span className="text-xs text-red-200/90">
-                New order intake and table bookings are halted across the entire restaurant. Active tickets can still be prepared and served.
+                New order intake and table bookings are halted across the entire
+                restaurant. Active tickets can still be prepared and served.
               </span>
             </div>
           </div>
@@ -2984,14 +3441,16 @@ function KitchenPage({
               Availability controls
             </h2>
             <p className="mt-1 text-xs text-[#84908a]">
-              Mark an item unavailable here and it is blocked across all order creation and the customer menu.
+              Mark an item unavailable here and it is blocked across all order
+              creation and the customer menu.
             </p>
           </div>
           <ChefHat size={21} className="text-[#b7623d]" />
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {menuItems.map((item) => {
-            const soldOut = item.available === false || soldOutItems.includes(item.name);
+            const soldOut =
+              item.available === false || soldOutItems.includes(item.name);
             return (
               <button
                 key={item.id || item.name}
@@ -3003,9 +3462,7 @@ function KitchenPage({
                     {item.name}
                   </strong>
                   <small className="mt-1 block text-xs text-[#84908a]">
-                    {soldOut
-                      ? "Unavailable (Sold out)"
-                      : "Available to order"}
+                    {soldOut ? "Unavailable (Sold out)" : "Available to order"}
                   </small>
                 </span>
                 <span
@@ -3093,7 +3550,7 @@ function EditMenuItemModal({
   );
   const [imageFileName, setImageFileName] = useState<string>("");
   const [imageUrlInput, setImageUrlInput] = useState<string>(
-    isDataUrl ? "" : item.image ?? "",
+    isDataUrl ? "" : (item.image ?? ""),
   );
   const [isDragging, setIsDragging] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -3133,7 +3590,11 @@ function EditMenuItemModal({
 
     if (currentUser?.isDemoAccount) {
       setError("This feature is disabled for the demo account.");
-      showToast?.("error", "Access Denied", "This feature is disabled for the demo account.");
+      showToast?.(
+        "error",
+        "Access Denied",
+        "This feature is disabled for the demo account.",
+      );
       setSaving(false);
       return;
     }
@@ -3160,7 +3621,9 @@ function EditMenuItemModal({
       onUpdated(updated);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update menu item.");
+      setError(
+        err instanceof Error ? err.message : "Failed to update menu item.",
+      );
     } finally {
       setSaving(false);
     }
@@ -3203,7 +3666,8 @@ function EditMenuItemModal({
             />
           </label>
           <label className="text-xs font-bold text-[#68736e]">
-            Price ({currencySymbol || "₹"}) <span className="text-[#b7623d]">*</span>
+            Price ({currencySymbol || "₹"}){" "}
+            <span className="text-[#b7623d]">*</span>
             <input
               required
               min="0"
@@ -3383,7 +3847,9 @@ function EditMenuItemModal({
                       e.currentTarget.style.display = "none";
                     }}
                   />
-                  <span className="text-xs text-[#84908a]">Preview of URL image</span>
+                  <span className="text-xs text-[#84908a]">
+                    Preview of URL image
+                  </span>
                 </div>
               )}
             </div>
@@ -3405,9 +3871,7 @@ function EditMenuItemModal({
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="text-xs font-bold text-[#68736e]">
             Allergens{" "}
-            <span className="font-normal text-[#84908a]">
-              comma separated
-            </span>
+            <span className="font-normal text-[#84908a]">comma separated</span>
             <input
               value={allergens}
               onChange={(e) => setAllergens(e.target.value)}
@@ -3417,9 +3881,7 @@ function EditMenuItemModal({
           </label>
           <label className="text-xs font-bold text-[#68736e]">
             Tags{" "}
-            <span className="font-normal text-[#84908a]">
-              comma separated
-            </span>
+            <span className="font-normal text-[#84908a]">comma separated</span>
             <input
               value={tags}
               onChange={(e) => setTags(e.target.value)}
@@ -3476,7 +3938,11 @@ function DeleteMenuItemModal({
   const handleDelete = async () => {
     if (currentUser?.isDemoAccount) {
       setError("This feature is disabled for the demo account.");
-      showToast?.("error", "Access Denied", "This feature is disabled for the demo account.");
+      showToast?.(
+        "error",
+        "Access Denied",
+        "This feature is disabled for the demo account.",
+      );
       return;
     }
 
@@ -3487,7 +3953,9 @@ function DeleteMenuItemModal({
       onDeleted(item.id);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete menu item.");
+      setError(
+        err instanceof Error ? err.message : "Failed to delete menu item.",
+      );
       setDeleting(false);
     }
   };
@@ -3502,7 +3970,9 @@ function DeleteMenuItemModal({
           Delete Menu Item
         </h3>
         <p className="mt-2 text-sm text-[#68736e]">
-          Are you sure you want to delete <span className="font-bold text-[#24312e]">"{item.name}"</span>? This will permanently remove this dish from the restaurant menu.
+          Are you sure you want to delete{" "}
+          <span className="font-bold text-[#24312e]">"{item.name}"</span>? This
+          will permanently remove this dish from the restaurant menu.
         </p>
 
         {error && (
@@ -3556,6 +4026,18 @@ function MenuPage({
   showToast?: any;
 }) {
   const isManager = canManage || canCreate || false;
+  const blockDemoAction = (action: string) => {
+    if (!currentUser?.isDemoAccount) return false;
+    showToast?.(
+      "error",
+      "Demo access only",
+      `${action} is disabled for the demo account.`,
+    );
+    return true;
+  };
+  const demoActionClass = currentUser?.isDemoAccount
+    ? "cursor-not-allowed opacity-60"
+    : "cursor-pointer";
   const [category, setCategory] = useState("All items");
   const [showCreate, setShowCreate] = useState(false);
   const [editingItem, setEditingItem] = useState<ApiMenuItem | null>(null);
@@ -3630,7 +4112,11 @@ function MenuPage({
 
     if (currentUser?.isDemoAccount) {
       setError("This feature is disabled for the demo account.");
-      showToast?.("error", "Access Denied", "This feature is disabled for the demo account.");
+      showToast?.(
+        "error",
+        "Access Denied",
+        "This feature is disabled for the demo account.",
+      );
       setSaving(false);
       return;
     }
@@ -3695,6 +4181,7 @@ function MenuPage({
   };
 
   const handleToggleAvailability = async (item: ApiMenuItem) => {
+    if (blockDemoAction("Changing menu availability")) return;
     const isUnavailable =
       item.available === false || soldOutItems.includes(item.name);
     const newAvailable = isUnavailable; // if unavailable, toggles to true
@@ -3735,8 +4222,14 @@ function MenuPage({
         action={
           isManager ? (
             <button
-              onClick={() => setShowCreate(true)}
-              className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#24312e] px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white transition hover:bg-[#315a3d] cursor-pointer"
+              onClick={() => {
+                if (blockDemoAction("Adding menu items")) return;
+                setShowCreate(true);
+              }}
+              aria-disabled={currentUser?.isDemoAccount}
+              className={`flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#24312e] px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white transition ${demoActionClass} ${
+                currentUser?.isDemoAccount ? "" : "hover:bg-[#315a3d]"
+              }`}
             >
               <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
               <span>Add menu item</span>
@@ -3767,7 +4260,9 @@ function MenuPage({
               <article
                 key={item.id || item.name}
                 className={`relative overflow-hidden rounded-2xl border bg-[#fbfaf7] p-5 shadow-xs transition ${
-                  isUnavailable ? "border-red-200/90 bg-red-50/20" : "border-[#e0e2dc]"
+                  isUnavailable
+                    ? "border-red-200/90 bg-red-50/20"
+                    : "border-[#e0e2dc]"
                 }`}
               >
                 <div className="relative flex h-40 w-full items-center justify-center overflow-hidden rounded-xl bg-[#e9eee5] text-[#315a3d]">
@@ -3796,9 +4291,13 @@ function MenuPage({
                     <div className="flex items-center gap-2">
                       <span
                         className={`inline-block h-2 w-2 rounded-full ${item.type === "veg" ? "bg-[#3b724c]" : "bg-[#b7623d]"}`}
-                        title={item.type === "veg" ? "Vegetarian" : "Non-Vegetarian"}
+                        title={
+                          item.type === "veg" ? "Vegetarian" : "Non-Vegetarian"
+                        }
                       />
-                      <p className={`font-bold text-[#24312e] ${isUnavailable ? "line-through text-[#84908a]" : ""}`}>
+                      <p
+                        className={`font-bold text-[#24312e] ${isUnavailable ? "line-through text-[#84908a]" : ""}`}
+                      >
                         {item.name}
                       </p>
                     </div>
@@ -3816,7 +4315,9 @@ function MenuPage({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setActiveDropdownId(activeDropdownId === item.id ? null : item.id);
+                          setActiveDropdownId(
+                            activeDropdownId === item.id ? null : item.id,
+                          );
                         }}
                         className="rounded-lg p-1.5 text-[#84908a] transition hover:bg-[#eceeea] hover:text-[#24312e]"
                         aria-label="Item actions"
@@ -3832,10 +4333,11 @@ function MenuPage({
                           <button
                             type="button"
                             onClick={() => {
+                              if (blockDemoAction("Editing menu items")) return;
                               setEditingItem(item);
                               setActiveDropdownId(null);
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-[#24312e] hover:bg-[#f2f4ef] transition"
+                            className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-[#24312e] transition ${demoActionClass}`}
                           >
                             <Pencil size={15} className="text-[#68736e]" />
                             Edit item
@@ -3846,11 +4348,14 @@ function MenuPage({
                               handleToggleAvailability(item);
                               setActiveDropdownId(null);
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-[#24312e] hover:bg-[#f2f4ef] transition"
+                            className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-[#24312e] transition ${demoActionClass}`}
                           >
                             {isUnavailable ? (
                               <>
-                                <CheckCircle2 size={15} className="text-[#3b724c]" />
+                                <CheckCircle2
+                                  size={15}
+                                  className="text-[#3b724c]"
+                                />
                                 Mark available
                               </>
                             ) : (
@@ -3864,10 +4369,12 @@ function MenuPage({
                           <button
                             type="button"
                             onClick={() => {
+                              if (blockDemoAction("Deleting menu items"))
+                                return;
                               setDeletingItem(item);
                               setActiveDropdownId(null);
                             }}
-                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition"
+                            className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition ${demoActionClass}`}
                           >
                             <Trash2 size={15} className="text-red-600" />
                             Delete item
@@ -3969,7 +4476,8 @@ function MenuPage({
                 />
               </label>
               <label className="text-xs font-bold text-[#68736e]">
-                Price ({currencySymbol || "₹"}) <span className="text-[#b7623d]">*</span>
+                Price ({currencySymbol || "₹"}){" "}
+                <span className="text-[#b7623d]">*</span>
                 <input
                   name="price"
                   required
@@ -4001,7 +4509,8 @@ function MenuPage({
                 />
               </label>
               <label className="text-xs font-bold text-[#68736e] sm:col-span-2">
-                Preparation time (minutes) <span className="text-[#b7623d]">*</span>
+                Preparation time (minutes){" "}
+                <span className="text-[#b7623d]">*</span>
                 <input
                   name="preparationTimeMinutes"
                   required
@@ -4191,8 +4700,6 @@ function MenuPage({
   );
 }
 
-
-
 function ManualBillModal({
   isOpen,
   onClose,
@@ -4220,16 +4727,24 @@ function ManualBillModal({
   onOrderCreated?: (order: Order) => void;
   onTableStatusChange?: (id: string, status: TableStatus) => void;
   onDirectSettle?: (invoice: any) => void;
-  showToast: (type: "success" | "error" | "info", title: string, message: string) => void;
+  showToast: (
+    type: "success" | "error" | "info",
+    title: string,
+    message: string,
+  ) => void;
   role?: StaffRole | null;
 }) {
   if (!isOpen) return null;
 
   const [orderType, setOrderType] = useState<"Dine in" | "Takeaway">("Dine in");
-  const [tableNumber, setTableNumber] = useState<string>(tables[0]?.id || "T01");
+  const [tableNumber, setTableNumber] = useState<string>(
+    tables[0]?.id || "T01",
+  );
   const [guestName, setGuestName] = useState<string>("");
   const [guestCount, setGuestCount] = useState<number>(2);
-  const [servantName, setServantName] = useState<string>(servants[0]?.name || "");
+  const [servantName, setServantName] = useState<string>(
+    servants[0]?.name || "",
+  );
 
   interface ManualItem {
     id: string;
@@ -4254,14 +4769,19 @@ function ManualBillModal({
     );
   };
 
-  const categories = ["All", ...Array.from(new Set(menuItems.map((m) => m.category || "General")))];
+  const categories = [
+    "All",
+    ...Array.from(new Set(menuItems.map((m) => m.category || "General"))),
+  ];
 
   const filteredMenuItems = menuItems
     .filter((item) => {
-      const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+      const matchesCategory =
+        selectedCategory === "All" || item.category === selectedCategory;
       const matchesSearch =
         item.name.toLowerCase().includes(dishSearch.toLowerCase()) ||
-        (item.category && item.category.toLowerCase().includes(dishSearch.toLowerCase()));
+        (item.category &&
+          item.category.toLowerCase().includes(dishSearch.toLowerCase()));
       return matchesCategory && matchesSearch;
     })
     .sort((a, b) => {
@@ -4275,7 +4795,9 @@ function ManualBillModal({
     if (isDishUnavailable(item)) return;
 
     setSelectedItems((prev) => {
-      const idx = prev.findIndex((i) => i.name.toLowerCase() === item.name.toLowerCase());
+      const idx = prev.findIndex(
+        (i) => i.name.toLowerCase() === item.name.toLowerCase(),
+      );
       if (idx >= 0) {
         const next = [...prev];
         next[idx] = {
@@ -4315,8 +4837,13 @@ function ManualBillModal({
   // Calculations
   const subtotal = selectedItems.reduce((sum, it) => sum + it.total, 0);
   const taxAmount = Number(((subtotal * taxRate) / 100).toFixed(2));
-  const serviceChargeAmount = Number(((subtotal * serviceCharge) / 100).toFixed(2));
-  const netPayable = Math.max(0, Number((subtotal + taxAmount + serviceChargeAmount).toFixed(2)));
+  const serviceChargeAmount = Number(
+    ((subtotal * serviceCharge) / 100).toFixed(2),
+  );
+  const netPayable = Math.max(
+    0,
+    Number((subtotal + taxAmount + serviceChargeAmount).toFixed(2)),
+  );
   const totalItemCount = selectedItems.reduce((sum, it) => sum + it.qty, 0);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -4330,8 +4857,15 @@ function ManualBillModal({
 
     const effectiveTable = orderType === "Takeaway" ? "Takeaway" : tableNumber;
 
-    if (orderType === "Dine in" && (!effectiveTable || effectiveTable.trim() === "" || effectiveTable === "Takeaway")) {
-      setError("Assigning a table is mandatory for dine-in orders. Please select a table.");
+    if (
+      orderType === "Dine in" &&
+      (!effectiveTable ||
+        effectiveTable.trim() === "" ||
+        effectiveTable === "Takeaway")
+    ) {
+      setError(
+        "Assigning a table is mandatory for dine-in orders. Please select a table.",
+      );
       return;
     }
 
@@ -4343,7 +4877,7 @@ function ManualBillModal({
     setIsSubmitting(true);
     try {
       const formattedItemList = selectedItems.map((it) =>
-        it.qty > 1 ? `${it.qty}x ${it.name}` : it.name
+        it.qty > 1 ? `${it.qty}x ${it.name}` : it.name,
       );
 
       const customerLabel = guestName.trim();
@@ -4358,7 +4892,7 @@ function ManualBillModal({
           serverName: servantName.trim() || undefined,
           orderType: orderType === "Takeaway" ? "Takeaway" : "Dine in",
         },
-        role || "Server"
+        role || "Server",
       );
 
       if (onOrderCreated) {
@@ -4369,10 +4903,16 @@ function ManualBillModal({
         onTableStatusChange(tableNumber, "Occupied");
       }
 
-      showToast("success", "Manual Bill Created", `Active bill created for ${effectiveTable} (${customerLabel}).`);
+      showToast(
+        "success",
+        "Manual Bill Created",
+        `Active bill created for ${effectiveTable} (${customerLabel}).`,
+      );
       onClose();
     } catch (err: any) {
-      setError(err?.message || "Failed to create manual bill. Please try again.");
+      setError(
+        err?.message || "Failed to create manual bill. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -4388,7 +4928,9 @@ function ManualBillModal({
               <Receipt size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-[#24312e]">Create Manual Bill</h3>
+              <h3 className="font-bold text-lg text-[#24312e]">
+                Create Manual Bill
+              </h3>
               <p className="text-xs text-[#84908a]">
                 Generate a custom dine-in or takeaway bill on the fly.
               </p>
@@ -4410,7 +4952,10 @@ function ManualBillModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col flex-1 overflow-hidden"
+        >
           {/* Scrollable Form Content */}
           <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
             {/* Order Type Buttons */}
@@ -4446,17 +4991,22 @@ function ManualBillModal({
               {orderType === "Dine in" ? (
                 <div>
                   <label className="text-xs font-bold text-[#68736e] block mb-1">
-                    Assign Table <span className="text-red-500 font-bold">*</span>
+                    Assign Table{" "}
+                    <span className="text-red-500 font-bold">*</span>
                   </label>
                   <select
                     required
                     value={tableNumber}
                     onChange={(e) => setTableNumber(e.target.value)}
                     className={`w-full rounded-xl border px-3 py-2 text-xs outline-none focus:border-[#24312e] cursor-pointer ${
-                      !tableNumber && error ? "border-red-400 bg-red-50/50" : "border-[#dfe1dc] bg-white"
+                      !tableNumber && error
+                        ? "border-red-400 bg-red-50/50"
+                        : "border-[#dfe1dc] bg-white"
                     }`}
                   >
-                    <option value="" disabled>-- Select Table (Required) --</option>
+                    <option value="" disabled>
+                      -- Select Table (Required) --
+                    </option>
                     {tables.map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.id} ({t.seats} seats · {t.zone}) - {t.status}
@@ -4466,7 +5016,9 @@ function ManualBillModal({
                 </div>
               ) : (
                 <div>
-                  <label className="text-xs font-bold text-[#68736e] block mb-1">Pickup Channel</label>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Pickup Channel
+                  </label>
                   <input
                     type="text"
                     value="Pickup Counter / Takeaway"
@@ -4477,7 +5029,9 @@ function ManualBillModal({
               )}
 
               <div>
-                <label className="text-xs font-bold text-[#68736e] block mb-1">Assigned Servant / Waiter</label>
+                <label className="text-xs font-bold text-[#68736e] block mb-1">
+                  Assigned Servant / Waiter
+                </label>
                 <select
                   value={servantName}
                   onChange={(e) => setServantName(e.target.value)}
@@ -4503,13 +5057,17 @@ function ManualBillModal({
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
                   className={`w-full rounded-xl border px-3 py-2 text-xs outline-none focus:border-[#24312e] ${
-                    !guestName.trim() && error ? "border-red-400 bg-red-50/50" : "border-[#dfe1dc] bg-white"
+                    !guestName.trim() && error
+                      ? "border-red-400 bg-red-50/50"
+                      : "border-[#dfe1dc] bg-white"
                   }`}
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-[#68736e] block mb-1">Guests / Covers</label>
+                <label className="text-xs font-bold text-[#68736e] block mb-1">
+                  Guests / Covers
+                </label>
                 <input
                   type="number"
                   min={1}
@@ -4529,7 +5087,8 @@ function ManualBillModal({
                 </span>
                 {totalItemCount > 0 && (
                   <span className="rounded-full bg-[#e8f1e8] px-2.5 py-0.5 text-[11px] font-bold text-[#315a3d]">
-                    {totalItemCount} {totalItemCount === 1 ? "dish" : "dishes"} selected
+                    {totalItemCount} {totalItemCount === 1 ? "dish" : "dishes"}{" "}
+                    selected
                   </span>
                 )}
               </div>
@@ -4537,7 +5096,10 @@ function ManualBillModal({
               {/* Dish Search & Category Filters */}
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
-                  <Search size={13} className="absolute left-2.5 top-2.5 text-[#84908a]" />
+                  <Search
+                    size={13}
+                    className="absolute left-2.5 top-2.5 text-[#84908a]"
+                  />
                   <input
                     type="text"
                     placeholder="Search menu dishes..."
@@ -4576,7 +5138,7 @@ function ManualBillModal({
                     {filteredMenuItems.map((dish) => {
                       const unavailable = isDishUnavailable(dish);
                       const cartItem = selectedItems.find(
-                        (i) => i.name.toLowerCase() === dish.name.toLowerCase()
+                        (i) => i.name.toLowerCase() === dish.name.toLowerCase(),
                       );
                       const inCartQty = cartItem ? cartItem.qty : 0;
 
@@ -4587,8 +5149,8 @@ function ManualBillModal({
                             unavailable
                               ? "bg-[#f4f5f1] border-dashed border-[#dfe1dc] opacity-65"
                               : inCartQty > 0
-                              ? "bg-[#f2f7f3] border-[#315a3d]/50 shadow-xs ring-1 ring-[#315a3d]/20"
-                              : "bg-white border-[#eef0eb] hover:border-[#dfe1dc] hover:shadow-2xs"
+                                ? "bg-[#f2f7f3] border-[#315a3d]/50 shadow-xs ring-1 ring-[#315a3d]/20"
+                                : "bg-white border-[#eef0eb] hover:border-[#dfe1dc] hover:shadow-2xs"
                           }`}
                         >
                           {/* Dish Image */}
@@ -4598,19 +5160,26 @@ function ManualBillModal({
                                 src={dish.image}
                                 alt={dish.name}
                                 className={`h-full w-full object-cover transition-transform duration-300 ${
-                                  unavailable ? "grayscale contrast-75" : "group-hover:scale-105"
+                                  unavailable
+                                    ? "grayscale contrast-75"
+                                    : "group-hover:scale-105"
                                 }`}
                                 onError={(e) => {
                                   e.currentTarget.style.display = "none";
                                 }}
                               />
                             ) : (
-                              <Utensils size={28} className="text-[#315a3d]/50" />
+                              <Utensils
+                                size={28}
+                                className="text-[#315a3d]/50"
+                              />
                             )}
                             <div className="absolute top-2 left-2 flex items-center gap-1 rounded-md bg-white/90 backdrop-blur-xs px-1.5 py-0.5 shadow-2xs">
                               <span
                                 className={`inline-block h-2 w-2 rounded-full ${
-                                  dish.type === "veg" ? "bg-[#3b724c]" : "bg-[#b7623d]"
+                                  dish.type === "veg"
+                                    ? "bg-[#3b724c]"
+                                    : "bg-[#b7623d]"
                                 }`}
                               />
                               <span className="text-[9px] font-bold uppercase tracking-wider text-[#24312e]">
@@ -4639,9 +5208,12 @@ function ManualBillModal({
                               {dish.name}
                             </h4>
                             <div className="mt-0.5 flex items-center justify-between">
-                              <span className="text-[10px] text-[#84908a] line-clamp-1">{dish.category}</span>
+                              <span className="text-[10px] text-[#84908a] line-clamp-1">
+                                {dish.category}
+                              </span>
                               <span className="text-xs font-black text-[#24312e]">
-                                {currencySymbol}{dish.price}
+                                {currencySymbol}
+                                {dish.price}
                               </span>
                             </div>
                           </div>
@@ -4658,7 +5230,9 @@ function ManualBillModal({
                                   type="button"
                                   onClick={() => {
                                     const idx = selectedItems.findIndex(
-                                      (i) => i.name.toLowerCase() === dish.name.toLowerCase()
+                                      (i) =>
+                                        i.name.toLowerCase() ===
+                                        dish.name.toLowerCase(),
                                     );
                                     if (idx >= 0) handleUpdateQty(idx, -1);
                                   }}
@@ -4674,7 +5248,9 @@ function ManualBillModal({
                                   type="button"
                                   onClick={() => {
                                     const idx = selectedItems.findIndex(
-                                      (i) => i.name.toLowerCase() === dish.name.toLowerCase()
+                                      (i) =>
+                                        i.name.toLowerCase() ===
+                                        dish.name.toLowerCase(),
                                     );
                                     if (idx >= 0) handleUpdateQty(idx, 1);
                                   }}
@@ -4712,7 +5288,8 @@ function ManualBillModal({
               </span>
               <span className="text-xs text-[#dfe1dc]">•</span>
               <span className="text-sm font-extrabold text-[#24312e]">
-                Total: {currencySymbol}{netPayable.toFixed(2)}
+                Total: {currencySymbol}
+                {netPayable.toFixed(2)}
               </span>
               {totalItemCount > 0 && (
                 <span className="text-[10px] text-[#84908a] hidden sm:inline">
@@ -4785,33 +5362,47 @@ function BillingPage({
   const serviceCharge = restaurantSettings?.serviceCharge ?? 5.0;
   const restroName = restaurantSettings?.restaurantName || "Table & Thyme";
   const branchName = restaurantSettings?.branchName || "Downtown Branch";
-  const receiptFooter = restaurantSettings?.receiptFooter || "Thank you for dining with us! Please visit again.";
+  const receiptFooter =
+    restaurantSettings?.receiptFooter ||
+    "Thank you for dining with us! Please visit again.";
   const logoUrl = restaurantSettings?.logoUrl || "";
   const gstNumber = restaurantSettings?.gstNumber || "07AAAAA0000A1Z5";
 
   // State management
-  const [activeTab, setActiveTab] = useState<"active-tables" | "takeaway" | "settled-history">("active-tables");
+  const [activeTab, setActiveTab] = useState<
+    "active-tables" | "takeaway" | "settled-history"
+  >("active-tables");
   const [selectedSessionId, setSelectedSessionId] = useState<string>("");
-  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "Card" | "Cash" | "Split">("UPI");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "UPI" | "Card" | "Cash" | "Split"
+  >("UPI");
   const [cashTenderedInput, setCashTenderedInput] = useState<string>("");
   const [waiveServiceCharge, setWaiveServiceCharge] = useState<boolean>(false);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [customDiscountInput, setCustomDiscountInput] = useState<string>("");
   const [splitCount, setSplitCount] = useState<number>(2);
-  const [cardAuthCode, setCardAuthCode] = useState<string>("AUTH-" + Math.floor(100000 + Math.random() * 900000));
+  const [cardAuthCode, setCardAuthCode] = useState<string>(
+    "AUTH-" + Math.floor(100000 + Math.random() * 900000),
+  );
   const [searchFilter, setSearchFilter] = useState<string>("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [receiptModalInvoice, setReceiptModalInvoice] = useState<any | null>(null);
+  const [receiptModalInvoice, setReceiptModalInvoice] = useState<any | null>(
+    null,
+  );
 
   // In-billing item editing & POS simulation state
   const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
-  const [showManualBillModal, setShowManualBillModal] = useState<boolean>(false);
+  const [showManualBillModal, setShowManualBillModal] =
+    useState<boolean>(false);
   const [dishSearchQuery, setDishSearchQuery] = useState<string>("");
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+  const [isProcessingPayment, setIsProcessingPayment] =
+    useState<boolean>(false);
 
   // Recent transaction records state
-  const [transactionsList, setTransactionsList] = useState<TransactionRecord[]>([]);
+  const [transactionsList, setTransactionsList] = useState<TransactionRecord[]>(
+    [],
+  );
 
   // Date helper to verify transactions made today
   const isTodayDate = (dateVal?: string | Date) => {
@@ -4826,9 +5417,16 @@ function BillingPage({
     );
   };
 
-  const showToast = (type: "success" | "error" | "info", title: string, message: string) => {
+  const showToast = (
+    type: "success" | "error" | "info",
+    title: string,
+    message: string,
+  ) => {
     const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, type, title, message, duration: 4000 }]);
+    setToasts((prev) => [
+      ...prev,
+      { id, type, title, message, duration: 4000 },
+    ]);
   };
 
   const removeToast = (id: string) => {
@@ -4868,8 +5466,14 @@ function BillingPage({
     const cleanOrder = normalizeTableKey(orderTable);
     const cleanTable = normalizeTableKey(tableId);
     if (cleanOrder === cleanTable) return true;
-    const numOrder = cleanOrder.replace(/^table/, "").replace(/^t/, "").replace(/^0+/, "");
-    const numTable = cleanTable.replace(/^table/, "").replace(/^t/, "").replace(/^0+/, "");
+    const numOrder = cleanOrder
+      .replace(/^table/, "")
+      .replace(/^t/, "")
+      .replace(/^0+/, "");
+    const numTable = cleanTable
+      .replace(/^table/, "")
+      .replace(/^t/, "")
+      .replace(/^0+/, "");
     if (numOrder && numTable && numOrder === numTable) return true;
     return false;
   };
@@ -4877,11 +5481,14 @@ function BillingPage({
   const parseBillableItems = (
     itemList: string[] | undefined,
     orderTotal: number,
-    menuItemsList: ApiMenuItem[]
+    menuItemsList: ApiMenuItem[],
   ): BillableItem[] => {
     if (!itemList || !itemList.length) return [];
 
-    const itemMap = new Map<string, { qty: number; rate: number; total: number }>();
+    const itemMap = new Map<
+      string,
+      { qty: number; rate: number; total: number }
+    >();
 
     itemList.forEach((raw) => {
       let qty = 1;
@@ -4899,12 +5506,12 @@ function BillingPage({
 
       const menuItem =
         menuItemsList.find(
-          (m) => m.name.toLowerCase().trim() === name.toLowerCase().trim()
+          (m) => m.name.toLowerCase().trim() === name.toLowerCase().trim(),
         ) ||
         menuItemsList.find(
           (m) =>
             m.name.toLowerCase().trim().includes(name.toLowerCase().trim()) ||
-            name.toLowerCase().trim().includes(m.name.toLowerCase().trim())
+            name.toLowerCase().trim().includes(m.name.toLowerCase().trim()),
         );
 
       const displayName = menuItem ? menuItem.name : name;
@@ -4930,7 +5537,9 @@ function BillingPage({
   };
 
   const [sessions, setSessions] = useState<BillableSession[]>([]);
-  const [settledSessionIds, setSettledSessionIds] = useState<Set<string>>(new Set());
+  const [settledSessionIds, setSettledSessionIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [settledInvoices, setSettledInvoices] = useState<any[]>([]);
 
   // Fetch transactions and hydrate settled invoices on load or when rates update
@@ -4948,8 +5557,9 @@ function BillingPage({
               const calculatedSubtotal =
                 itemsList.reduce(
                   (acc: number, it: any) =>
-                    acc + (Number(it.total) || (Number(it.rate) * Number(it.qty)) || 0),
-                  0
+                    acc +
+                    (Number(it.total) || Number(it.rate) * Number(it.qty) || 0),
+                  0,
                 ) || Number(tx.amount || 0);
               return {
                 id: tx.id || `inv-${tx.invoiceNo}`,
@@ -5022,7 +5632,7 @@ function BillingPage({
           (b) =>
             isMatchingTable(b.tableId || "", t.id) &&
             b.status !== "Cancelled" &&
-            b.status !== "Completed"
+            b.status !== "Completed",
         );
 
         const allRawItems: string[] = [];
@@ -5031,25 +5641,40 @@ function BillingPage({
           if (o.itemList && Array.isArray(o.itemList)) {
             allRawItems.push(...o.itemList);
           }
-          const cleanTotal = parseFloat(String(o.total).replace(/[^0-9.]/g, "")) || 0;
+          const cleanTotal =
+            parseFloat(String(o.total).replace(/[^0-9.]/g, "")) || 0;
           combinedOrderTotal += cleanTotal;
         });
 
-        const items = parseBillableItems(allRawItems, combinedOrderTotal, menuItems);
-        const subtotal = items.length > 0
-          ? items.reduce((sum, it) => sum + it.total, 0)
-          : combinedOrderTotal;
+        const items = parseBillableItems(
+          allRawItems,
+          combinedOrderTotal,
+          menuItems,
+        );
+        const subtotal =
+          items.length > 0
+            ? items.reduce((sum, it) => sum + it.total, 0)
+            : combinedOrderTotal;
 
-        const depositVal = typeof booking?.deposit === "number" ? booking.deposit : 0;
-        const serverFromOrder = activeTableOrders.find((o) => o.serverName)?.serverName;
-        const assignedServer = serverFromOrder || t.serverName || (servants[0]?.name ?? "Arjun Rao");
+        const depositVal =
+          typeof booking?.deposit === "number" ? booking.deposit : 0;
+        const serverFromOrder = activeTableOrders.find(
+          (o) => o.serverName,
+        )?.serverName;
+        const assignedServer =
+          serverFromOrder || t.serverName || (servants[0]?.name ?? "Arjun Rao");
 
         dynamicDineIn.push({
           id: t.id,
           tableId: t.id,
-          title: t.id.startsWith("T") ? `Table ${t.id.replace(/^T0?/, "")}` : t.id,
+          title: t.id.startsWith("T")
+            ? `Table ${t.id.replace(/^T0?/, "")}`
+            : t.id,
           type: "dine-in",
-          customer: booking?.customer || activeTableOrders[0]?.customer || "Dining Guest",
+          customer:
+            booking?.customer ||
+            activeTableOrders[0]?.customer ||
+            "Dining Guest",
           guests: t.seats || 2,
           server: assignedServer,
           time: "Active",
@@ -5069,7 +5694,7 @@ function BillingPage({
         !capturedOrderIds.has(o.id) &&
         !o.table.toLowerCase().includes("takeaway") &&
         o.status !== "Paid" &&
-        o.status !== "Cancelled"
+        o.status !== "Cancelled",
     );
 
     const uncapturedByTable = new Map<string, Order[]>();
@@ -5081,7 +5706,10 @@ function BillingPage({
     });
 
     uncapturedByTable.forEach((tableOrders, tableKey) => {
-      if (settledSessionIds.has(tableKey) || settledSessionIds.has(normalizeTableKey(tableKey))) {
+      if (
+        settledSessionIds.has(tableKey) ||
+        settledSessionIds.has(normalizeTableKey(tableKey))
+      ) {
         return;
       }
       const allRawItems: string[] = [];
@@ -5090,22 +5718,31 @@ function BillingPage({
         if (o.itemList && Array.isArray(o.itemList)) {
           allRawItems.push(...o.itemList);
         }
-        const cleanTotal = parseFloat(String(o.total).replace(/[^0-9.]/g, "")) || 0;
+        const cleanTotal =
+          parseFloat(String(o.total).replace(/[^0-9.]/g, "")) || 0;
         combinedOrderTotal += cleanTotal;
       });
 
-      const items = parseBillableItems(allRawItems, combinedOrderTotal, menuItems);
-      const subtotal = items.length > 0
-        ? items.reduce((sum, it) => sum + it.total, 0)
-        : combinedOrderTotal;
+      const items = parseBillableItems(
+        allRawItems,
+        combinedOrderTotal,
+        menuItems,
+      );
+      const subtotal =
+        items.length > 0
+          ? items.reduce((sum, it) => sum + it.total, 0)
+          : combinedOrderTotal;
 
       const serverFromOrder = tableOrders.find((o) => o.serverName)?.serverName;
-      const assignedServer = serverFromOrder || (servants[0]?.name ?? "Arjun Rao");
+      const assignedServer =
+        serverFromOrder || (servants[0]?.name ?? "Arjun Rao");
 
       dynamicDineIn.push({
         id: tableKey,
         tableId: tableKey,
-        title: tableKey.startsWith("T") ? `Table ${tableKey.replace(/^T0?/, "")}` : tableKey,
+        title: tableKey.startsWith("T")
+          ? `Table ${tableKey.replace(/^T0?/, "")}`
+          : tableKey,
         type: "dine-in",
         customer: tableOrders[0]?.customer || "Dining Guest",
         guests: 2,
@@ -5119,7 +5756,10 @@ function BillingPage({
     });
 
     setSessions(dynamicDineIn);
-    if (!selectedSessionId || !dynamicDineIn.some((s) => s.id === selectedSessionId)) {
+    if (
+      !selectedSessionId ||
+      !dynamicDineIn.some((s) => s.id === selectedSessionId)
+    ) {
       if (dynamicDineIn.length > 0) {
         setSelectedSessionId(dynamicDineIn[0].id);
       }
@@ -5128,13 +5768,20 @@ function BillingPage({
 
   // Takeaway sessions
   const takeawaySessions: BillableSession[] = orders
-    .filter((o) => o.table.toLowerCase().includes("takeaway") && o.status !== "Paid" && o.status !== "Cancelled")
+    .filter(
+      (o) =>
+        o.table.toLowerCase().includes("takeaway") &&
+        o.status !== "Paid" &&
+        o.status !== "Cancelled",
+    )
     .map((o) => {
-      const cleanTotal = parseFloat(String(o.total).replace(/[^0-9.]/g, "")) || 0;
+      const cleanTotal =
+        parseFloat(String(o.total).replace(/[^0-9.]/g, "")) || 0;
       const items = parseBillableItems(o.itemList, cleanTotal, menuItems);
-      const subtotal = items.length > 0
-        ? items.reduce((sum, it) => sum + it.total, 0)
-        : cleanTotal;
+      const subtotal =
+        items.length > 0
+          ? items.reduce((sum, it) => sum + it.total, 0)
+          : cleanTotal;
 
       return {
         id: `takeaway-${o.id}`,
@@ -5155,7 +5802,7 @@ function BillingPage({
   const filteredSessions = currentPool.filter(
     (s) =>
       s.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      s.customer.toLowerCase().includes(searchFilter.toLowerCase())
+      s.customer.toLowerCase().includes(searchFilter.toLowerCase()),
   );
 
   const selectedSession: BillableSession | null =
@@ -5166,7 +5813,7 @@ function BillingPage({
   // Helper to persist session item modifications to backend API
   const persistSessionItems = async (
     session: BillableSession,
-    updatedItems: BillableItem[]
+    updatedItems: BillableItem[],
   ) => {
     const newSubtotal = updatedItems.reduce((acc, it) => acc + it.total, 0);
 
@@ -5182,11 +5829,16 @@ function BillingPage({
     // Optimistic local state update
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === session.id ? { ...s, items: updatedItems, subtotal: newSubtotal } : s
-      )
+        s.id === session.id
+          ? { ...s, items: updatedItems, subtotal: newSubtotal }
+          : s,
+      ),
     );
 
-    const primaryOrderId = session.orderIds && session.orderIds.length > 0 ? session.orderIds[0] : null;
+    const primaryOrderId =
+      session.orderIds && session.orderIds.length > 0
+        ? session.orderIds[0]
+        : null;
 
     if (primaryOrderId) {
       try {
@@ -5211,15 +5863,15 @@ function BillingPage({
             serverName: session.server || undefined,
             orderType: session.type === "takeaway" ? "Takeaway" : "Dine in",
           },
-          role || "Server"
+          role || "Server",
         );
         if (onOrderCreated) {
           onOrderCreated(created);
         }
         setSessions((prev) =>
           prev.map((s) =>
-            s.id === session.id ? { ...s, orderIds: [created.id] } : s
-          )
+            s.id === session.id ? { ...s, orderIds: [created.id] } : s,
+          ),
         );
       } catch (err) {
         console.error("Failed to create order from billing:", err);
@@ -5231,7 +5883,7 @@ function BillingPage({
   const handleAddItemToSession = async (menuItem: ApiMenuItem) => {
     if (!selectedSession) return;
     const existingIdx = selectedSession.items.findIndex(
-      (it) => it.name.toLowerCase() === menuItem.name.toLowerCase()
+      (it) => it.name.toLowerCase() === menuItem.name.toLowerCase(),
     );
     let newItems = [...selectedSession.items];
     if (existingIdx >= 0) {
@@ -5251,7 +5903,11 @@ function BillingPage({
     }
 
     await persistSessionItems(selectedSession, newItems);
-    showToast("success", "Dish Added", `Added ${menuItem.name} to ${selectedSession.title}`);
+    showToast(
+      "success",
+      "Dish Added",
+      `Added ${menuItem.name} to ${selectedSession.title}`,
+    );
   };
 
   const handleUpdateItemQty = async (itemIdx: number, delta: number) => {
@@ -5277,24 +5933,36 @@ function BillingPage({
     if (!selectedSession) return;
     const newItems = selectedSession.items.filter((_, idx) => idx !== itemIdx);
     await persistSessionItems(selectedSession, newItems);
-    showToast("info", "Item Removed", "Dish removed from active billing ticket.");
+    showToast(
+      "info",
+      "Item Removed",
+      "Dish removed from active billing ticket.",
+    );
   };
 
   const handleUpdateSessionServer = async (newServer: string) => {
     if (!selectedSession) return;
     setSessions((prev) =>
-      prev.map((s) => (s.id === selectedSession.id ? { ...s, server: newServer } : s))
+      prev.map((s) =>
+        s.id === selectedSession.id ? { ...s, server: newServer } : s,
+      ),
     );
     const primaryOrderId = selectedSession.orderIds?.[0];
     if (primaryOrderId) {
       try {
-        const updated = await updateOrder(primaryOrderId, { serverName: newServer });
+        const updated = await updateOrder(primaryOrderId, {
+          serverName: newServer,
+        });
         if (onOrderUpdated) onOrderUpdated(updated);
       } catch (err) {
         console.error("Failed to update server on order:", err);
       }
     }
-    showToast("success", "Servant Assigned", `${newServer || "Servant"} assigned to ${selectedSession.title}`);
+    showToast(
+      "success",
+      "Servant Assigned",
+      `${newServer || "Servant"} assigned to ${selectedSession.title}`,
+    );
   };
 
   // Calculations
@@ -5302,7 +5970,9 @@ function BillingPage({
   const effectiveTaxRate = taxRate;
   const effectiveServiceRate = waiveServiceCharge ? 0 : serviceCharge;
   const taxAmount = Number(((subtotal * effectiveTaxRate) / 100).toFixed(2));
-  const serviceChargeAmount = Number(((subtotal * effectiveServiceRate) / 100).toFixed(2));
+  const serviceChargeAmount = Number(
+    ((subtotal * effectiveServiceRate) / 100).toFixed(2),
+  );
 
   let discountAmount = 0;
   if (discountPercent > 0) {
@@ -5312,8 +5982,12 @@ function BillingPage({
   }
 
   const depositCredit = selectedSession?.deposit || 0;
-  const grossPayable = subtotal + taxAmount + serviceChargeAmount - discountAmount;
-  const finalPayable = Math.max(0, Number((grossPayable - depositCredit).toFixed(2)));
+  const grossPayable =
+    subtotal + taxAmount + serviceChargeAmount - discountAmount;
+  const finalPayable = Math.max(
+    0,
+    Number((grossPayable - depositCredit).toFixed(2)),
+  );
 
   const tenderedNum = parseFloat(cashTenderedInput) || 0;
   const changeDue = Math.max(0, tenderedNum - finalPayable);
@@ -5327,8 +6001,8 @@ function BillingPage({
       (paymentMethod === "UPI"
         ? "UPI QR Scanner timeout: Customer cancelled payment request"
         : paymentMethod === "Card"
-        ? "Card declined: Chip read error or daily contactless limit reached"
-        : "Cash discrepancy: Insufficient tender provided");
+          ? "Card declined: Chip read error or daily contactless limit reached"
+          : "Cash discrepancy: Insufficient tender provided");
 
     const invoiceNo = `INV-${Date.now().toString().slice(-6)}`;
     setPaymentError(reason);
@@ -5354,7 +6028,13 @@ function BillingPage({
       const saved = await recordTransaction(failedTx);
       setTransactionsList((prev) => [saved, ...prev]);
     } catch {
-      setTransactionsList((prev) => [{ ...failedTx, createdAt: new Date().toISOString() } as TransactionRecord, ...prev]);
+      setTransactionsList((prev) => [
+        {
+          ...failedTx,
+          createdAt: new Date().toISOString(),
+        } as TransactionRecord,
+        ...prev,
+      ]);
     } finally {
       setIsProcessingPayment(false);
     }
@@ -5376,8 +6056,15 @@ function BillingPage({
       title: selectedSession.title,
       customer: selectedSession.customer,
       server: selectedSession.server || "Unassigned",
-      date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      date: new Date().toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }),
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
       createdAt: new Date().toISOString(),
       items: selectedSession.items,
       subtotal,
@@ -5389,8 +6076,10 @@ function BillingPage({
       depositCredit,
       total: finalPayable,
       paymentMethod: paymentMethod === "UPI" ? "UPI / Scanner" : paymentMethod,
-      cashTendered: paymentMethod === "Cash" && tenderedNum ? tenderedNum : undefined,
-      changeDue: paymentMethod === "Cash" && tenderedNum ? changeDue : undefined,
+      cashTendered:
+        paymentMethod === "Cash" && tenderedNum ? tenderedNum : undefined,
+      changeDue:
+        paymentMethod === "Cash" && tenderedNum ? changeDue : undefined,
     };
 
     setSettledInvoices((prev) => [newInvoice, ...prev]);
@@ -5415,7 +6104,13 @@ function BillingPage({
       const saved = await recordTransaction(successTx);
       setTransactionsList((prev) => [saved, ...prev]);
     } catch {
-      setTransactionsList((prev) => [{ ...successTx, createdAt: new Date().toISOString() } as TransactionRecord, ...prev]);
+      setTransactionsList((prev) => [
+        {
+          ...successTx,
+          createdAt: new Date().toISOString(),
+        } as TransactionRecord,
+        ...prev,
+      ]);
     } finally {
       setIsProcessingPayment(false);
     }
@@ -5428,11 +6123,21 @@ function BillingPage({
     // Update order status: find ALL orders matching this table/session and mark them Paid
     const matchingOrders = orders.filter((o) => {
       if (o.status === "Paid" || o.status === "Cancelled") return false;
-      if (selectedSession.orderIds && selectedSession.orderIds.includes(o.id)) return true;
-      if (selectedSession.type === "takeaway" && o.table?.toLowerCase().includes("takeaway")) {
-        return `takeaway-${o.id}` === selectedSession.id || o.id === selectedSession.id;
+      if (selectedSession.orderIds && selectedSession.orderIds.includes(o.id))
+        return true;
+      if (
+        selectedSession.type === "takeaway" &&
+        o.table?.toLowerCase().includes("takeaway")
+      ) {
+        return (
+          `takeaway-${o.id}` === selectedSession.id ||
+          o.id === selectedSession.id
+        );
       }
-      return isMatchingTable(o.table, selectedSession.tableId || selectedSession.id);
+      return isMatchingTable(
+        o.table,
+        selectedSession.tableId || selectedSession.id,
+      );
     });
 
     if (onOrderStatusChange) {
@@ -5463,7 +6168,8 @@ function BillingPage({
     // Remove from active sessions and select next session
     setSessions((prev) => {
       const remaining = prev.filter(
-        (s) => s.id !== selectedSession.id && s.tableId !== selectedSession.tableId
+        (s) =>
+          s.id !== selectedSession.id && s.tableId !== selectedSession.tableId,
       );
       if (remaining.length > 0) {
         setSelectedSessionId(remaining[0].id);
@@ -5476,7 +6182,7 @@ function BillingPage({
     showToast(
       "success",
       `Payment Succeeded (${invoiceNo})`,
-      `${selectedSession.title} settled with ${paymentMethod}. Redirecting to bill printing.`
+      `${selectedSession.title} settled with ${paymentMethod}. Redirecting to bill printing.`,
     );
 
     // Prompt print preview immediately upon success
@@ -5492,11 +6198,11 @@ function BillingPage({
 
   // Today's settled calculations
   const todaySettledInvoices = settledInvoices.filter((inv) =>
-    inv.createdAt ? isTodayDate(inv.createdAt) : true
+    inv.createdAt ? isTodayDate(inv.createdAt) : true,
   );
   const totalCollectedToday = todaySettledInvoices.reduce(
     (acc, inv) => acc + (Number(inv.total) || 0),
-    0
+    0,
   );
   const settledCountToday = todaySettledInvoices.length;
 
@@ -5553,106 +6259,248 @@ function BillingPage({
                 <img
                   src={logoUrl}
                   alt="Logo"
-                  style={{ maxHeight: "40px", maxWidth: "120px", margin: "0 auto 4px auto", display: "block" }}
+                  style={{
+                    maxHeight: "40px",
+                    maxWidth: "120px",
+                    margin: "0 auto 4px auto",
+                    display: "block",
+                  }}
                 />
               )}
-              <h2 style={{ fontSize: "16px", fontWeight: "bold", margin: "0" }}>{restroName}</h2>
+              <h2 style={{ fontSize: "16px", fontWeight: "bold", margin: "0" }}>
+                {restroName}
+              </h2>
               <p style={{ fontSize: "10px", margin: "2px 0" }}>{branchName}</p>
-              <p style={{ fontSize: "10px", margin: "2px 0" }}>GSTIN: {gstNumber}</p>
+              <p style={{ fontSize: "10px", margin: "2px 0" }}>
+                GSTIN: {gstNumber}
+              </p>
               <p style={{ fontSize: "10px", margin: "2px 0" }}>TAX INVOICE</p>
             </div>
 
-            <div style={{ borderTop: "1px dashed #000", borderBottom: "1px dashed #000", padding: "4px 0", margin: "6px 0", fontSize: "10px" }}>
+            <div
+              style={{
+                borderTop: "1px dashed #000",
+                borderBottom: "1px dashed #000",
+                padding: "4px 0",
+                margin: "6px 0",
+                fontSize: "10px",
+              }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>Invoice: {receiptModalInvoice.invoiceNo}</span>
                 <span>{receiptModalInvoice.time}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>{receiptModalInvoice.title} ({receiptModalInvoice.customer})</span>
+                <span>
+                  {receiptModalInvoice.title} ({receiptModalInvoice.customer})
+                </span>
                 <span>{receiptModalInvoice.date}</span>
               </div>
               <div>Server: {receiptModalInvoice.server}</div>
             </div>
 
             <div style={{ margin: "6px 0" }}>
-              <table style={{ width: "100%", fontSize: "10px", borderCollapse: "collapse" }}>
+              <table
+                style={{
+                  width: "100%",
+                  fontSize: "10px",
+                  borderCollapse: "collapse",
+                }}
+              >
                 <thead>
-                  <tr style={{ borderBottom: "1px dashed #000", textAlign: "left" }}>
+                  <tr
+                    style={{
+                      borderBottom: "1px dashed #000",
+                      textAlign: "left",
+                    }}
+                  >
                     <th style={{ padding: "3px 0", width: "12%" }}>Qty</th>
                     <th style={{ padding: "3px 0", width: "50%" }}>Item</th>
-                    <th style={{ padding: "3px 0", width: "18%", textAlign: "right" }}>Rate</th>
-                    <th style={{ padding: "3px 0", width: "20%", textAlign: "right" }}>Amt</th>
+                    <th
+                      style={{
+                        padding: "3px 0",
+                        width: "18%",
+                        textAlign: "right",
+                      }}
+                    >
+                      Rate
+                    </th>
+                    <th
+                      style={{
+                        padding: "3px 0",
+                        width: "20%",
+                        textAlign: "right",
+                      }}
+                    >
+                      Amt
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {receiptModalInvoice.items && receiptModalInvoice.items.map((it: any, i: number) => (
-                    <tr key={i}>
-                      <td style={{ padding: "2px 0" }}>{it.qty}</td>
-                      <td style={{ padding: "2px 0" }}>{it.name}</td>
-                      <td style={{ padding: "2px 0", textAlign: "right" }}>{it.rate}</td>
-                      <td style={{ padding: "2px 0", textAlign: "right" }}>{it.total}</td>
-                    </tr>
-                  ))}
+                  {receiptModalInvoice.items &&
+                    receiptModalInvoice.items.map((it: any, i: number) => (
+                      <tr key={i}>
+                        <td style={{ padding: "2px 0" }}>{it.qty}</td>
+                        <td style={{ padding: "2px 0" }}>{it.name}</td>
+                        <td style={{ padding: "2px 0", textAlign: "right" }}>
+                          {it.rate}
+                        </td>
+                        <td style={{ padding: "2px 0", textAlign: "right" }}>
+                          {it.total}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
 
-            <div style={{ borderTop: "1px dashed #000", paddingTop: "4px", fontSize: "10px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", margin: "2px 0" }}>
+            <div
+              style={{
+                borderTop: "1px dashed #000",
+                paddingTop: "4px",
+                fontSize: "10px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  margin: "2px 0",
+                }}
+              >
                 <span>Subtotal</span>
-                <span>{currencySymbol}{Number(receiptModalInvoice.subtotal).toFixed(2)}</span>
+                <span>
+                  {currencySymbol}
+                  {Number(receiptModalInvoice.subtotal).toFixed(2)}
+                </span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", margin: "2px 0" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  margin: "2px 0",
+                }}
+              >
                 <span>GST ({receiptModalInvoice.taxRate ?? taxRate}%)</span>
-                <span>+{currencySymbol}{Number(receiptModalInvoice.taxAmount).toFixed(2)}</span>
+                <span>
+                  +{currencySymbol}
+                  {Number(receiptModalInvoice.taxAmount).toFixed(2)}
+                </span>
               </div>
               {receiptModalInvoice.serviceCharge > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", margin: "2px 0" }}>
-                  <span>Service Charge ({receiptModalInvoice.serviceCharge}%)</span>
-                  <span>+{currencySymbol}{Number(receiptModalInvoice.serviceChargeAmount).toFixed(2)}</span>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    margin: "2px 0",
+                  }}
+                >
+                  <span>
+                    Service Charge ({receiptModalInvoice.serviceCharge}%)
+                  </span>
+                  <span>
+                    +{currencySymbol}
+                    {Number(receiptModalInvoice.serviceChargeAmount).toFixed(2)}
+                  </span>
                 </div>
               )}
               {receiptModalInvoice.discountAmount > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", margin: "2px 0" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    margin: "2px 0",
+                  }}
+                >
                   <span>Discount</span>
-                  <span>-{currencySymbol}{Number(receiptModalInvoice.discountAmount).toFixed(2)}</span>
+                  <span>
+                    -{currencySymbol}
+                    {Number(receiptModalInvoice.discountAmount).toFixed(2)}
+                  </span>
                 </div>
               )}
               {receiptModalInvoice.depositCredit > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", margin: "2px 0" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    margin: "2px 0",
+                  }}
+                >
                   <span>Booking Deposit Credit</span>
-                  <span>-{currencySymbol}{Number(receiptModalInvoice.depositCredit).toFixed(2)}</span>
+                  <span>
+                    -{currencySymbol}
+                    {Number(receiptModalInvoice.depositCredit).toFixed(2)}
+                  </span>
                 </div>
               )}
             </div>
 
-            <div style={{ borderTop: "1px solid #000", borderBottom: "1px solid #000", padding: "4px 0", margin: "6px 0", display: "flex", justifyContent: "space-between", fontWeight: "bold", fontSize: "13px" }}>
+            <div
+              style={{
+                borderTop: "1px solid #000",
+                borderBottom: "1px solid #000",
+                padding: "4px 0",
+                margin: "6px 0",
+                display: "flex",
+                justifyContent: "space-between",
+                fontWeight: "bold",
+                fontSize: "13px",
+              }}
+            >
               <span>TOTAL PAYABLE</span>
-              <span>{currencySymbol}{Number(receiptModalInvoice.total).toFixed(2)}</span>
+              <span>
+                {currencySymbol}
+                {Number(receiptModalInvoice.total).toFixed(2)}
+              </span>
             </div>
 
             <div style={{ fontSize: "10px", margin: "4px 0" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>Payment Mode:</span>
-                <span style={{ fontWeight: "bold" }}>PAID via {receiptModalInvoice.paymentMethod}</span>
+                <span style={{ fontWeight: "bold" }}>
+                  PAID via {receiptModalInvoice.paymentMethod}
+                </span>
               </div>
               {receiptModalInvoice.cashTendered && (
                 <>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div
+                    style={{ display: "flex", justifyContent: "space-between" }}
+                  >
                     <span>Cash Tendered:</span>
-                    <span>{currencySymbol}{Number(receiptModalInvoice.cashTendered).toFixed(2)}</span>
+                    <span>
+                      {currencySymbol}
+                      {Number(receiptModalInvoice.cashTendered).toFixed(2)}
+                    </span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div
+                    style={{ display: "flex", justifyContent: "space-between" }}
+                  >
                     <span>Change Returned:</span>
-                    <span>{currencySymbol}{Number(receiptModalInvoice.changeDue).toFixed(2)}</span>
+                    <span>
+                      {currencySymbol}
+                      {Number(receiptModalInvoice.changeDue).toFixed(2)}
+                    </span>
                   </div>
                 </>
               )}
             </div>
 
-            <div style={{ textAlign: "center", marginTop: "12px", borderTop: "1px dashed #000", paddingTop: "6px", fontSize: "9px" }}>
-              <p style={{ margin: "2px 0", fontStyle: "italic" }}>"{receiptFooter}"</p>
-              <p style={{ margin: "4px 0 0 0", fontWeight: "bold" }}>*** HAVE A DELIGHTFUL DAY ***</p>
+            <div
+              style={{
+                textAlign: "center",
+                marginTop: "12px",
+                borderTop: "1px dashed #000",
+                paddingTop: "6px",
+                fontSize: "9px",
+              }}
+            >
+              <p style={{ margin: "2px 0", fontStyle: "italic" }}>
+                "{receiptFooter}"
+              </p>
+              <p style={{ margin: "4px 0 0 0", fontWeight: "bold" }}>
+                *** HAVE A DELIGHTFUL DAY ***
+              </p>
             </div>
           </div>
         )}
@@ -5680,9 +6528,14 @@ function BillingPage({
         <div className="flex items-center gap-2.5 text-emerald-950 font-medium">
           <CheckCircle2 size={18} className="text-emerald-700 shrink-0" />
           <span>
-            <strong>Dynamic POS Calculation Active:</strong> All orders calculate{" "}
-            <strong>{taxRate}% GST</strong> and <strong>{serviceCharge}% Service Charge</strong> under system currency{" "}
-            <strong className="text-emerald-900 bg-emerald-200/60 px-1.5 py-0.5 rounded text-xs font-bold">{currencySymbol}</strong>.
+            <strong>Dynamic POS Calculation Active:</strong> All orders
+            calculate <strong>{taxRate}% GST</strong> and{" "}
+            <strong>{serviceCharge}% Service Charge</strong> under system
+            currency{" "}
+            <strong className="text-emerald-900 bg-emerald-200/60 px-1.5 py-0.5 rounded text-xs font-bold">
+              {currencySymbol}
+            </strong>
+            .
           </span>
         </div>
         {onNavigateSettings && (
@@ -5788,7 +6641,10 @@ function BillingPage({
         <div className="flex items-center gap-2.5">
           {activeTab !== "settled-history" && (
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-2.5 text-[#84908a]" />
+              <Search
+                size={14}
+                className="absolute left-3 top-2.5 text-[#84908a]"
+              />
               <input
                 type="text"
                 placeholder="Search table or customer..."
@@ -5810,19 +6666,27 @@ function BillingPage({
                 Settled Bills & Invoices Archive
               </h2>
               <p className="mt-1 text-xs text-[#84908a]">
-                Audit past customer payments, inspect breakdowns, and reprint receipts anytime.
+                Audit past customer payments, inspect breakdowns, and reprint
+                receipts anytime.
               </p>
             </div>
             <span className="rounded-lg bg-[#e8f1e8] px-3 py-1 text-xs font-bold text-[#3b724c]">
-              Total Settled: {currencySymbol}{settledInvoices.reduce((acc, i) => acc + i.total, 0).toLocaleString()}
+              Total Settled: {currencySymbol}
+              {settledInvoices
+                .reduce((acc, i) => acc + i.total, 0)
+                .toLocaleString()}
             </span>
           </div>
 
           {settledInvoices.length === 0 ? (
             <div className="py-12 text-center text-[#84908a]">
               <Receipt size={40} className="mx-auto text-[#cbd5e1] mb-2" />
-              <p className="font-bold text-sm text-[#24312e]">No settled bills yet today</p>
-              <p className="text-xs mt-1">Completed table checkout receipts will be archived here.</p>
+              <p className="font-bold text-sm text-[#24312e]">
+                No settled bills yet today
+              </p>
+              <p className="text-xs mt-1">
+                Completed table checkout receipts will be archived here.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -5844,20 +6708,33 @@ function BillingPage({
                 <tbody className="divide-y divide-[#f0f1ed]">
                   {settledInvoices.map((inv) => (
                     <tr key={inv.id} className="hover:bg-white/60 transition">
-                      <td className="py-3.5 font-mono font-bold text-[#24312e]">{inv.invoiceNo}</td>
-                      <td className="py-3.5 font-bold text-[#315a3d]">{inv.title}</td>
+                      <td className="py-3.5 font-mono font-bold text-[#24312e]">
+                        {inv.invoiceNo}
+                      </td>
+                      <td className="py-3.5 font-bold text-[#315a3d]">
+                        {inv.title}
+                      </td>
                       <td className="py-3.5 text-[#68736e]">{inv.customer}</td>
-                      <td className="py-3.5 text-[#45504b] font-medium">{inv.server}</td>
+                      <td className="py-3.5 text-[#45504b] font-medium">
+                        {inv.server}
+                      </td>
                       <td className="py-3.5 text-[#84908a]">{inv.time}</td>
                       <td className="py-3.5">
                         <span className="inline-flex items-center gap-1 rounded-md bg-[#eef3ee] px-2 py-0.5 text-[10px] font-bold text-[#315a3d]">
                           {inv.paymentMethod}
                         </span>
                       </td>
-                      <td className="py-3.5 text-right font-medium">{currencySymbol}{Number(inv.subtotal || 0).toFixed(2)}</td>
-                      <td className="py-3.5 text-right text-emerald-700">+{currencySymbol}{Number(inv.taxAmount || 0).toFixed(2)}</td>
+                      <td className="py-3.5 text-right font-medium">
+                        {currencySymbol}
+                        {Number(inv.subtotal || 0).toFixed(2)}
+                      </td>
+                      <td className="py-3.5 text-right text-emerald-700">
+                        +{currencySymbol}
+                        {Number(inv.taxAmount || 0).toFixed(2)}
+                      </td>
                       <td className="py-3.5 text-right font-extrabold text-[#24312e]">
-                        {currencySymbol}{Number(inv.total || 0).toFixed(2)}
+                        {currencySymbol}
+                        {Number(inv.total || 0).toFixed(2)}
                       </td>
                       <td className="py-3.5 text-right">
                         <button
@@ -5884,22 +6761,31 @@ function BillingPage({
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h2 className="display-font text-xl font-bold text-[#24312e]">
-                    {activeTab === "takeaway" ? "Takeaway Tickets" : "Active Table Sessions"}
+                    {activeTab === "takeaway"
+                      ? "Takeaway Tickets"
+                      : "Active Table Sessions"}
                   </h2>
                   <p className="mt-0.5 text-xs text-[#84908a]">
-                    Select any billable session to modify items, manage servants, or process checkout.
+                    Select any billable session to modify items, manage
+                    servants, or process checkout.
                   </p>
                 </div>
                 <span className="text-xs font-bold text-[#68736e]">
-                  Active Currency: <strong className="text-[#24312e]">{currencySymbol}</strong>
+                  Active Currency:{" "}
+                  <strong className="text-[#24312e]">{currencySymbol}</strong>
                 </span>
               </div>
 
               {filteredSessions.length === 0 ? (
                 <div className="py-12 text-center text-[#84908a]">
                   <Utensils size={36} className="mx-auto text-[#cbd5e1] mb-2" />
-                  <p className="font-bold text-sm text-[#24312e]">No active sessions found</p>
-                  <p className="text-xs mt-1 mb-4">Orders sent to tables or counter will appear here for billing.</p>
+                  <p className="font-bold text-sm text-[#24312e]">
+                    No active sessions found
+                  </p>
+                  <p className="text-xs mt-1 mb-4">
+                    Orders sent to tables or counter will appear here for
+                    billing.
+                  </p>
                   <button
                     type="button"
                     onClick={() => setShowManualBillModal(true)}
@@ -5924,10 +6810,16 @@ function BillingPage({
                         }`}
                       >
                         <div className="flex items-center gap-3.5">
-                          <div className={`flex h-11 w-11 items-center justify-center rounded-xl font-bold text-xs shrink-0 ${
-                            isSelected ? "bg-[#24312e] text-white" : "bg-[#f0f2ed] text-[#24312e]"
-                          }`}>
-                            {session.type === "takeaway" ? "📦" : session.title.replace("Table ", "T")}
+                          <div
+                            className={`flex h-11 w-11 items-center justify-center rounded-xl font-bold text-xs shrink-0 ${
+                              isSelected
+                                ? "bg-[#24312e] text-white"
+                                : "bg-[#f0f2ed] text-[#24312e]"
+                            }`}
+                          >
+                            {session.type === "takeaway"
+                              ? "📦"
+                              : session.title.replace("Table ", "T")}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
@@ -5935,34 +6827,49 @@ function BillingPage({
                                 {session.title}
                                 {session.customer &&
                                 session.customer !== "Dining Guest" &&
-                                !session.title.toLowerCase().includes(session.customer.toLowerCase())
+                                !session.title
+                                  .toLowerCase()
+                                  .includes(session.customer.toLowerCase())
                                   ? ` (${session.customer})`
                                   : ""}
                               </p>
                               {session.deposit > 0 && (
                                 <span className="rounded bg-amber-100 text-amber-900 px-1.5 py-0.2 text-[10px] font-bold">
-                                  Deposit: {currencySymbol}{session.deposit}
+                                  Deposit: {currencySymbol}
+                                  {session.deposit}
                                 </span>
                               )}
                             </div>
                             <p className="mt-0.5 text-xs text-[#84908a]">
-                              {session.guests} guests • Server: <span className="text-[#24312e] font-semibold">{session.server || "Unassigned"}</span>
+                              {session.guests} guests • Server:{" "}
+                              <span className="text-[#24312e] font-semibold">
+                                {session.server || "Unassigned"}
+                              </span>
                             </p>
                             <p className="text-[11px] text-[#68736e] mt-1 line-clamp-1">
-                              {session.items.map((it) => `${it.qty}x ${it.name}`).join(", ")}
+                              {session.items
+                                .map((it) => `${it.qty}x ${it.name}`)
+                                .join(", ")}
                             </p>
                           </div>
                         </div>
 
                         <div className="text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-[#f0f1ed] flex sm:flex-col justify-between sm:justify-start items-baseline sm:items-end">
                           <div>
-                            <span className="text-[10px] uppercase font-bold text-[#84908a] block">Subtotal</span>
+                            <span className="text-[10px] uppercase font-bold text-[#84908a] block">
+                              Subtotal
+                            </span>
                             <p className="font-extrabold text-base text-[#24312e]">
-                              {currencySymbol}{session.subtotal.toLocaleString()}
+                              {currencySymbol}
+                              {session.subtotal.toLocaleString()}
                             </p>
                           </div>
-                          <span className={`text-[11px] font-bold mt-0.5 ${isSelected ? "text-[#315a3d]" : "text-[#b7623d]"}`}>
-                            {isSelected ? "Active in Terminal ✓" : "Settle Bill →"}
+                          <span
+                            className={`text-[11px] font-bold mt-0.5 ${isSelected ? "text-[#315a3d]" : "text-[#b7623d]"}`}
+                          >
+                            {isSelected
+                              ? "Active in Terminal ✓"
+                              : "Settle Bill →"}
                           </span>
                         </div>
                       </div>
@@ -5975,7 +6882,8 @@ function BillingPage({
             {/* Bottom quick action bar */}
             <div className="mt-6 pt-4 border-t border-[#e9eae6] flex items-center justify-between text-xs text-[#84908a]">
               <span>
-                Displaying <strong>{filteredSessions.length}</strong> active billable sessions
+                Displaying <strong>{filteredSessions.length}</strong> active
+                billable sessions
               </span>
               <button
                 onClick={async () => {
@@ -5991,7 +6899,11 @@ function BillingPage({
                       "Loaded updated orders and floor tickets from server.",
                     );
                   } catch {
-                    showToast("error", "Refresh Failed", "Could not refresh from server.");
+                    showToast(
+                      "error",
+                      "Refresh Failed",
+                      "Could not refresh from server.",
+                    );
                   }
                 }}
                 className="flex items-center gap-1 font-bold text-[#24312e] hover:underline cursor-pointer"
@@ -6009,9 +6921,12 @@ function BillingPage({
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0f2ed] text-[#24312e] mb-3">
                   <CheckCircle2 size={28} className="text-emerald-700" />
                 </div>
-                <p className="font-bold text-base text-[#24312e]">No Active Session Selected</p>
+                <p className="font-bold text-base text-[#24312e]">
+                  No Active Session Selected
+                </p>
                 <p className="text-xs mt-1.5 max-w-xs text-[#84908a]">
-                  All active table bills have been settled, or select an open table from the list on the left to proceed with billing.
+                  All active table bills have been settled, or select an open
+                  table from the list on the left to proceed with billing.
                 </p>
               </div>
             ) : (
@@ -6019,561 +6934,675 @@ function BillingPage({
                 <div>
                   {/* Receipt Header */}
                   <div className="flex items-center justify-between border-b border-[#e9eae6] pb-4">
-                <div className="flex items-center gap-3">
-                  {logoUrl ? (
-                    <img
-                      src={logoUrl}
-                      alt="Logo"
-                      className="h-10 w-10 rounded-xl object-contain border border-[#dfe1dc] bg-white p-0.5"
-                    />
-                  ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#24312e] text-[#f4bc83]">
-                      <ChefHat size={20} />
+                    <div className="flex items-center gap-3">
+                      {logoUrl ? (
+                        <img
+                          src={logoUrl}
+                          alt="Logo"
+                          className="h-10 w-10 rounded-xl object-contain border border-[#dfe1dc] bg-white p-0.5"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#24312e] text-[#f4bc83]">
+                          <ChefHat size={20} />
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="font-bold text-sm text-[#24312e]">
+                          {restroName}
+                        </h3>
+                        <p className="text-[10px] text-[#84908a] uppercase tracking-wider font-semibold">
+                          {selectedSession.title}
+                          {selectedSession.customer &&
+                          selectedSession.customer !== "Dining Guest" &&
+                          !selectedSession.title
+                            .toLowerCase()
+                            .includes(selectedSession.customer.toLowerCase())
+                            ? ` (${selectedSession.customer})`
+                            : ""}{" "}
+                          · POS Checkout
+                        </p>
+                      </div>
                     </div>
-                  )}
-                  <div>
-                    <h3 className="font-bold text-sm text-[#24312e]">{restroName}</h3>
-                    <p className="text-[10px] text-[#84908a] uppercase tracking-wider font-semibold">
-                      {selectedSession.title}
-                      {selectedSession.customer &&
-                      selectedSession.customer !== "Dining Guest" &&
-                      !selectedSession.title.toLowerCase().includes(selectedSession.customer.toLowerCase())
-                        ? ` (${selectedSession.customer})`
-                        : ""}{" "}
-                      · POS Checkout
-                    </p>
+
+                    <button
+                      onClick={() =>
+                        executeDirectPrint({
+                          invoiceNo: `INV-${Date.now().toString().slice(-6)}`,
+                          title: selectedSession.title,
+                          customer: selectedSession.customer,
+                          server: selectedSession.server,
+                          date: new Date().toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          }),
+                          time: new Date().toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }),
+                          items: selectedSession.items,
+                          subtotal,
+                          taxRate: effectiveTaxRate,
+                          taxAmount,
+                          serviceCharge: effectiveServiceRate,
+                          serviceChargeAmount,
+                          discountAmount,
+                          depositCredit,
+                          total: finalPayable,
+                          paymentMethod,
+                          cashTendered:
+                            paymentMethod === "Cash" && tenderedNum
+                              ? tenderedNum
+                              : undefined,
+                          changeDue:
+                            paymentMethod === "Cash" && tenderedNum
+                              ? changeDue
+                              : undefined,
+                        })
+                      }
+                      className="flex items-center gap-1.5 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-1.5 text-xs font-bold text-[#24312e] hover:bg-[#f0f1ed] transition cursor-pointer shadow-2xs"
+                      title="Print preview slip"
+                    >
+                      <Printer size={14} />
+                      <span>Print Slip</span>
+                    </button>
                   </div>
-                </div>
 
-                <button
-                  onClick={() => executeDirectPrint({
-                    invoiceNo: `INV-${Date.now().toString().slice(-6)}`,
-                    title: selectedSession.title,
-                    customer: selectedSession.customer,
-                    server: selectedSession.server,
-                    date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-                    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                    items: selectedSession.items,
-                    subtotal,
-                    taxRate: effectiveTaxRate,
-                    taxAmount,
-                    serviceCharge: effectiveServiceRate,
-                    serviceChargeAmount,
-                    discountAmount,
-                    depositCredit,
-                    total: finalPayable,
-                    paymentMethod,
-                    cashTendered: paymentMethod === "Cash" && tenderedNum ? tenderedNum : undefined,
-                    changeDue: paymentMethod === "Cash" && tenderedNum ? changeDue : undefined,
-                  })}
-                  className="flex items-center gap-1.5 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-1.5 text-xs font-bold text-[#24312e] hover:bg-[#f0f1ed] transition cursor-pointer shadow-2xs"
-                  title="Print preview slip"
-                >
-                  <Printer size={14} />
-                  <span>Print Slip</span>
-                </button>
-              </div>
-
-              {/* Guest & Servant Selector (Editable in billing) */}
-              <div className="my-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f7f8f5] px-3.5 py-2.5 text-xs text-[#68736e]">
-                <span>Guest: <strong className="text-[#24312e]">{selectedSession.customer}</strong></span>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-[#45504b]">Servant:</span>
-                  <select
-                    value={selectedSession.server || ""}
-                    onChange={(e) => handleUpdateSessionServer(e.target.value)}
-                    className="rounded-lg border border-[#dfe1dc] bg-white px-2 py-1 text-xs font-bold text-[#24312e] outline-none focus:border-[#24312e] shadow-2xs cursor-pointer"
-                  >
-                    <option value="">-- Assign Servant --</option>
-                    {servants.map((s) => (
-                      <option key={s.id || s.name} value={s.name}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Itemized Order Items with Add & Remove Capabilities */}
-              <div className="space-y-2 border-b border-[#e9eae6] pb-3.5">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#9aa39d]">
-                    Itemized Order Dishes ({selectedSession.items.reduce((s, it) => s + it.qty, 0)})
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddItemModal(true)}
-                    className="inline-flex items-center gap-1 rounded-lg bg-[#24312e] px-2 py-1 text-[11px] font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-2xs"
-                  >
-                    <Plus size={12} />
-                    <span>Add Dish</span>
-                  </button>
-                </div>
-
-                {/* Quick Add Dish Modal / Popover */}
-                {showAddItemModal && (
-                  <div className="rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 shadow-inner my-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-xs text-[#24312e]">
-                        Add Dish to {selectedSession.title}
-                        {selectedSession.customer &&
-                        selectedSession.customer !== "Dining Guest" &&
-                        !selectedSession.title.toLowerCase().includes(selectedSession.customer.toLowerCase())
-                          ? ` (${selectedSession.customer})`
-                          : ""}
+                  {/* Guest & Servant Selector (Editable in billing) */}
+                  <div className="my-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f7f8f5] px-3.5 py-2.5 text-xs text-[#68736e]">
+                    <span>
+                      Guest:{" "}
+                      <strong className="text-[#24312e]">
+                        {selectedSession.customer}
+                      </strong>
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-[#45504b]">
+                        Servant:
                       </span>
-                      <button
-                        onClick={() => setShowAddItemModal(false)}
-                        className="text-[#84908a] hover:text-[#24312e]"
+                      <select
+                        value={selectedSession.server || ""}
+                        onChange={(e) =>
+                          handleUpdateSessionServer(e.target.value)
+                        }
+                        className="rounded-lg border border-[#dfe1dc] bg-white px-2 py-1 text-xs font-bold text-[#24312e] outline-none focus:border-[#24312e] shadow-2xs cursor-pointer"
                       >
-                        <X size={14} />
+                        <option value="">-- Assign Servant --</option>
+                        {servants.map((s) => (
+                          <option key={s.id || s.name} value={s.name}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Itemized Order Items with Add & Remove Capabilities */}
+                  <div className="space-y-2 border-b border-[#e9eae6] pb-3.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#9aa39d]">
+                        Itemized Order Dishes (
+                        {selectedSession.items.reduce((s, it) => s + it.qty, 0)}
+                        )
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddItemModal(true)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-[#24312e] px-2 py-1 text-[11px] font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-2xs"
+                      >
+                        <Plus size={12} />
+                        <span>Add Dish</span>
                       </button>
                     </div>
-                    <div className="relative mb-2">
-                      <Search size={13} className="absolute left-2.5 top-2 text-[#84908a]" />
-                      <input
-                        type="text"
-                        placeholder="Search menu items..."
-                        value={dishSearchQuery}
-                        onChange={(e) => setDishSearchQuery(e.target.value)}
-                        className="w-full rounded-lg border border-[#dfe1dc] bg-white pl-7 pr-2.5 py-1 text-xs outline-none focus:border-[#24312e]"
-                      />
-                    </div>
-                    <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
-                      {menuItems
-                        .filter((m) => m.name.toLowerCase().includes(dishSearchQuery.toLowerCase()))
-                        .slice(0, 10)
-                        .map((dish) => {
-                          const isUnavailable =
-                            dish.available === false ||
-                            soldOutItems.includes(dish.name) ||
-                            (dish as any).status === "Unavailable";
-                          return (
-                            <div
-                              key={dish.id}
-                              className={`flex items-center justify-between rounded-lg p-2 text-xs border ${
-                                isUnavailable
-                                  ? "bg-[#f5f5f2] border-dashed border-[#dfe1dc] opacity-60"
-                                  : "bg-white border-[#eef0eb] hover:border-[#dfe1dc]"
-                              }`}
-                            >
-                              <div>
-                                <p className={`font-bold ${isUnavailable ? "text-[#84908a] line-through" : "text-[#24312e]"}`}>
-                                  {dish.name}
-                                </p>
-                                <span className="text-[10px] text-[#84908a]">
-                                  {dish.category} · {currencySymbol}{dish.price}
-                                </span>
-                              </div>
-                              {isUnavailable ? (
-                                <span className="rounded-lg bg-gray-200/80 px-2 py-0.5 text-[11px] font-semibold text-gray-500 border border-gray-300/80 select-none cursor-not-allowed">
-                                  Unavailable
-                                </span>
-                              ) : (
+
+                    {/* Quick Add Dish Modal / Popover */}
+                    {showAddItemModal && (
+                      <div className="rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 shadow-inner my-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-bold text-xs text-[#24312e]">
+                            Add Dish to {selectedSession.title}
+                            {selectedSession.customer &&
+                            selectedSession.customer !== "Dining Guest" &&
+                            !selectedSession.title
+                              .toLowerCase()
+                              .includes(selectedSession.customer.toLowerCase())
+                              ? ` (${selectedSession.customer})`
+                              : ""}
+                          </span>
+                          <button
+                            onClick={() => setShowAddItemModal(false)}
+                            className="text-[#84908a] hover:text-[#24312e]"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <div className="relative mb-2">
+                          <Search
+                            size={13}
+                            className="absolute left-2.5 top-2 text-[#84908a]"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Search menu items..."
+                            value={dishSearchQuery}
+                            onChange={(e) => setDishSearchQuery(e.target.value)}
+                            className="w-full rounded-lg border border-[#dfe1dc] bg-white pl-7 pr-2.5 py-1 text-xs outline-none focus:border-[#24312e]"
+                          />
+                        </div>
+                        <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                          {menuItems
+                            .filter((m) =>
+                              m.name
+                                .toLowerCase()
+                                .includes(dishSearchQuery.toLowerCase()),
+                            )
+                            .slice(0, 10)
+                            .map((dish) => {
+                              const isUnavailable =
+                                dish.available === false ||
+                                soldOutItems.includes(dish.name) ||
+                                (dish as any).status === "Unavailable";
+                              return (
+                                <div
+                                  key={dish.id}
+                                  className={`flex items-center justify-between rounded-lg p-2 text-xs border ${
+                                    isUnavailable
+                                      ? "bg-[#f5f5f2] border-dashed border-[#dfe1dc] opacity-60"
+                                      : "bg-white border-[#eef0eb] hover:border-[#dfe1dc]"
+                                  }`}
+                                >
+                                  <div>
+                                    <p
+                                      className={`font-bold ${isUnavailable ? "text-[#84908a] line-through" : "text-[#24312e]"}`}
+                                    >
+                                      {dish.name}
+                                    </p>
+                                    <span className="text-[10px] text-[#84908a]">
+                                      {dish.category} · {currencySymbol}
+                                      {dish.price}
+                                    </span>
+                                  </div>
+                                  {isUnavailable ? (
+                                    <span className="rounded-lg bg-gray-200/80 px-2 py-0.5 text-[11px] font-semibold text-gray-500 border border-gray-300/80 select-none cursor-not-allowed">
+                                      Unavailable
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleAddItemToSession(dish)
+                                      }
+                                      className="rounded-lg bg-[#e8f1e8] px-2.5 py-1 text-xs font-bold text-[#315a3d] hover:bg-[#315a3d] hover:text-white transition cursor-pointer"
+                                    >
+                                      + Add
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Items List */}
+                    <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                      {selectedSession.items.length === 0 ? (
+                        <div className="py-4 text-center text-[#84908a] text-xs">
+                          No dishes in this bill. Click{" "}
+                          <strong>+ Add Dish</strong> above to add items.
+                        </div>
+                      ) : (
+                        selectedSession.items.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between rounded-xl bg-[#fafaf7] p-2 text-[#24312e] border border-[#f0f2ed]"
+                          >
+                            <div className="flex items-center gap-2">
+                              {/* Quantity Controls */}
+                              <div className="flex items-center rounded-lg border border-[#dfe1dc] bg-white shadow-2xs">
                                 <button
                                   type="button"
-                                  onClick={() => handleAddItemToSession(dish)}
-                                  className="rounded-lg bg-[#e8f1e8] px-2.5 py-1 text-xs font-bold text-[#315a3d] hover:bg-[#315a3d] hover:text-white transition cursor-pointer"
+                                  onClick={() => handleUpdateItemQty(idx, -1)}
+                                  className="px-1.5 py-0.5 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] rounded-l-lg cursor-pointer"
+                                  title="Decrease quantity"
                                 >
-                                  + Add
+                                  -
                                 </button>
-                              )}
+                                <span className="px-1.5 text-xs font-black text-[#24312e]">
+                                  {item.qty}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateItemQty(idx, 1)}
+                                  className="px-1.5 py-0.5 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] rounded-r-lg cursor-pointer"
+                                  title="Increase quantity"
+                                >
+                                  +
+                                </button>
+                              </div>
+
+                              <div>
+                                <span className="font-semibold block">
+                                  {item.name}
+                                </span>
+                                <span className="text-[10px] text-[#84908a]">
+                                  @{currencySymbol}
+                                  {item.rate} each
+                                </span>
+                              </div>
                             </div>
-                          );
-                        })}
+
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold">
+                                {currencySymbol}
+                                {item.total.toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItem(idx)}
+                                className="p-1 text-[#b7623d] hover:bg-red-50 rounded-lg transition cursor-pointer"
+                                title="Remove item"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
-                )}
 
-                {/* Items List */}
-                <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1 text-xs">
-                  {selectedSession.items.length === 0 ? (
-                    <div className="py-4 text-center text-[#84908a] text-xs">
-                      No dishes in this bill. Click <strong>+ Add Dish</strong> above to add items.
+                  {/* Dynamic Charges & Calculations */}
+                  <div className="mt-3 space-y-2 text-xs">
+                    <div className="flex justify-between text-[#68736e]">
+                      <span>F&B Subtotal</span>
+                      <span className="font-semibold text-[#24312e]">
+                        {currencySymbol}
+                        {subtotal.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
                     </div>
-                  ) : (
-                    selectedSession.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between rounded-xl bg-[#fafaf7] p-2 text-[#24312e] border border-[#f0f2ed]"
-                      >
-                        <div className="flex items-center gap-2">
-                          {/* Quantity Controls */}
-                          <div className="flex items-center rounded-lg border border-[#dfe1dc] bg-white shadow-2xs">
+
+                    <div className="flex justify-between text-[#68736e]">
+                      <span className="flex items-center gap-1">
+                        <span>GST / Tax ({taxRate}%)</span>
+                        <span className="rounded bg-emerald-100 text-emerald-800 text-[9px] px-1 font-bold">
+                          Dynamic
+                        </span>
+                      </span>
+                      <span className="font-semibold text-emerald-700">
+                        +{currencySymbol}
+                        {taxAmount.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[#68736e]">
+                      <div className="flex items-center gap-2">
+                        <span>Service Charge ({serviceCharge}%)</span>
+                        <label className="flex items-center gap-1 text-[10px] text-[#84908a] cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={waiveServiceCharge}
+                            onChange={(e) =>
+                              setWaiveServiceCharge(e.target.checked)
+                            }
+                            className="rounded accent-[#24312e]"
+                          />
+                          <span>Waive</span>
+                        </label>
+                      </div>
+                      <span className="font-semibold text-indigo-700">
+                        {waiveServiceCharge ? (
+                          <span className="line-through text-[#84908a]">
+                            +{currencySymbol}
+                            {((subtotal * serviceCharge) / 100).toFixed(2)}
+                          </span>
+                        ) : (
+                          `+${currencySymbol}${serviceChargeAmount.toFixed(2)}`
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Discount */}
+                    <div className="rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-[#68736e] mb-1.5">
+                        <span className="flex items-center gap-1">
+                          <Tag size={12} className="text-[#b7623d]" />
+                          <span>Promotional Discount</span>
+                        </span>
+                        {discountAmount > 0 && (
+                          <span className="text-emerald-700 font-extrabold">
+                            -{currencySymbol}
+                            {discountAmount.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-1.5">
+                        {[
+                          { label: "0%", val: 0 },
+                          { label: "5%", val: 5 },
+                          { label: "10%", val: 10 },
+                          { label: "15%", val: 15 },
+                        ].map((d) => (
+                          <button
+                            key={d.val}
+                            type="button"
+                            onClick={() => {
+                              setDiscountPercent(d.val);
+                              setCustomDiscountInput("");
+                            }}
+                            className={`flex-1 rounded-lg py-1 text-[11px] font-bold transition ${
+                              discountPercent === d.val && !customDiscountInput
+                                ? "bg-[#24312e] text-white shadow-2xs"
+                                : "bg-white border border-[#dfe1dc] text-[#68736e] hover:bg-[#f0f1ed]"
+                            }`}
+                          >
+                            {d.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Advance Booking Deposit Adjustment */}
+                    {depositCredit > 0 && (
+                      <div className="flex justify-between items-center text-amber-900 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                        <div>
+                          <p className="font-bold">Booking Deposit Credit</p>
+                          <p className="text-[10px] text-amber-700">
+                            Paid in advance via reservation
+                          </p>
+                        </div>
+                        <span className="font-extrabold text-sm">
+                          -{currencySymbol}
+                          {depositCredit.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Grand Total */}
+                    <div className="border-t border-[#e9eae6] pt-3 flex items-baseline justify-between">
+                      <div>
+                        <span className="font-bold text-sm text-[#24312e] block">
+                          Net Payable Total
+                        </span>
+                        <span className="text-[10px] text-[#84908a]">
+                          Including all dynamic taxes
+                        </span>
+                      </div>
+                      <span className="display-font font-black text-2xl text-[#24312e]">
+                        {currencySymbol}
+                        {finalPayable.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Payment Mode Selector */}
+                  <div className="mt-4 pt-3 border-t border-[#e9eae6]">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#9aa39d] mb-2">
+                      Select POS Terminal Mode
+                    </p>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {[
+                        { id: "UPI", icon: QrCode, label: "POS Scanner" },
+                        { id: "Card", icon: CreditCard, label: "POS Card" },
+                        { id: "Cash", icon: Banknote, label: "Cash" },
+                        { id: "Split", icon: Split, label: "Split" },
+                      ].map((m) => {
+                        const Icon = m.icon;
+                        const isSel = paymentMethod === m.id;
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              setPaymentMethod(m.id as any);
+                              setPaymentError(null);
+                            }}
+                            className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2.5 text-xs font-bold transition cursor-pointer ${
+                              isSel
+                                ? "bg-[#24312e] text-white shadow-xs"
+                                : "border border-[#dfe1dc] bg-[#fbfaf7] text-[#68736e] hover:bg-[#f0f1ed]"
+                            }`}
+                          >
+                            <Icon size={16} />
+                            <span className="text-[11px]">{m.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Mode 1: Interactive POS Scanner Machine UI */}
+                    {paymentMethod === "UPI" && (
+                      <div className="mt-3 rounded-2xl border border-[#2d3b37] bg-[#1a2321] p-4 text-white shadow-md">
+                        <div className="flex items-center justify-between border-b border-[#2d3b37] pb-2 text-[10px]">
+                          <span className="flex items-center gap-1.5 font-mono font-bold text-emerald-400">
+                            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                            POS SCANNER TERMINAL #TT-SCAN-01
+                          </span>
+                          <span className="rounded bg-emerald-950 px-1.5 py-0.5 text-emerald-300 font-bold border border-emerald-800">
+                            READY TO SCAN
+                          </span>
+                        </div>
+
+                        <div className="my-3 flex flex-col sm:flex-row items-center gap-4">
+                          {/* Realistic QR Scanner Box with Animated Laser Beam */}
+                          <div className="relative flex h-28 w-28 items-center justify-center rounded-xl bg-white p-2 shadow-inner shrink-0 overflow-hidden border-2 border-emerald-500">
+                            <QrCode size={92} className="text-[#1a2321]" />
+                            {/* Animated Laser Sweep */}
+                            <div className="scanner-beam absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent shadow-[0_0_8px_#10b981]" />
+                          </div>
+
+                          <div className="text-center sm:text-left">
+                            <p className="font-bold text-sm text-emerald-100">
+                              {restroName} POS Pay
+                            </p>
+                            <p className="text-[10px] text-[#9ca3af]">
+                              Merchant ID: TT-POS-882910
+                            </p>
+                            <p className="mt-2 text-xs font-medium text-emerald-300">
+                              Scan to pay{" "}
+                              <span className="text-base font-black text-white">
+                                {currencySymbol}
+                                {finalPayable.toFixed(2)}
+                              </span>
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-1 justify-center sm:justify-start text-[9px] font-bold text-gray-300">
+                              <span className="rounded bg-white/10 px-1.5 py-0.5">
+                                Google Pay
+                              </span>
+                              <span className="rounded bg-white/10 px-1.5 py-0.5">
+                                PhonePe
+                              </span>
+                              <span className="rounded bg-white/10 px-1.5 py-0.5">
+                                Paytm
+                              </span>
+                              <span className="rounded bg-white/10 px-1.5 py-0.5">
+                                BHIM
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mode 2: Interactive POS Card Terminal UI */}
+                    {paymentMethod === "Card" && (
+                      <div className="mt-3 rounded-2xl border border-[#2d3b37] bg-[#1a2321] p-4 text-white shadow-md">
+                        <div className="flex items-center justify-between border-b border-[#2d3b37] pb-2 text-[10px]">
+                          <span className="flex items-center gap-1.5 font-mono font-bold text-indigo-400">
+                            <CreditCard size={13} className="text-indigo-400" />
+                            POS SMART TERMINAL #TT-CARD-09
+                          </span>
+                          <span className="rounded bg-indigo-950 px-1.5 py-0.5 text-indigo-300 font-bold border border-indigo-800">
+                            INSERT OR TAP
+                          </span>
+                        </div>
+
+                        <div className="my-3 space-y-3">
+                          <div className="flex items-center justify-between rounded-xl bg-white/5 p-2.5 border border-white/10 text-xs">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-11 items-center justify-center rounded bg-gradient-to-r from-amber-600 to-amber-700 text-[9px] font-bold text-white shadow-2xs">
+                                CHIP
+                              </div>
+                              <div>
+                                <p className="font-mono font-bold text-white">
+                                  •••• •••• •••• 4092
+                                </p>
+                                <p className="text-[10px] text-gray-400">
+                                  Visa / Mastercard Contactless
+                                </p>
+                              </div>
+                            </div>
+                            <span className="font-extrabold text-sm text-emerald-400">
+                              {currencySymbol}
+                              {finalPayable.toFixed(2)}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-xs text-gray-300">
+                            <span>Terminal Auth Code:</span>
+                            <input
+                              type="text"
+                              value={cardAuthCode}
+                              onChange={(e) => setCardAuthCode(e.target.value)}
+                              className="rounded-lg border border-white/20 bg-white/10 px-2 py-0.5 text-xs font-mono font-bold text-white outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mode 3: Cash */}
+                    {paymentMethod === "Cash" && (
+                      <div className="mt-3 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 text-xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="font-bold text-[#24312e]">
+                            Cash Tendered:
+                          </label>
+                          <input
+                            type="number"
+                            placeholder={String(finalPayable)}
+                            value={cashTenderedInput}
+                            onChange={(e) =>
+                              setCashTenderedInput(e.target.value)
+                            }
+                            className="w-28 rounded-lg border border-[#dfe1dc] bg-white px-2.5 py-1 text-right text-xs font-bold outline-none focus:border-[#24312e]"
+                          />
+                        </div>
+                        {tenderedNum > 0 && (
+                          <div className="mt-2 flex items-center justify-between border-t border-[#e9eae6] pt-2 text-[#315a3d] font-bold">
+                            <span>Change to return:</span>
+                            <span>
+                              {currencySymbol}
+                              {changeDue.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Mode 4: Split */}
+                    {paymentMethod === "Split" && (
+                      <div className="mt-3 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-[#24312e]">
+                            Split between guests:
+                          </span>
+                          <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => handleUpdateItemQty(idx, -1)}
-                              className="px-1.5 py-0.5 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] rounded-l-lg cursor-pointer"
-                              title="Decrease quantity"
+                              onClick={() =>
+                                setSplitCount((c) => Math.max(2, c - 1))
+                              }
+                              className="h-6 w-6 rounded bg-[#dfe1dc] font-bold text-xs hover:bg-[#d0d3cd] cursor-pointer"
                             >
                               -
                             </button>
-                            <span className="px-1.5 text-xs font-black text-[#24312e]">
-                              {item.qty}
+                            <span className="font-bold text-sm text-[#24312e]">
+                              {splitCount}
                             </span>
                             <button
                               type="button"
-                              onClick={() => handleUpdateItemQty(idx, 1)}
-                              className="px-1.5 py-0.5 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] rounded-r-lg cursor-pointer"
-                              title="Increase quantity"
+                              onClick={() => setSplitCount((c) => c + 1)}
+                              className="h-6 w-6 rounded bg-[#dfe1dc] font-bold text-xs hover:bg-[#d0d3cd] cursor-pointer"
                             >
                               +
                             </button>
                           </div>
-
-                          <div>
-                            <span className="font-semibold block">{item.name}</span>
-                            <span className="text-[10px] text-[#84908a]">
-                              @{currencySymbol}{item.rate} each
-                            </span>
-                          </div>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold">
-                            {currencySymbol}{item.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        <div className="mt-2 border-t border-[#e9eae6] pt-2 flex justify-between font-bold text-[#315a3d]">
+                          <span>Each guest pays:</span>
+                          <span>
+                            {currencySymbol}
+                            {(finalPayable / splitCount).toFixed(2)}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(idx)}
-                            className="p-1 text-[#b7623d] hover:bg-red-50 rounded-lg transition cursor-pointer"
-                            title="Remove item"
-                          >
-                            <Trash2 size={13} />
-                          </button>
                         </div>
                       </div>
-                    ))
+                    )}
+                  </div>
+
+                  {/* Payment Failure Error Banner */}
+                  {paymentError && (
+                    <div className="mt-3 rounded-xl border border-red-300 bg-red-50 p-3 text-xs text-red-800 flex items-start gap-2.5">
+                      <XCircle
+                        size={17}
+                        className="text-red-600 shrink-0 mt-0.5"
+                      />
+                      <div className="flex-1">
+                        <p className="font-bold text-red-900">Payment Failed</p>
+                        <p className="mt-0.5 text-red-700">{paymentError}</p>
+                        <p className="mt-1 text-[11px] text-red-600 font-medium">
+                          Table ticket remains active. Please retry payment or
+                          switch mode.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentError(null)}
+                        className="text-red-400 hover:text-red-700 cursor-pointer"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   )}
                 </div>
-              </div>
 
-              {/* Dynamic Charges & Calculations */}
-              <div className="mt-3 space-y-2 text-xs">
-                <div className="flex justify-between text-[#68736e]">
-                  <span>F&B Subtotal</span>
-                  <span className="font-semibold text-[#24312e]">
-                    {currencySymbol}{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-
-                <div className="flex justify-between text-[#68736e]">
-                  <span className="flex items-center gap-1">
-                    <span>GST / Tax ({taxRate}%)</span>
-                    <span className="rounded bg-emerald-100 text-emerald-800 text-[9px] px-1 font-bold">Dynamic</span>
-                  </span>
-                  <span className="font-semibold text-emerald-700">
-                    +{currencySymbol}{taxAmount.toFixed(2)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center text-[#68736e]">
-                  <div className="flex items-center gap-2">
-                    <span>Service Charge ({serviceCharge}%)</span>
-                    <label className="flex items-center gap-1 text-[10px] text-[#84908a] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={waiveServiceCharge}
-                        onChange={(e) => setWaiveServiceCharge(e.target.checked)}
-                        className="rounded accent-[#24312e]"
-                      />
-                      <span>Waive</span>
-                    </label>
-                  </div>
-                  <span className="font-semibold text-indigo-700">
-                    {waiveServiceCharge ? (
-                      <span className="line-through text-[#84908a]">+{currencySymbol}{((subtotal * serviceCharge) / 100).toFixed(2)}</span>
-                    ) : (
-                      `+${currencySymbol}${serviceChargeAmount.toFixed(2)}`
-                    )}
-                  </span>
-                </div>
-
-                {/* Discount */}
-                <div className="rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-[#68736e] mb-1.5">
-                    <span className="flex items-center gap-1">
-                      <Tag size={12} className="text-[#b7623d]" />
-                      <span>Promotional Discount</span>
-                    </span>
-                    {discountAmount > 0 && (
-                      <span className="text-emerald-700 font-extrabold">
-                        -{currencySymbol}{discountAmount.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-1.5">
-                    {[
-                      { label: "0%", val: 0 },
-                      { label: "5%", val: 5 },
-                      { label: "10%", val: 10 },
-                      { label: "15%", val: 15 },
-                    ].map((d) => (
-                      <button
-                        key={d.val}
-                        type="button"
-                        onClick={() => {
-                          setDiscountPercent(d.val);
-                          setCustomDiscountInput("");
-                        }}
-                        className={`flex-1 rounded-lg py-1 text-[11px] font-bold transition ${
-                          discountPercent === d.val && !customDiscountInput
-                            ? "bg-[#24312e] text-white shadow-2xs"
-                            : "bg-white border border-[#dfe1dc] text-[#68736e] hover:bg-[#f0f1ed]"
-                        }`}
-                      >
-                        {d.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Advance Booking Deposit Adjustment */}
-                {depositCredit > 0 && (
-                  <div className="flex justify-between items-center text-amber-900 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
-                    <div>
-                      <p className="font-bold">Booking Deposit Credit</p>
-                      <p className="text-[10px] text-amber-700">Paid in advance via reservation</p>
-                    </div>
-                    <span className="font-extrabold text-sm">
-                      -{currencySymbol}{depositCredit.toFixed(2)}
+                {/* Bottom Actions with Success and Failure Testing Controls */}
+                <div className="mt-5 pt-4 border-t border-[#e9eae6] space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-[#84908a] px-1">
+                    <span>Testing Simulation Controls:</span>
+                    <span className="text-[#24312e]">
+                      Instant POS Emulation
                     </span>
                   </div>
-                )}
 
-                {/* Grand Total */}
-                <div className="border-t border-[#e9eae6] pt-3 flex items-baseline justify-between">
-                  <div>
-                    <span className="font-bold text-sm text-[#24312e] block">Net Payable Total</span>
-                    <span className="text-[10px] text-[#84908a]">Including all dynamic taxes</span>
-                  </div>
-                  <span className="display-font font-black text-2xl text-[#24312e]">
-                    {currencySymbol}{finalPayable.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Payment Mode Selector */}
-              <div className="mt-4 pt-3 border-t border-[#e9eae6]">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#9aa39d] mb-2">
-                  Select POS Terminal Mode
-                </p>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {[
-                    { id: "UPI", icon: QrCode, label: "POS Scanner" },
-                    { id: "Card", icon: CreditCard, label: "POS Card" },
-                    { id: "Cash", icon: Banknote, label: "Cash" },
-                    { id: "Split", icon: Split, label: "Split" },
-                  ].map((m) => {
-                    const Icon = m.icon;
-                    const isSel = paymentMethod === m.id;
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => {
-                          setPaymentMethod(m.id as any);
-                          setPaymentError(null);
-                        }}
-                        className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2.5 text-xs font-bold transition cursor-pointer ${
-                          isSel
-                            ? "bg-[#24312e] text-white shadow-xs"
-                            : "border border-[#dfe1dc] bg-[#fbfaf7] text-[#68736e] hover:bg-[#f0f1ed]"
-                        }`}
-                      >
-                        <Icon size={16} />
-                        <span className="text-[11px]">{m.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Mode 1: Interactive POS Scanner Machine UI */}
-                {paymentMethod === "UPI" && (
-                  <div className="mt-3 rounded-2xl border border-[#2d3b37] bg-[#1a2321] p-4 text-white shadow-md">
-                    <div className="flex items-center justify-between border-b border-[#2d3b37] pb-2 text-[10px]">
-                      <span className="flex items-center gap-1.5 font-mono font-bold text-emerald-400">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-                        POS SCANNER TERMINAL #TT-SCAN-01
-                      </span>
-                      <span className="rounded bg-emerald-950 px-1.5 py-0.5 text-emerald-300 font-bold border border-emerald-800">
-                        READY TO SCAN
-                      </span>
-                    </div>
-
-                    <div className="my-3 flex flex-col sm:flex-row items-center gap-4">
-                      {/* Realistic QR Scanner Box with Animated Laser Beam */}
-                      <div className="relative flex h-28 w-28 items-center justify-center rounded-xl bg-white p-2 shadow-inner shrink-0 overflow-hidden border-2 border-emerald-500">
-                        <QrCode size={92} className="text-[#1a2321]" />
-                        {/* Animated Laser Sweep */}
-                        <div className="scanner-beam absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent shadow-[0_0_8px_#10b981]" />
-                      </div>
-
-                      <div className="text-center sm:text-left">
-                        <p className="font-bold text-sm text-emerald-100">{restroName} POS Pay</p>
-                        <p className="text-[10px] text-[#9ca3af]">Merchant ID: TT-POS-882910</p>
-                        <p className="mt-2 text-xs font-medium text-emerald-300">
-                          Scan to pay <span className="text-base font-black text-white">{currencySymbol}{finalPayable.toFixed(2)}</span>
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-1 justify-center sm:justify-start text-[9px] font-bold text-gray-300">
-                          <span className="rounded bg-white/10 px-1.5 py-0.5">Google Pay</span>
-                          <span className="rounded bg-white/10 px-1.5 py-0.5">PhonePe</span>
-                          <span className="rounded bg-white/10 px-1.5 py-0.5">Paytm</span>
-                          <span className="rounded bg-white/10 px-1.5 py-0.5">BHIM</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Mode 2: Interactive POS Card Terminal UI */}
-                {paymentMethod === "Card" && (
-                  <div className="mt-3 rounded-2xl border border-[#2d3b37] bg-[#1a2321] p-4 text-white shadow-md">
-                    <div className="flex items-center justify-between border-b border-[#2d3b37] pb-2 text-[10px]">
-                      <span className="flex items-center gap-1.5 font-mono font-bold text-indigo-400">
-                        <CreditCard size={13} className="text-indigo-400" />
-                        POS SMART TERMINAL #TT-CARD-09
-                      </span>
-                      <span className="rounded bg-indigo-950 px-1.5 py-0.5 text-indigo-300 font-bold border border-indigo-800">
-                        INSERT OR TAP
-                      </span>
-                    </div>
-
-                    <div className="my-3 space-y-3">
-                      <div className="flex items-center justify-between rounded-xl bg-white/5 p-2.5 border border-white/10 text-xs">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-11 items-center justify-center rounded bg-gradient-to-r from-amber-600 to-amber-700 text-[9px] font-bold text-white shadow-2xs">
-                            CHIP
-                          </div>
-                          <div>
-                            <p className="font-mono font-bold text-white">•••• •••• •••• 4092</p>
-                            <p className="text-[10px] text-gray-400">Visa / Mastercard Contactless</p>
-                          </div>
-                        </div>
-                        <span className="font-extrabold text-sm text-emerald-400">
-                          {currencySymbol}{finalPayable.toFixed(2)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs text-gray-300">
-                        <span>Terminal Auth Code:</span>
-                        <input
-                          type="text"
-                          value={cardAuthCode}
-                          onChange={(e) => setCardAuthCode(e.target.value)}
-                          className="rounded-lg border border-white/20 bg-white/10 px-2 py-0.5 text-xs font-mono font-bold text-white outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Mode 3: Cash */}
-                {paymentMethod === "Cash" && (
-                  <div className="mt-3 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 text-xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <label className="font-bold text-[#24312e]">Cash Tendered:</label>
-                      <input
-                        type="number"
-                        placeholder={String(finalPayable)}
-                        value={cashTenderedInput}
-                        onChange={(e) => setCashTenderedInput(e.target.value)}
-                        className="w-28 rounded-lg border border-[#dfe1dc] bg-white px-2.5 py-1 text-right text-xs font-bold outline-none focus:border-[#24312e]"
-                      />
-                    </div>
-                    {tenderedNum > 0 && (
-                      <div className="mt-2 flex items-center justify-between border-t border-[#e9eae6] pt-2 text-[#315a3d] font-bold">
-                        <span>Change to return:</span>
-                        <span>{currencySymbol}{changeDue.toFixed(2)}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Mode 4: Split */}
-                {paymentMethod === "Split" && (
-                  <div className="mt-3 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#24312e]">Split between guests:</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setSplitCount((c) => Math.max(2, c - 1))}
-                          className="h-6 w-6 rounded bg-[#dfe1dc] font-bold text-xs hover:bg-[#d0d3cd] cursor-pointer"
-                        >
-                          -
-                        </button>
-                        <span className="font-bold text-sm text-[#24312e]">{splitCount}</span>
-                        <button
-                          type="button"
-                          onClick={() => setSplitCount((c) => c + 1)}
-                          className="h-6 w-6 rounded bg-[#dfe1dc] font-bold text-xs hover:bg-[#d0d3cd] cursor-pointer"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mt-2 border-t border-[#e9eae6] pt-2 flex justify-between font-bold text-[#315a3d]">
-                      <span>Each guest pays:</span>
-                      <span>{currencySymbol}{(finalPayable / splitCount).toFixed(2)}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Payment Failure Error Banner */}
-              {paymentError && (
-                <div className="mt-3 rounded-xl border border-red-300 bg-red-50 p-3 text-xs text-red-800 flex items-start gap-2.5">
-                  <XCircle size={17} className="text-red-600 shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-bold text-red-900">Payment Failed</p>
-                    <p className="mt-0.5 text-red-700">{paymentError}</p>
-                    <p className="mt-1 text-[11px] text-red-600 font-medium">
-                      Table ticket remains active. Please retry payment or switch mode.
-                    </p>
-                  </div>
+                  {/* Success Button */}
                   <button
                     type="button"
-                    onClick={() => setPaymentError(null)}
-                    className="text-red-400 hover:text-red-700 cursor-pointer"
+                    disabled={isProcessingPayment}
+                    onClick={handlePaymentSuccess}
+                    className="w-full rounded-xl bg-[#24312e] px-4 py-3 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-xs flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                    <X size={14} />
+                    <Check size={16} />
+                    <span>Simulate Payment Success & Print Bill</span>
+                  </button>
+
+                  {/* Failure Button */}
+                  <button
+                    type="button"
+                    disabled={isProcessingPayment}
+                    onClick={() => handlePaymentFailure()}
+                    className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 hover:border-red-300 transition cursor-pointer shadow-2xs flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <XCircle size={15} className="text-red-600" />
+                    <span>Simulate Payment Failure (Test Error State)</span>
                   </button>
                 </div>
-              )}
-            </div>
-
-            {/* Bottom Actions with Success and Failure Testing Controls */}
-            <div className="mt-5 pt-4 border-t border-[#e9eae6] space-y-2">
-              <div className="flex items-center justify-between text-[11px] font-bold text-[#84908a] px-1">
-                <span>Testing Simulation Controls:</span>
-                <span className="text-[#24312e]">Instant POS Emulation</span>
-              </div>
-
-              {/* Success Button */}
-              <button
-                type="button"
-                disabled={isProcessingPayment}
-                onClick={handlePaymentSuccess}
-                className="w-full rounded-xl bg-[#24312e] px-4 py-3 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-xs flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <Check size={16} />
-                <span>Simulate Payment Success & Print Bill</span>
-              </button>
-
-              {/* Failure Button */}
-              <button
-                type="button"
-                disabled={isProcessingPayment}
-                onClick={() => handlePaymentFailure()}
-                className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 hover:border-red-300 transition cursor-pointer shadow-2xs flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <XCircle size={15} className="text-red-600" />
-                <span>Simulate Payment Failure (Test Error State)</span>
-              </button>
-            </div>
-            </>
-          )}
+              </>
+            )}
           </aside>
         </div>
       )}
@@ -6599,10 +7628,14 @@ function BillingPage({
                     className="h-9 w-9 mx-auto object-contain rounded-lg mb-1"
                   />
                 )}
-                <h3 className="font-bold text-base tracking-tight">{restroName}</h3>
+                <h3 className="font-bold text-base tracking-tight">
+                  {restroName}
+                </h3>
                 <p className="text-[10px] text-[#68736e]">{branchName}</p>
                 <p className="text-[10px] text-[#84908a]">GSTIN: {gstNumber}</p>
-                <p className="text-[10px] font-bold mt-1 text-[#315a3d]">*** TAX INVOICE ***</p>
+                <p className="text-[10px] font-bold mt-1 text-[#315a3d]">
+                  *** TAX INVOICE ***
+                </p>
               </div>
 
               <div className="py-2.5 border-b border-dashed border-[#ccc] text-[10px] space-y-0.5 text-[#68736e]">
@@ -6611,10 +7644,17 @@ function BillingPage({
                   <span>{receiptModalInvoice.time}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{receiptModalInvoice.title} ({receiptModalInvoice.customer})</span>
+                  <span>
+                    {receiptModalInvoice.title} ({receiptModalInvoice.customer})
+                  </span>
                   <span>{receiptModalInvoice.date}</span>
                 </div>
-                <div>Server: <span className="font-bold text-[#24312e]">{receiptModalInvoice.server}</span></div>
+                <div>
+                  Server:{" "}
+                  <span className="font-bold text-[#24312e]">
+                    {receiptModalInvoice.server}
+                  </span>
+                </div>
               </div>
 
               {/* Items */}
@@ -6629,14 +7669,17 @@ function BillingPage({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#eee]">
-                    {receiptModalInvoice.items && receiptModalInvoice.items.map((it: any, i: number) => (
-                      <tr key={i}>
-                        <td className="py-1">{it.qty}</td>
-                        <td className="py-1">{it.name}</td>
-                        <td className="py-1 text-right">{it.rate}</td>
-                        <td className="py-1 text-right font-bold">{it.total}</td>
-                      </tr>
-                    ))}
+                    {receiptModalInvoice.items &&
+                      receiptModalInvoice.items.map((it: any, i: number) => (
+                        <tr key={i}>
+                          <td className="py-1">{it.qty}</td>
+                          <td className="py-1">{it.name}</td>
+                          <td className="py-1 text-right">{it.rate}</td>
+                          <td className="py-1 text-right font-bold">
+                            {it.total}
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -6645,28 +7688,47 @@ function BillingPage({
               <div className="py-2.5 border-b border-dashed border-[#ccc] text-[10px] space-y-1">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>{currencySymbol}{Number(receiptModalInvoice.subtotal).toFixed(2)}</span>
+                  <span>
+                    {currencySymbol}
+                    {Number(receiptModalInvoice.subtotal).toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>GST ({receiptModalInvoice.taxRate ?? taxRate}%)</span>
-                  <span>+{currencySymbol}{Number(receiptModalInvoice.taxAmount).toFixed(2)}</span>
+                  <span>
+                    +{currencySymbol}
+                    {Number(receiptModalInvoice.taxAmount).toFixed(2)}
+                  </span>
                 </div>
                 {receiptModalInvoice.serviceCharge > 0 && (
                   <div className="flex justify-between">
-                    <span>Service Charge ({receiptModalInvoice.serviceCharge}%)</span>
-                    <span>+{currencySymbol}{Number(receiptModalInvoice.serviceChargeAmount).toFixed(2)}</span>
+                    <span>
+                      Service Charge ({receiptModalInvoice.serviceCharge}%)
+                    </span>
+                    <span>
+                      +{currencySymbol}
+                      {Number(receiptModalInvoice.serviceChargeAmount).toFixed(
+                        2,
+                      )}
+                    </span>
                   </div>
                 )}
                 {receiptModalInvoice.discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-800">
                     <span>Discount</span>
-                    <span>-{currencySymbol}{Number(receiptModalInvoice.discountAmount).toFixed(2)}</span>
+                    <span>
+                      -{currencySymbol}
+                      {Number(receiptModalInvoice.discountAmount).toFixed(2)}
+                    </span>
                   </div>
                 )}
                 {receiptModalInvoice.depositCredit > 0 && (
                   <div className="flex justify-between text-amber-900">
                     <span>Deposit Credit</span>
-                    <span>-{currencySymbol}{Number(receiptModalInvoice.depositCredit).toFixed(2)}</span>
+                    <span>
+                      -{currencySymbol}
+                      {Number(receiptModalInvoice.depositCredit).toFixed(2)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -6674,23 +7736,34 @@ function BillingPage({
               {/* Total */}
               <div className="py-2.5 border-b-2 border-double border-[#000] flex justify-between text-sm font-black">
                 <span>TOTAL PAID</span>
-                <span>{currencySymbol}{Number(receiptModalInvoice.total).toFixed(2)}</span>
+                <span>
+                  {currencySymbol}
+                  {Number(receiptModalInvoice.total).toFixed(2)}
+                </span>
               </div>
 
               <div className="pt-2 text-[10px] space-y-0.5">
                 <div className="flex justify-between font-bold">
                   <span>Status:</span>
-                  <span className="text-[#3b724c]">PAID via {receiptModalInvoice.paymentMethod}</span>
+                  <span className="text-[#3b724c]">
+                    PAID via {receiptModalInvoice.paymentMethod}
+                  </span>
                 </div>
                 {receiptModalInvoice.cashTendered && (
                   <>
                     <div className="flex justify-between">
                       <span>Cash Tendered:</span>
-                      <span>{currencySymbol}{Number(receiptModalInvoice.cashTendered).toFixed(2)}</span>
+                      <span>
+                        {currencySymbol}
+                        {Number(receiptModalInvoice.cashTendered).toFixed(2)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Change:</span>
-                      <span>{currencySymbol}{Number(receiptModalInvoice.changeDue).toFixed(2)}</span>
+                      <span>
+                        {currencySymbol}
+                        {Number(receiptModalInvoice.changeDue).toFixed(2)}
+                      </span>
                     </div>
                   </>
                 )}
@@ -6744,856 +7817,163 @@ function BillingPage({
   );
 }
 
-  function AddEmployeeModal({
-    onClose,
-    onSave,
-    departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
-    onAddDepartment,
-  }: {
-    onClose: () => void;
-    onSave: (data: {
-      name: string;
-      phone: string;
-      pin: string;
-      department: string;
-      shift: string;
-    }) => Promise<void>;
-    departments?: string[];
-    onAddDepartment?: (name: string) => Promise<any>;
-  }) {
-    const [name, setName] = useState("");
-    const [phone, setPhone] = useState("");
-    const [pin, setPin] = useState("1234");
-    const [department, setDepartment] = useState(departments[0] || "Floor");
-    const [isCustomDept, setIsCustomDept] = useState(false);
-    const [customDeptInput, setCustomDeptInput] = useState("");
-    const [shift, setShift] = useState("09:00 - 17:00");
-    const [isSaving, setIsSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+function AddEmployeeModal({
+  onClose,
+  onSave,
+  departments = [
+    "Floor",
+    "Kitchen",
+    "Bar",
+    "Cleaning",
+    "Utility",
+    "Management",
+  ],
+  onAddDepartment,
+}: {
+  onClose: () => void;
+  onSave: (data: {
+    name: string;
+    phone: string;
+    pin: string;
+    department: string;
+    shift: string;
+  }) => Promise<void>;
+  departments?: string[];
+  onAddDepartment?: (name: string) => Promise<any>;
+}) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [pin, setPin] = useState("1234");
+  const [department, setDepartment] = useState(departments[0] || "Floor");
+  const [isCustomDept, setIsCustomDept] = useState(false);
+  const [customDeptInput, setCustomDeptInput] = useState("");
+  const [shift, setShift] = useState("09:00 - 17:00");
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = async (e: FormEvent) => {
-      e.preventDefault();
-      if (!name.trim() || !phone.trim()) {
-        setError("Full Name and Phone Number are required.");
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !phone.trim()) {
+      setError("Full Name and Phone Number are required.");
+      return;
+    }
+    if (pin.length !== 4) {
+      setError("PIN must be exactly 4 digits.");
+      return;
+    }
+    let finalDept = department;
+    if (isCustomDept) {
+      if (!customDeptInput.trim()) {
+        setError("Please specify a department name.");
         return;
       }
-      if (pin.length !== 4) {
-        setError("PIN must be exactly 4 digits.");
-        return;
+      finalDept = customDeptInput.trim();
+      if (onAddDepartment) {
+        try {
+          await onAddDepartment(finalDept);
+        } catch {}
       }
-      let finalDept = department;
-      if (isCustomDept) {
-        if (!customDeptInput.trim()) {
-          setError("Please specify a department name.");
-          return;
-        }
-        finalDept = customDeptInput.trim();
-        if (onAddDepartment) {
-          try {
-            await onAddDepartment(finalDept);
-          } catch {}
-        }
-      }
-      setIsSaving(true);
-      setError(null);
-      try {
-        await onSave({
-          name: name.trim(),
-          phone: phone.trim(),
-          pin: pin.trim(),
-          department: finalDept,
-          shift: shift.trim() || "09:00 - 17:00",
-        });
-        onClose();
-      } catch (err) {
-        setError(String(err));
-      } finally {
-        setIsSaving(false);
-      }
-    };
+    }
+    setIsSaving(true);
+    setError(null);
+    try {
+      await onSave({
+        name: name.trim(),
+        phone: phone.trim(),
+        pin: pin.trim(),
+        department: finalDept,
+        shift: shift.trim() || "09:00 - 17:00",
+      });
+      onClose();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
-          <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
-            <div className="flex items-center gap-2">
-              <Plus size={18} className="text-[#315a3d]" />
-              <div>
-                <h3 className="display-font text-lg font-bold text-[#24312e]">
-                  Add New Employee
-                </h3>
-                <p className="text-[11px] text-[#84908a]">
-                  Register staff for attendance and shift roster
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-[#84908a] hover:text-[#24312e] cursor-pointer"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {error && (
-            <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
+        <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
+          <div className="flex items-center gap-2">
+            <Plus size={18} className="text-[#315a3d]" />
             <div>
-              <label className="block font-bold text-[#24312e] mb-1">Full Name</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Ramesh Singh"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
-              />
+              <h3 className="display-font text-lg font-bold text-[#24312e]">
+                Add New Employee
+              </h3>
+              <p className="text-[11px] text-[#84908a]">
+                Register staff for attendance and shift roster
+              </p>
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-[#24312e] mb-1">Phone Number</label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="+91 98201 12345"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
-                />
-              </div>
-              <div>
-                <label className="block font-bold text-[#24312e] mb-1">
-                  4-Digit PIN <span className="font-normal text-[#84908a]">(Mobile GPS Punch)</span>
-                </label>
-                <input
-                  type="text"
-                  maxLength={4}
-                  required
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block font-bold text-[#24312e]">Department</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomDept(!isCustomDept);
-                      setCustomDeptInput("");
-                    }}
-                    className="text-[10px] font-bold text-[#315a3d] hover:underline cursor-pointer"
-                  >
-                    {isCustomDept ? "Select existing" : "+ Add new"}
-                  </button>
-                </div>
-                {isCustomDept ? (
-                  <input
-                    type="text"
-                    autoFocus
-                    placeholder="New department..."
-                    value={customDeptInput}
-                    onChange={(e) => setCustomDeptInput(e.target.value)}
-                    className="w-full rounded-xl border border-[#315a3d] bg-white p-2.5 outline-hidden font-semibold"
-                  />
-                ) : (
-                  <select
-                    value={department}
-                    onChange={(e) => {
-                      if (e.target.value === "__NEW__") {
-                        setIsCustomDept(true);
-                        setCustomDeptInput("");
-                      } else {
-                        setDepartment(e.target.value);
-                      }
-                    }}
-                    className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-semibold"
-                  >
-                    {departments.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
-                    ))}
-                    <option value="__NEW__">+ Add New Department...</option>
-                  </select>
-                )}
-              </div>
-              <div>
-                <label className="block font-bold text-[#24312e] mb-1">Shift Hours</label>
-                <input
-                  type="text"
-                  placeholder="09:00 - 17:00"
-                  value={shift}
-                  onChange={(e) => setShift(e.target.value)}
-                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
-                />
-              </div>
-            </div>
-
-            <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
-              >
-                {isSaving ? "Saving..." : "Add Employee"}
-              </button>
-            </div>
-          </form>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[#84908a] hover:text-[#24312e] cursor-pointer"
+          >
+            <X size={18} />
+          </button>
         </div>
-      </div>
-    );
-  }
 
-  function EditEmployeeModal({
-    staff,
-    onClose,
-    onSave,
-    departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
-    onAddDepartment,
-  }: {
-    staff: StaffMember;
-    onClose: () => void;
-    onSave: (id: string, data: Partial<StaffMember>) => Promise<void>;
-    departments?: string[];
-    onAddDepartment?: (name: string) => Promise<any>;
-  }) {
-    const [name, setName] = useState(staff.name);
-    const [phone, setPhone] = useState(staff.phone);
-    const [pin, setPin] = useState(staff.pin);
-    const [department, setDepartment] = useState(staff.department);
-    const [isCustomDept, setIsCustomDept] = useState(false);
-    const [customDeptInput, setCustomDeptInput] = useState("");
-    const [shift, setShift] = useState(staff.shift);
-    const [isSaving, setIsSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+        {error && (
+          <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
+            {error}
+          </div>
+        )}
 
-    const deptOptions = Array.from(new Set([...departments, staff.department])).filter(Boolean);
-
-    const handleSubmit = async (e: FormEvent) => {
-      e.preventDefault();
-      if (!name.trim() || !phone.trim()) {
-        setError("Name and Phone are required.");
-        return;
-      }
-      if (pin.length !== 4) {
-        setError("PIN must be exactly 4 digits.");
-        return;
-      }
-      let finalDept = department;
-      if (isCustomDept) {
-        if (!customDeptInput.trim()) {
-          setError("Please specify a department name.");
-          return;
-        }
-        finalDept = customDeptInput.trim();
-        if (onAddDepartment) {
-          try {
-            await onAddDepartment(finalDept);
-          } catch {}
-        }
-      }
-      setIsSaving(true);
-      setError(null);
-      try {
-        await onSave(staff.id, {
-          name: name.trim(),
-          phone: phone.trim(),
-          pin: pin.trim(),
-          department: finalDept,
-          shift,
-        });
-        onClose();
-      } catch (err) {
-        setError(String(err));
-      } finally {
-        setIsSaving(false);
-      }
-    };
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
-          <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
-            <div className="flex items-center gap-2">
-              <Pencil size={18} className="text-[#315a3d]" />
-              <div>
-                <h3 className="display-font text-lg font-bold text-[#24312e]">
-                  Edit Employee
-                </h3>
-                <p className="text-[11px] text-[#84908a]">{staff.name}</p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-[#84908a] hover:text-[#24312e] cursor-pointer"
-            >
-              <X size={18} />
-            </button>
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
+          <div>
+            <label className="block font-bold text-[#24312e] mb-1">
+              Full Name
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Ramesh Singh"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+            />
           </div>
 
-          {error && (
-            <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-[#24312e] mb-1">Full Name</label>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Phone Number
+              </label>
               <input
-                type="text"
+                type="tel"
                 required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                placeholder="+91 98201 12345"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
               />
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-[#24312e] mb-1">Phone Number</label>
-                <input
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
-                />
-              </div>
-              <div>
-                <label className="block font-bold text-[#24312e] mb-1">
-                  4-Digit PIN <span className="font-normal text-[#84908a]">(Mobile GPS Punch)</span>
-                </label>
-                <input
-                  type="text"
-                  maxLength={4}
-                  required
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block font-bold text-[#24312e]">Department</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomDept(!isCustomDept);
-                      setCustomDeptInput("");
-                    }}
-                    className="text-[10px] font-bold text-[#315a3d] hover:underline cursor-pointer"
-                  >
-                    {isCustomDept ? "Select existing" : "+ Add new"}
-                  </button>
-                </div>
-                {isCustomDept ? (
-                  <input
-                    type="text"
-                    autoFocus
-                    placeholder="New department..."
-                    value={customDeptInput}
-                    onChange={(e) => setCustomDeptInput(e.target.value)}
-                    className="w-full rounded-xl border border-[#315a3d] bg-white p-2.5 outline-hidden font-semibold"
-                  />
-                ) : (
-                  <select
-                    value={department}
-                    onChange={(e) => {
-                      if (e.target.value === "__NEW__") {
-                        setIsCustomDept(true);
-                        setCustomDeptInput("");
-                      } else {
-                        setDepartment(e.target.value);
-                      }
-                    }}
-                    className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-semibold"
-                  >
-                    {deptOptions.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
-                    ))}
-                    <option value="__NEW__">+ Add New Department...</option>
-                  </select>
-                )}
-              </div>
-              <div>
-                <label className="block font-bold text-[#24312e] mb-1">Shift Hours</label>
-                <input
-                  type="text"
-                  value={shift}
-                  onChange={(e) => setShift(e.target.value)}
-                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
-                />
-              </div>
-            </div>
-
-            <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
-              >
-                {isSaving ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  function AddDashboardMemberModal({
-    onClose,
-    onSave,
-    departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
-    onAddDepartment,
-  }: {
-    onClose: () => void;
-    onSave: (data: {
-      name: string;
-      email: string;
-      password: string;
-      systemRole: "Manager" | "Server" | "Kitchen";
-      department: string;
-      phone?: string;
-    }) => Promise<void>;
-    departments?: string[];
-    onAddDepartment?: (name: string) => Promise<any>;
-  }) {
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("demo123");
-    const [systemRole, setSystemRole] = useState<"Manager" | "Server" | "Kitchen">("Server");
-    const [department, setDepartment] = useState(
-      departments.find((d) => d.toLowerCase().includes("floor")) || departments[0] || "Floor"
-    );
-    const [isCustomDept, setIsCustomDept] = useState(false);
-    const [customDeptInput, setCustomDeptInput] = useState("");
-    const [phone, setPhone] = useState("");
-    const [isSaving, setIsSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const handleRoleChange = (newRole: "Manager" | "Server" | "Kitchen") => {
-      setSystemRole(newRole);
-      if (newRole === "Manager") {
-        const found = departments.find((d) => d.toLowerCase().includes("manage"));
-        setDepartment(found || "Management");
-      } else if (newRole === "Kitchen") {
-        const found = departments.find((d) => d.toLowerCase().includes("kitchen"));
-        setDepartment(found || "Kitchen");
-      } else {
-        const found = departments.find((d) => d.toLowerCase().includes("floor"));
-        setDepartment(found || "Floor");
-      }
-    };
-
-    const handleSubmit = async (e: FormEvent) => {
-      e.preventDefault();
-      if (!name.trim() || !email.trim() || !password.trim()) {
-        setError("Name, Dashboard Email, and Password are required.");
-        return;
-      }
-      let finalDept = department;
-      if (isCustomDept) {
-        if (!customDeptInput.trim()) {
-          setError("Please enter a department name.");
-          return;
-        }
-        finalDept = customDeptInput.trim();
-        if (onAddDepartment) {
-          try {
-            await onAddDepartment(finalDept);
-          } catch {}
-        }
-      }
-      setIsSaving(true);
-      setError(null);
-      try {
-        const generatedPhone = phone.trim() || `+91 98201 ${Date.now().toString().slice(-5)}`;
-        await onSave({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          password: password.trim(),
-          systemRole,
-          department: finalDept,
-          phone: generatedPhone,
-        });
-        onClose();
-      } catch (err) {
-        setError(String(err));
-      } finally {
-        setIsSaving(false);
-      }
-    };
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
-          <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={18} className="text-[#315a3d]" />
-              <div>
-                <h3 className="display-font text-lg font-bold text-[#24312e]">
-                  Add Dashboard Access
-                </h3>
-                <p className="text-[11px] text-[#84908a]">
-                  Create station login credentials for Kitchen, Servant, or Manager
-                </p>
-              </div>
-            </div>
-            <button onClick={onClose} className="text-[#84908a] hover:text-[#24312e] cursor-pointer">
-              <X size={18} />
-            </button>
-          </div>
-
-          {error && (
-            <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
             <div>
-              <label className="block font-bold text-[#24312e] mb-1">Full Name</label>
+              <label className="block font-bold text-[#24312e] mb-1">
+                4-Digit PIN{" "}
+                <span className="font-normal text-[#84908a]">
+                  (Mobile GPS Punch)
+                </span>
+              </label>
               <input
                 type="text"
+                maxLength={4}
                 required
-                placeholder="e.g. Chef Sanjay Kumar"
-                value={name}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setName(val);
-                  if (!email || email.includes("@tableandthyme.com")) {
-                    setEmail(val ? `${val.toLowerCase().replace(/[^a-z0-9]/g, ".")}@tableandthyme.com` : "");
-                  }
-                }}
-                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
               />
             </div>
-
-            <div>
-              <label className="block font-bold text-[#24312e] mb-1">Station Access Role</label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleRoleChange("Manager")}
-                  className={`rounded-xl border p-2.5 text-center font-bold transition cursor-pointer ${
-                    systemRole === "Manager"
-                      ? "border-amber-500 bg-amber-50 text-amber-900 shadow-xs"
-                      : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
-                  }`}
-                >
-                  <ShieldCheck className="mx-auto mb-1 text-amber-700" size={18} />
-                  Manager
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRoleChange("Server")}
-                  className={`rounded-xl border p-2.5 text-center font-bold transition cursor-pointer ${
-                    systemRole === "Server"
-                      ? "border-emerald-500 bg-emerald-50 text-emerald-900 shadow-xs"
-                      : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
-                  }`}
-                >
-                  <Users className="mx-auto mb-1 text-emerald-700" size={18} />
-                  Servant / Floor
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRoleChange("Kitchen")}
-                  className={`rounded-xl border p-2.5 text-center font-bold transition cursor-pointer ${
-                    systemRole === "Kitchen"
-                      ? "border-purple-500 bg-purple-50 text-purple-900 shadow-xs"
-                      : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
-                  }`}
-                >
-                  <ChefHat className="mx-auto mb-1 text-purple-700" size={18} />
-                  Kitchen
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-[#24312e] mb-1">
-                  Dashboard Work Email <span className="font-normal text-[#84908a]">(Login)</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="email@tableandthyme.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
-                />
-              </div>
-              <div>
-                <label className="block font-bold text-[#24312e] mb-1">
-                  Dashboard Password <span className="font-normal text-[#84908a]">(Login)</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. demo123"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block font-bold text-[#24312e]">Department</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomDept(!isCustomDept);
-                      setCustomDeptInput("");
-                    }}
-                    className="text-[10px] font-bold text-[#315a3d] hover:underline cursor-pointer"
-                  >
-                    {isCustomDept ? "Select existing" : "+ Add new"}
-                  </button>
-                </div>
-                {isCustomDept ? (
-                  <input
-                    type="text"
-                    autoFocus
-                    placeholder="New department..."
-                    value={customDeptInput}
-                    onChange={(e) => setCustomDeptInput(e.target.value)}
-                    className="w-full rounded-xl border border-[#315a3d] bg-white p-2.5 outline-hidden font-semibold"
-                  />
-                ) : (
-                  <select
-                    value={department}
-                    onChange={(e) => {
-                      if (e.target.value === "__NEW__") {
-                        setIsCustomDept(true);
-                        setCustomDeptInput("");
-                      } else {
-                        setDepartment(e.target.value);
-                      }
-                    }}
-                    className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-semibold"
-                  >
-                    {departments.map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                    <option value="__NEW__">+ Add New Department...</option>
-                  </select>
-                )}
-              </div>
-              <div>
-                <label className="block font-bold text-[#24312e] mb-1">Phone (Optional)</label>
-                <input
-                  type="tel"
-                  placeholder="+91 98201 ..."
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
-                />
-              </div>
-            </div>
-
-            <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
-              >
-                {isSaving ? "Creating Access..." : "Grant Dashboard Access"}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  function EditDashboardMemberModal({
-    staff,
-    onClose,
-    onSave,
-    departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
-    onAddDepartment,
-  }: {
-    staff: StaffMember;
-    onClose: () => void;
-    onSave: (id: string, data: Partial<StaffMember>) => Promise<void>;
-    departments?: string[];
-    onAddDepartment?: (name: string) => Promise<any>;
-  }) {
-    const [name, setName] = useState(staff.name);
-    const [email, setEmail] = useState(staff.email || "");
-    const [password, setPassword] = useState(staff.password || "demo123");
-    const [systemRole, setSystemRole] = useState<"Manager" | "Server" | "Kitchen">(
-      staff.systemRole === "Manager" || staff.systemRole === "Kitchen" ? staff.systemRole : "Server"
-    );
-    const [department, setDepartment] = useState(staff.department);
-    const [isCustomDept, setIsCustomDept] = useState(false);
-    const [customDeptInput, setCustomDeptInput] = useState("");
-    const [isSaving, setIsSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const allDepts = Array.from(new Set([...departments, staff.department])).filter(Boolean);
-
-    const handleSubmit = async (e: FormEvent) => {
-      e.preventDefault();
-      if (!name.trim() || !email.trim() || !password.trim()) {
-        setError("Name, Email, and Password are required.");
-        return;
-      }
-      let finalDept = department;
-      if (isCustomDept) {
-        if (!customDeptInput.trim()) {
-          setError("Please specify a department name.");
-          return;
-        }
-        finalDept = customDeptInput.trim();
-        if (onAddDepartment) {
-          try {
-            await onAddDepartment(finalDept);
-          } catch {}
-        }
-      }
-      setIsSaving(true);
-      setError(null);
-      try {
-        await onSave(staff.id, {
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          password: password.trim(),
-          systemRole,
-          department: finalDept,
-        });
-        onClose();
-      } catch (err) {
-        setError(String(err));
-      } finally {
-        setIsSaving(false);
-      }
-    };
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
-          <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
-            <div className="flex items-center gap-2">
-              <Pencil size={18} className="text-[#315a3d]" />
-              <div>
-                <h3 className="display-font text-lg font-bold text-[#24312e]">
-                  Edit Dashboard Access
-                </h3>
-                <p className="text-[11px] text-[#84908a]">{staff.name}</p>
-              </div>
-            </div>
-            <button onClick={onClose} className="text-[#84908a] hover:text-[#24312e] cursor-pointer">
-              <X size={18} />
-            </button>
           </div>
 
-          {error && (
-            <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
-            <div>
-              <label className="block font-bold text-[#24312e] mb-1">Full Name</label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-[#24312e] mb-1">Station Access Role</label>
-              <select
-                value={systemRole}
-                onChange={(e) =>
-                  setSystemRole(e.target.value as "Manager" | "Server" | "Kitchen")
-                }
-                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-bold"
-              >
-                <option value="Manager">Manager (Full Control Desk)</option>
-                <option value="Server">Server (Servant / Floor Station)</option>
-                <option value="Kitchen">Kitchen (Kitchen Head Station)</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-[#24312e] mb-1">
-                  Dashboard Work Email <span className="font-normal text-[#84908a]">(Login)</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
-                />
-              </div>
-              <div>
-                <label className="block font-bold text-[#24312e] mb-1">
-                  Dashboard Password <span className="font-normal text-[#84908a]">(Login)</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
-                />
-              </div>
-            </div>
-
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block font-bold text-[#24312e]">Department</label>
+                <label className="block font-bold text-[#24312e]">
+                  Department
+                </label>
                 <button
                   type="button"
                   onClick={() => {
@@ -7627,35 +8007,831 @@ function BillingPage({
                   }}
                   className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-semibold"
                 >
-                  {allDepts.map((d) => (
-                    <option key={d} value={d}>{d}</option>
+                  {departments.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
                   ))}
                   <option value="__NEW__">+ Add New Department...</option>
                 </select>
               )}
             </div>
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Shift Hours
+              </label>
+              <input
+                type="text"
+                placeholder="09:00 - 17:00"
+                value={shift}
+                onChange={(e) => setShift(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+          </div>
 
-            <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
+          <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
+            >
+              {isSaving ? "Saving..." : "Add Employee"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditEmployeeModal({
+  staff,
+  onClose,
+  onSave,
+  departments = [
+    "Floor",
+    "Kitchen",
+    "Bar",
+    "Cleaning",
+    "Utility",
+    "Management",
+  ],
+  onAddDepartment,
+}: {
+  staff: StaffMember;
+  onClose: () => void;
+  onSave: (id: string, data: Partial<StaffMember>) => Promise<void>;
+  departments?: string[];
+  onAddDepartment?: (name: string) => Promise<any>;
+}) {
+  const [name, setName] = useState(staff.name);
+  const [phone, setPhone] = useState(staff.phone);
+  const [pin, setPin] = useState(staff.pin);
+  const [department, setDepartment] = useState(staff.department);
+  const [isCustomDept, setIsCustomDept] = useState(false);
+  const [customDeptInput, setCustomDeptInput] = useState("");
+  const [shift, setShift] = useState(staff.shift);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deptOptions = Array.from(
+    new Set([...departments, staff.department]),
+  ).filter(Boolean);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !phone.trim()) {
+      setError("Name and Phone are required.");
+      return;
+    }
+    if (pin.length !== 4) {
+      setError("PIN must be exactly 4 digits.");
+      return;
+    }
+    let finalDept = department;
+    if (isCustomDept) {
+      if (!customDeptInput.trim()) {
+        setError("Please specify a department name.");
+        return;
+      }
+      finalDept = customDeptInput.trim();
+      if (onAddDepartment) {
+        try {
+          await onAddDepartment(finalDept);
+        } catch {}
+      }
+    }
+    setIsSaving(true);
+    setError(null);
+    try {
+      await onSave(staff.id, {
+        name: name.trim(),
+        phone: phone.trim(),
+        pin: pin.trim(),
+        department: finalDept,
+        shift,
+      });
+      onClose();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
+        <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
+          <div className="flex items-center gap-2">
+            <Pencil size={18} className="text-[#315a3d]" />
+            <div>
+              <h3 className="display-font text-lg font-bold text-[#24312e]">
+                Edit Employee
+              </h3>
+              <p className="text-[11px] text-[#84908a]">{staff.name}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[#84908a] hover:text-[#24312e] cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {error && (
+          <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
+          <div>
+            <label className="block font-bold text-[#24312e] mb-1">
+              Full Name
+            </label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">
+                4-Digit PIN{" "}
+                <span className="font-normal text-[#84908a]">
+                  (Mobile GPS Punch)
+                </span>
+              </label>
+              <input
+                type="text"
+                maxLength={4}
+                required
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-bold text-[#24312e]">
+                  Department
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomDept(!isCustomDept);
+                    setCustomDeptInput("");
+                  }}
+                  className="text-[10px] font-bold text-[#315a3d] hover:underline cursor-pointer"
+                >
+                  {isCustomDept ? "Select existing" : "+ Add new"}
+                </button>
+              </div>
+              {isCustomDept ? (
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="New department..."
+                  value={customDeptInput}
+                  onChange={(e) => setCustomDeptInput(e.target.value)}
+                  className="w-full rounded-xl border border-[#315a3d] bg-white p-2.5 outline-hidden font-semibold"
+                />
+              ) : (
+                <select
+                  value={department}
+                  onChange={(e) => {
+                    if (e.target.value === "__NEW__") {
+                      setIsCustomDept(true);
+                      setCustomDeptInput("");
+                    } else {
+                      setDepartment(e.target.value);
+                    }
+                  }}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-semibold"
+                >
+                  {deptOptions.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                  <option value="__NEW__">+ Add New Department...</option>
+                </select>
+              )}
+            </div>
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Shift Hours
+              </label>
+              <input
+                type="text"
+                value={shift}
+                onChange={(e) => setShift(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+          </div>
+
+          <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AddDashboardMemberModal({
+  onClose,
+  onSave,
+  departments = [
+    "Floor",
+    "Kitchen",
+    "Bar",
+    "Cleaning",
+    "Utility",
+    "Management",
+  ],
+  onAddDepartment,
+}: {
+  onClose: () => void;
+  onSave: (data: {
+    name: string;
+    email: string;
+    password: string;
+    systemRole: "Manager" | "Server" | "Kitchen";
+    department: string;
+    phone?: string;
+  }) => Promise<void>;
+  departments?: string[];
+  onAddDepartment?: (name: string) => Promise<any>;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("demo123");
+  const [systemRole, setSystemRole] = useState<
+    "Manager" | "Server" | "Kitchen"
+  >("Server");
+  const [department, setDepartment] = useState(
+    departments.find((d) => d.toLowerCase().includes("floor")) ||
+      departments[0] ||
+      "Floor",
+  );
+  const [isCustomDept, setIsCustomDept] = useState(false);
+  const [customDeptInput, setCustomDeptInput] = useState("");
+  const [phone, setPhone] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleRoleChange = (newRole: "Manager" | "Server" | "Kitchen") => {
+    setSystemRole(newRole);
+    if (newRole === "Manager") {
+      const found = departments.find((d) => d.toLowerCase().includes("manage"));
+      setDepartment(found || "Management");
+    } else if (newRole === "Kitchen") {
+      const found = departments.find((d) =>
+        d.toLowerCase().includes("kitchen"),
+      );
+      setDepartment(found || "Kitchen");
+    } else {
+      const found = departments.find((d) => d.toLowerCase().includes("floor"));
+      setDepartment(found || "Floor");
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setError("Name, Dashboard Email, and Password are required.");
+      return;
+    }
+    let finalDept = department;
+    if (isCustomDept) {
+      if (!customDeptInput.trim()) {
+        setError("Please enter a department name.");
+        return;
+      }
+      finalDept = customDeptInput.trim();
+      if (onAddDepartment) {
+        try {
+          await onAddDepartment(finalDept);
+        } catch {}
+      }
+    }
+    setIsSaving(true);
+    setError(null);
+    try {
+      const generatedPhone =
+        phone.trim() || `+91 98201 ${Date.now().toString().slice(-5)}`;
+      await onSave({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+        systemRole,
+        department: finalDept,
+        phone: generatedPhone,
+      });
+      onClose();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
+        <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={18} className="text-[#315a3d]" />
+            <div>
+              <h3 className="display-font text-lg font-bold text-[#24312e]">
+                Add Dashboard Access
+              </h3>
+              <p className="text-[11px] text-[#84908a]">
+                Create station login credentials for Kitchen, Servant, or
+                Manager
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[#84908a] hover:text-[#24312e] cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {error && (
+          <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
+          <div>
+            <label className="block font-bold text-[#24312e] mb-1">
+              Full Name
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Chef Sanjay Kumar"
+              value={name}
+              onChange={(e) => {
+                const val = e.target.value;
+                setName(val);
+                if (!email || email.includes("@tableandthyme.com")) {
+                  setEmail(
+                    val
+                      ? `${val.toLowerCase().replace(/[^a-z0-9]/g, ".")}@tableandthyme.com`
+                      : "",
+                  );
+                }
+              }}
+              className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+            />
+          </div>
+
+          <div>
+            <label className="block font-bold text-[#24312e] mb-1">
+              Station Access Role
+            </label>
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={onClose}
-                className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+                onClick={() => handleRoleChange("Manager")}
+                className={`rounded-xl border p-2.5 text-center font-bold transition cursor-pointer ${
+                  systemRole === "Manager"
+                    ? "border-amber-500 bg-amber-50 text-amber-900 shadow-xs"
+                    : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+                }`}
               >
-                Cancel
+                <ShieldCheck
+                  className="mx-auto mb-1 text-amber-700"
+                  size={18}
+                />
+                Manager
               </button>
               <button
-                type="submit"
-                disabled={isSaving}
-                className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
+                type="button"
+                onClick={() => handleRoleChange("Server")}
+                className={`rounded-xl border p-2.5 text-center font-bold transition cursor-pointer ${
+                  systemRole === "Server"
+                    ? "border-emerald-500 bg-emerald-50 text-emerald-900 shadow-xs"
+                    : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+                }`}
               >
-                {isSaving ? "Saving..." : "Save Credentials"}
+                <Users className="mx-auto mb-1 text-emerald-700" size={18} />
+                Servant / Floor
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRoleChange("Kitchen")}
+                className={`rounded-xl border p-2.5 text-center font-bold transition cursor-pointer ${
+                  systemRole === "Kitchen"
+                    ? "border-purple-500 bg-purple-50 text-purple-900 shadow-xs"
+                    : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
+                }`}
+              >
+                <ChefHat className="mx-auto mb-1 text-purple-700" size={18} />
+                Kitchen
               </button>
             </div>
-          </form>
-        </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Dashboard Work Email{" "}
+                <span className="font-normal text-[#84908a]">(Login)</span>
+              </label>
+              <input
+                type="email"
+                required
+                placeholder="email@tableandthyme.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Dashboard Password{" "}
+                <span className="font-normal text-[#84908a]">(Login)</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. demo123"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-bold text-[#24312e]">
+                  Department
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomDept(!isCustomDept);
+                    setCustomDeptInput("");
+                  }}
+                  className="text-[10px] font-bold text-[#315a3d] hover:underline cursor-pointer"
+                >
+                  {isCustomDept ? "Select existing" : "+ Add new"}
+                </button>
+              </div>
+              {isCustomDept ? (
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="New department..."
+                  value={customDeptInput}
+                  onChange={(e) => setCustomDeptInput(e.target.value)}
+                  className="w-full rounded-xl border border-[#315a3d] bg-white p-2.5 outline-hidden font-semibold"
+                />
+              ) : (
+                <select
+                  value={department}
+                  onChange={(e) => {
+                    if (e.target.value === "__NEW__") {
+                      setIsCustomDept(true);
+                      setCustomDeptInput("");
+                    } else {
+                      setDepartment(e.target.value);
+                    }
+                  }}
+                  className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-semibold"
+                >
+                  {departments.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                  <option value="__NEW__">+ Add New Department...</option>
+                </select>
+              )}
+            </div>
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Phone (Optional)
+              </label>
+              <input
+                type="tel"
+                placeholder="+91 98201 ..."
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+          </div>
+
+          <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
+            >
+              {isSaving ? "Creating Access..." : "Grant Dashboard Access"}
+            </button>
+          </div>
+        </form>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+function EditDashboardMemberModal({
+  staff,
+  onClose,
+  onSave,
+  departments = [
+    "Floor",
+    "Kitchen",
+    "Bar",
+    "Cleaning",
+    "Utility",
+    "Management",
+  ],
+  onAddDepartment,
+}: {
+  staff: StaffMember;
+  onClose: () => void;
+  onSave: (id: string, data: Partial<StaffMember>) => Promise<void>;
+  departments?: string[];
+  onAddDepartment?: (name: string) => Promise<any>;
+}) {
+  const [name, setName] = useState(staff.name);
+  const [email, setEmail] = useState(staff.email || "");
+  const [password, setPassword] = useState(staff.password || "demo123");
+  const [systemRole, setSystemRole] = useState<
+    "Manager" | "Server" | "Kitchen"
+  >(
+    staff.systemRole === "Manager" || staff.systemRole === "Kitchen"
+      ? staff.systemRole
+      : "Server",
+  );
+  const [department, setDepartment] = useState(staff.department);
+  const [isCustomDept, setIsCustomDept] = useState(false);
+  const [customDeptInput, setCustomDeptInput] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const allDepts = Array.from(
+    new Set([...departments, staff.department]),
+  ).filter(Boolean);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setError("Name, Email, and Password are required.");
+      return;
+    }
+    let finalDept = department;
+    if (isCustomDept) {
+      if (!customDeptInput.trim()) {
+        setError("Please specify a department name.");
+        return;
+      }
+      finalDept = customDeptInput.trim();
+      if (onAddDepartment) {
+        try {
+          await onAddDepartment(finalDept);
+        } catch {}
+      }
+    }
+    setIsSaving(true);
+    setError(null);
+    try {
+      await onSave(staff.id, {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+        systemRole,
+        department: finalDept,
+      });
+      onClose();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
+        <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
+          <div className="flex items-center gap-2">
+            <Pencil size={18} className="text-[#315a3d]" />
+            <div>
+              <h3 className="display-font text-lg font-bold text-[#24312e]">
+                Edit Dashboard Access
+              </h3>
+              <p className="text-[11px] text-[#84908a]">{staff.name}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[#84908a] hover:text-[#24312e] cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {error && (
+          <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-xs">
+          <div>
+            <label className="block font-bold text-[#24312e] mb-1">
+              Full Name
+            </label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+            />
+          </div>
+
+          <div>
+            <label className="block font-bold text-[#24312e] mb-1">
+              Station Access Role
+            </label>
+            <select
+              value={systemRole}
+              onChange={(e) =>
+                setSystemRole(
+                  e.target.value as "Manager" | "Server" | "Kitchen",
+                )
+              }
+              className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-bold"
+            >
+              <option value="Manager">Manager (Full Control Desk)</option>
+              <option value="Server">Server (Servant / Floor Station)</option>
+              <option value="Kitchen">Kitchen (Kitchen Head Station)</option>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Dashboard Work Email{" "}
+                <span className="font-normal text-[#84908a]">(Login)</span>
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Dashboard Password{" "}
+                <span className="font-normal text-[#84908a]">(Login)</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 font-mono outline-hidden focus:border-[#24312e]"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block font-bold text-[#24312e]">
+                Department
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCustomDept(!isCustomDept);
+                  setCustomDeptInput("");
+                }}
+                className="text-[10px] font-bold text-[#315a3d] hover:underline cursor-pointer"
+              >
+                {isCustomDept ? "Select existing" : "+ Add new"}
+              </button>
+            </div>
+            {isCustomDept ? (
+              <input
+                type="text"
+                autoFocus
+                placeholder="New department..."
+                value={customDeptInput}
+                onChange={(e) => setCustomDeptInput(e.target.value)}
+                className="w-full rounded-xl border border-[#315a3d] bg-white p-2.5 outline-hidden font-semibold"
+              />
+            ) : (
+              <select
+                value={department}
+                onChange={(e) => {
+                  if (e.target.value === "__NEW__") {
+                    setIsCustomDept(true);
+                    setCustomDeptInput("");
+                  } else {
+                    setDepartment(e.target.value);
+                  }
+                }}
+                className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden font-semibold"
+              >
+                {allDepts.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+                <option value="__NEW__">+ Add New Department...</option>
+              </select>
+            )}
+          </div>
+
+          <div className="mt-5 flex justify-end gap-2 border-t border-[#f0f1ed] pt-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-[#dfe1dc] px-4 py-2 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="rounded-xl bg-[#24312e] px-4 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer"
+            >
+              {isSaving ? "Saving..." : "Save Credentials"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 function GeofenceModal({
   settings,
@@ -7668,7 +8844,9 @@ function GeofenceModal({
 }) {
   const [geoLat, setGeoLat] = useState<number>(settings?.latitude || 28.5355);
   const [geoLng, setGeoLng] = useState<number>(settings?.longitude || 77.391);
-  const [geoRadius, setGeoRadius] = useState<number>(settings?.radiusMeters || 50);
+  const [geoRadius, setGeoRadius] = useState<number>(
+    settings?.radiusMeters || 50,
+  );
   const [detectingGps, setDetectingGps] = useState(false);
   const [isSavingGeo, setIsSavingGeo] = useState(false);
 
@@ -7707,7 +8885,9 @@ function GeofenceModal({
             radiusMeters: geoRadius || 50,
           });
           onSaved();
-          alert(`✓ Restaurant GPS successfully synced to your current coordinates (${lat}°, ${lng}°)!`);
+          alert(
+            `✓ Restaurant GPS successfully synced to your current coordinates (${lat}°, ${lng}°)!`,
+          );
           onClose();
         } catch (err) {
           console.error("Auto save failed:", err);
@@ -7716,7 +8896,11 @@ function GeofenceModal({
         }
       },
       (err) => {
-        alert("GPS Error: " + err.message + ". Please ensure location permissions are enabled in your browser.");
+        alert(
+          "GPS Error: " +
+            err.message +
+            ". Please ensure location permissions are enabled in your browser.",
+        );
         setDetectingGps(false);
       },
       { enableHighAccuracy: true },
@@ -7742,7 +8926,8 @@ function GeofenceModal({
         </div>
         <form onSubmit={handleSaveGeofence} className="mt-4 space-y-3 text-xs">
           <p className="text-[#68736e] leading-relaxed">
-            Set the physical GPS location of Table & Thyme. Employees must be within the specified radius to clock in.
+            Set the physical GPS location of Table & Thyme. Employees must be
+            within the specified radius to clock in.
           </p>
           <button
             type="button"
@@ -7751,11 +8936,15 @@ function GeofenceModal({
             className="w-full rounded-xl border border-emerald-300 bg-emerald-50 py-2.5 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition flex items-center justify-center gap-2 cursor-pointer"
           >
             <Navigation size={15} />
-            {detectingGps ? "Detecting Device Coordinates..." : "Set to My Current Location"}
+            {detectingGps
+              ? "Detecting Device Coordinates..."
+              : "Set to My Current Location"}
           </button>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-[#24312e] mb-1">Latitude</label>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Latitude
+              </label>
               <input
                 type="number"
                 step="any"
@@ -7766,7 +8955,9 @@ function GeofenceModal({
               />
             </div>
             <div>
-              <label className="block font-bold text-[#24312e] mb-1">Longitude</label>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Longitude
+              </label>
               <input
                 type="number"
                 step="any"
@@ -7791,7 +8982,8 @@ function GeofenceModal({
               className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden"
             />
             <p className="mt-1 text-[10px] text-[#84908a]">
-              Recommended: 50 meters for standard restaurants; 75 meters for large properties.
+              Recommended: 50 meters for standard restaurants; 75 meters for
+              large properties.
             </p>
           </div>
           <div className="mt-5 flex justify-end gap-2 pt-2 border-t border-[#f0f1ed]">
@@ -7858,7 +9050,9 @@ function AnnouncementModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[#dfe1dc]">
         <div className="flex items-center justify-between border-b border-[#f0f1ed] pb-3">
-          <h3 className="display-font text-lg font-bold text-[#24312e]">Compose Notice</h3>
+          <h3 className="display-font text-lg font-bold text-[#24312e]">
+            Compose Notice
+          </h3>
           <button
             onClick={onClose}
             className="text-[#84908a] hover:text-[#24312e] cursor-pointer"
@@ -7866,9 +9060,14 @@ function AnnouncementModal({
             <X size={18} />
           </button>
         </div>
-        <form onSubmit={handleCreateAnnouncement} className="mt-4 space-y-3 text-xs">
+        <form
+          onSubmit={handleCreateAnnouncement}
+          className="mt-4 space-y-3 text-xs"
+        >
           <div>
-            <label className="block font-bold text-[#24312e] mb-1">Notice Title</label>
+            <label className="block font-bold text-[#24312e] mb-1">
+              Notice Title
+            </label>
             <input
               type="text"
               required
@@ -7880,10 +9079,14 @@ function AnnouncementModal({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-[#24312e] mb-1">Target Audience</label>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Target Audience
+              </label>
               <select
                 value={annTarget}
-                onChange={(e) => setAnnTarget(e.target.value as "All" | "Specific")}
+                onChange={(e) =>
+                  setAnnTarget(e.target.value as "All" | "Specific")
+                }
                 className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden"
               >
                 <option value="All">All Employees</option>
@@ -7891,10 +9094,14 @@ function AnnouncementModal({
               </select>
             </div>
             <div>
-              <label className="block font-bold text-[#24312e] mb-1">Priority</label>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Priority
+              </label>
               <select
                 value={annPriority}
-                onChange={(e) => setAnnPriority(e.target.value as "Normal" | "Urgent")}
+                onChange={(e) =>
+                  setAnnPriority(e.target.value as "Normal" | "Urgent")
+                }
                 className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2.5 outline-hidden"
               >
                 <option value="Normal">Normal</option>
@@ -7904,7 +9111,9 @@ function AnnouncementModal({
           </div>
           {annTarget === "Specific" && (
             <div>
-              <label className="block font-bold text-[#24312e] mb-1">Select Employee</label>
+              <label className="block font-bold text-[#24312e] mb-1">
+                Select Employee
+              </label>
               <select
                 required
                 value={annTargetStaffId}
@@ -7921,7 +9130,9 @@ function AnnouncementModal({
             </div>
           )}
           <div>
-            <label className="block font-bold text-[#24312e] mb-1">Message</label>
+            <label className="block font-bold text-[#24312e] mb-1">
+              Message
+            </label>
             <textarea
               required
               rows={3}
@@ -7974,7 +9185,10 @@ function StaffAttendanceDetailModal({
     setIsLoading(true);
     setError(null);
 
-    fetchStaffAttendanceHistory(staff.id, selectedMonth === "all" ? undefined : selectedMonth)
+    fetchStaffAttendanceHistory(
+      staff.id,
+      selectedMonth === "all" ? undefined : selectedMonth,
+    )
       .then((res) => {
         if (isMounted) {
           setData(res);
@@ -7983,7 +9197,11 @@ function StaffAttendanceDetailModal({
       })
       .catch((err) => {
         if (isMounted) {
-          setError(err instanceof Error ? err.message : "Failed to load attendance records");
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load attendance records",
+          );
           setIsLoading(false);
         }
       });
@@ -8000,7 +9218,9 @@ function StaffAttendanceDetailModal({
     }
     const [year, month] = selectedMonth.split("-").map(Number);
     const prevDate = new Date(year, month - 2, 1);
-    setSelectedMonth(`${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`);
+    setSelectedMonth(
+      `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`,
+    );
   };
 
   const handleNextMonth = () => {
@@ -8010,7 +9230,9 @@ function StaffAttendanceDetailModal({
     }
     const [year, month] = selectedMonth.split("-").map(Number);
     const nextDate = new Date(year, month, 1);
-    setSelectedMonth(`${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`);
+    setSelectedMonth(
+      `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`,
+    );
   };
 
   const formatMonthTitle = (monthStr: string) => {
@@ -8033,7 +9255,10 @@ function StaffAttendanceDetailModal({
       const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       opts.push({
         value: val,
-        label: d.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+        label: d.toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        }),
       });
     }
     opts.push({ value: "all", label: "All Recorded History" });
@@ -8101,10 +9326,10 @@ function StaffAttendanceDetailModal({
                     staff.todayStatus === "Clocked in"
                       ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
                       : staff.todayStatus === "On break"
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                      : staff.todayStatus === "Clocked out"
-                      ? "bg-stone-500/20 text-stone-300 border border-stone-500/40"
-                      : "bg-[#3d524b] text-[#cfe0d0]"
+                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                        : staff.todayStatus === "Clocked out"
+                          ? "bg-stone-500/20 text-stone-300 border border-stone-500/40"
+                          : "bg-[#3d524b] text-[#cfe0d0]"
                   }`}
                 >
                   ● Today: {staff.todayStatus}
@@ -8117,17 +9342,30 @@ function StaffAttendanceDetailModal({
               </div>
 
               <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-[#aab8b0]">
-                <span>Dept: <strong className="text-white">{staff.department}</strong></span>
+                <span>
+                  Dept:{" "}
+                  <strong className="text-white">{staff.department}</strong>
+                </span>
                 <span>•</span>
-                <span>Shift: <strong className="text-white">{staff.shift}</strong></span>
+                <span>
+                  Shift: <strong className="text-white">{staff.shift}</strong>
+                </span>
                 <span>•</span>
-                <span>Phone: <strong className="text-white">{staff.phone}</strong></span>
+                <span>
+                  Phone: <strong className="text-white">{staff.phone}</strong>
+                </span>
                 <span>•</span>
-                <span>Mobile PIN: <strong className="text-white font-mono">{staff.pin}</strong></span>
+                <span>
+                  Mobile PIN:{" "}
+                  <strong className="text-white font-mono">{staff.pin}</strong>
+                </span>
                 {staff.email && (
                   <>
                     <span>•</span>
-                    <span>Email: <strong className="text-white">{staff.email}</strong></span>
+                    <span>
+                      Email:{" "}
+                      <strong className="text-white">{staff.email}</strong>
+                    </span>
                   </>
                 )}
               </div>
@@ -8279,7 +9517,10 @@ function StaffAttendanceDetailModal({
 
             {isLoading ? (
               <div className="py-12 text-center text-xs text-[#84908a]">
-                <Clock3 size={24} className="mx-auto mb-2 animate-spin text-[#315a3d]" />
+                <Clock3
+                  size={24}
+                  className="mx-auto mb-2 animate-spin text-[#315a3d]"
+                />
                 Loading attendance history...
               </div>
             ) : error ? (
@@ -8288,8 +9529,13 @@ function StaffAttendanceDetailModal({
               </div>
             ) : filteredLogs.length === 0 ? (
               <div className="py-12 text-center text-xs text-[#84908a] space-y-1">
-                <p className="font-semibold text-[#24312e]">No attendance punches found</p>
-                <p>No clock-in logs recorded for this employee during the selected period.</p>
+                <p className="font-semibold text-[#24312e]">
+                  No attendance punches found
+                </p>
+                <p>
+                  No clock-in logs recorded for this employee during the
+                  selected period.
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -8307,7 +9553,10 @@ function StaffAttendanceDetailModal({
                   </thead>
                   <tbody className="divide-y divide-[#f0f1ed]">
                     {filteredLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-[#fbfaf7] transition">
+                      <tr
+                        key={log.id}
+                        className="hover:bg-[#fbfaf7] transition"
+                      >
                         <td className="py-3">
                           <div className="font-bold text-[#24312e]">
                             {formatDate(log.date)}
@@ -8322,10 +9571,10 @@ function StaffAttendanceDetailModal({
                               log.status === "Clocked in"
                                 ? "bg-emerald-100 text-emerald-800"
                                 : log.status === "On break"
-                                ? "bg-amber-100 text-amber-800"
-                                : log.status === "Clocked out"
-                                ? "bg-stone-100 text-stone-800"
-                                : "bg-[#e8f1e8] text-[#315a3d]"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : log.status === "Clocked out"
+                                    ? "bg-stone-100 text-stone-800"
+                                    : "bg-[#e8f1e8] text-[#315a3d]"
                             }`}
                           >
                             ● {log.status}
@@ -8344,7 +9593,8 @@ function StaffAttendanceDetailModal({
                             <div className="font-bold text-[#24312e]">
                               {formatTime(log.clockOut)}
                             </div>
-                          ) : log.status === "Clocked in" || log.status === "On break" ? (
+                          ) : log.status === "Clocked in" ||
+                            log.status === "On break" ? (
                             <span className="font-mono text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                               Active Shift
                             </span>
@@ -8354,12 +9604,16 @@ function StaffAttendanceDetailModal({
                         </td>
                         <td className="py-3">
                           <span className="font-semibold text-amber-900">
-                            {log.totalBreakMinutes > 0 ? `${log.totalBreakMinutes} mins` : "0 mins"}
+                            {log.totalBreakMinutes > 0
+                              ? `${log.totalBreakMinutes} mins`
+                              : "0 mins"}
                           </span>
                         </td>
                         <td className="py-3">
                           <span className="font-mono font-bold text-[#315a3d]">
-                            {formatMinutesToHours(Number(log.workDurationMinutes))}
+                            {formatMinutesToHours(
+                              Number(log.workDurationMinutes),
+                            )}
                           </span>
                         </td>
                         <td className="py-3 text-right">
@@ -8368,13 +9622,16 @@ function StaffAttendanceDetailModal({
                               <ShieldCheck size={11} />
                               Manager Override
                             </span>
-                          ) : log.distanceMeters !== null && log.distanceMeters !== undefined ? (
+                          ) : log.distanceMeters !== null &&
+                            log.distanceMeters !== undefined ? (
                             <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
                               <MapPin size={11} />
                               GPS {log.distanceMeters}m (Verified)
                             </span>
                           ) : (
-                            <span className="text-[#a1aaa4] text-[11px]">--</span>
+                            <span className="text-[#a1aaa4] text-[11px]">
+                              --
+                            </span>
                           )}
                         </td>
                       </tr>
@@ -8389,7 +9646,8 @@ function StaffAttendanceDetailModal({
         {/* Footer */}
         <div className="border-t border-[#e9eae6] bg-white p-4 flex items-center justify-between text-xs shrink-0">
           <span className="text-[#84908a]">
-            Employee ID: <strong className="text-[#24312e]">{staff.id}</strong> • Table & Thyme Attendance Register
+            Employee ID: <strong className="text-[#24312e]">{staff.id}</strong>{" "}
+            • Table & Thyme Attendance Register
           </span>
           <button
             type="button"
@@ -8406,7 +9664,14 @@ function StaffAttendanceDetailModal({
 
 function EmployeesPage({
   onOpenPortal,
-  departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
+  departments = [
+    "Floor",
+    "Kitchen",
+    "Bar",
+    "Cleaning",
+    "Utility",
+    "Management",
+  ],
   onAddDepartment,
   onDeleteDepartment,
   currentUser,
@@ -8423,7 +9688,9 @@ function EmployeesPage({
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [activeTab, setActiveTab] = useState<"staff" | "leaves" | "announcements">("staff");
+  const [activeTab, setActiveTab] = useState<
+    "staff" | "leaves" | "announcements"
+  >("staff");
   const [searchQuery, setSearchQuery] = useState("");
   const [deptFilter, setDeptFilter] = useState("All");
 
@@ -8434,12 +9701,23 @@ function EmployeesPage({
   // Modals
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
-  const [viewingStaffAttendance, setViewingStaffAttendance] = useState<StaffMember | null>(null);
+  const [viewingStaffAttendance, setViewingStaffAttendance] =
+    useState<StaffMember | null>(null);
   const [showGeofenceModal, setShowGeofenceModal] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [detectingGps, setDetectingGps] = useState(false);
+  const blockDemoAction = (action: string) => {
+    if (!currentUser?.isDemoAccount) return false;
+    showToast?.(
+      "error",
+      "Demo access only",
+      `${action} is disabled for the demo account.`,
+    );
+    return true;
+  };
 
   const handleQuickAddDepartment = async () => {
+    if (blockDemoAction("Adding departments")) return;
     const trimmed = newDeptInput.trim();
     if (!trimmed || !onAddDepartment) return;
     setIsAddingDept(true);
@@ -8456,10 +9734,18 @@ function EmployeesPage({
   };
 
   const loadData = () => {
-    fetchStaff().then(setStaffList).catch(() => {});
-    fetchRestaurantSettings().then(setSettings).catch(() => {});
-    fetchLeaves().then(setLeaves).catch(() => {});
-    fetchAnnouncements().then(setAnnouncements).catch(() => {});
+    fetchStaff()
+      .then(setStaffList)
+      .catch(() => {});
+    fetchRestaurantSettings()
+      .then(setSettings)
+      .catch(() => {});
+    fetchLeaves()
+      .then(setLeaves)
+      .catch(() => {});
+    fetchAnnouncements()
+      .then(setAnnouncements)
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -8476,7 +9762,12 @@ function EmployeesPage({
     shift: string;
   }) => {
     if (currentUser?.isDemoAccount) {
-      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      if (showToast)
+        showToast(
+          "error",
+          "Access Denied",
+          "This feature is disabled for the demo account.",
+        );
       return;
     }
 
@@ -8491,7 +9782,12 @@ function EmployeesPage({
 
   const handleUpdateStaff = async (id: string, data: Partial<StaffMember>) => {
     if (currentUser?.isDemoAccount) {
-      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      if (showToast)
+        showToast(
+          "error",
+          "Access Denied",
+          "This feature is disabled for the demo account.",
+        );
       return;
     }
     await updateStaff(id, data);
@@ -8499,11 +9795,13 @@ function EmployeesPage({
   };
 
   const handleDeleteStaff = async (id: string, name: string) => {
-    if (currentUser?.isDemoAccount) {
-      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+    if (blockDemoAction("Deleting employees")) return;
+    if (
+      !confirm(
+        `Are you sure you want to remove ${name} from employees? This action cannot be undone.`,
+      )
+    )
       return;
-    }
-    if (!confirm(`Are you sure you want to remove ${name} from employees? This action cannot be undone.`)) return;
     try {
       await deleteStaff(id);
       loadData();
@@ -8512,7 +9810,10 @@ function EmployeesPage({
     }
   };
 
-  const handleToggleAttendance = async (staffId: string, currentStatus: string) => {
+  const handleToggleAttendance = async (
+    staffId: string,
+    currentStatus: string,
+  ) => {
     try {
       if (currentStatus === "Clocked in") {
         await clockOutStaff(staffId);
@@ -8525,7 +9826,10 @@ function EmployeesPage({
     }
   };
 
-  const handleLeaveStatusChange = async (id: number, status: "Approved" | "Rejected") => {
+  const handleLeaveStatusChange = async (
+    id: number,
+    status: "Approved" | "Rejected",
+  ) => {
     try {
       await updateLeaveStatus(id, status, "Manager");
       loadData();
@@ -8551,7 +9855,9 @@ function EmployeesPage({
             radiusMeters: settings?.radiusMeters || 50,
           });
           loadData();
-          alert(`✓ Restaurant GPS successfully synced to your current coordinates (${lat}°, ${lng}°)!`);
+          alert(
+            `✓ Restaurant GPS successfully synced to your current coordinates (${lat}°, ${lng}°)!`,
+          );
         } catch (err) {
           console.error("Auto save failed:", err);
         } finally {
@@ -8559,7 +9865,11 @@ function EmployeesPage({
         }
       },
       (err) => {
-        alert("GPS Error: " + err.message + ". Please ensure location permissions are enabled in your browser.");
+        alert(
+          "GPS Error: " +
+            err.message +
+            ". Please ensure location permissions are enabled in your browser.",
+        );
         setDetectingGps(false);
       },
       { enableHighAccuracy: true },
@@ -8569,8 +9879,13 @@ function EmployeesPage({
   const clockedInCount = staffList.filter(
     (s) => s.todayStatus === "Clocked in" || s.todayStatus === "On break",
   ).length;
-  const pendingLeavesCount = leaves.filter((l) => l.status === "Pending").length;
-  const attendanceRate = staffList.length > 0 ? Math.round((clockedInCount / staffList.length) * 100) : 0;
+  const pendingLeavesCount = leaves.filter(
+    (l) => l.status === "Pending",
+  ).length;
+  const attendanceRate =
+    staffList.length > 0
+      ? Math.round((clockedInCount / staffList.length) * 100)
+      : 0;
 
   const filteredStaff = staffList.filter((s) => {
     const matchesQuery =
@@ -8603,8 +9918,16 @@ function EmployeesPage({
               </button>
             )}
             <button
-              onClick={() => setShowAddStaffModal(true)}
-              className="flex items-center gap-2 rounded-xl bg-[#24312e] px-4 py-3 text-sm font-bold text-white hover:bg-[#315a3d] transition shadow-xs cursor-pointer"
+              onClick={() => {
+                if (blockDemoAction("Adding employees")) return;
+                setShowAddStaffModal(true);
+              }}
+              aria-disabled={currentUser?.isDemoAccount}
+              className={`flex items-center gap-2 rounded-xl bg-[#24312e] px-4 py-3 text-sm font-bold text-white transition shadow-xs ${
+                currentUser?.isDemoAccount
+                  ? "cursor-not-allowed opacity-60"
+                  : "cursor-pointer hover:bg-[#315a3d]"
+              }`}
             >
               <Plus size={18} />
               Add Employee
@@ -8632,7 +9955,9 @@ function EmployeesPage({
         <StatCard
           label="Pending leaves"
           value={String(pendingLeavesCount)}
-          change={pendingLeavesCount > 0 ? "Requires review" : "All requests handled"}
+          change={
+            pendingLeavesCount > 0 ? "Requires review" : "All requests handled"
+          }
           icon={CalendarDays}
           color="bg-[#fbe8dc] text-[#b7623d]"
         />
@@ -8653,10 +9978,13 @@ function EmployeesPage({
           </div>
           <div>
             <p className="font-bold text-[#24312e]">
-              Restaurant Geofence: {settings?.latitude.toFixed(4)}° N, {settings?.longitude.toFixed(4)}° E • {settings?.radiusMeters || 50}m Radius
+              Restaurant Geofence: {settings?.latitude.toFixed(4)}° N,{" "}
+              {settings?.longitude.toFixed(4)}° E •{" "}
+              {settings?.radiusMeters || 50}m Radius
             </p>
             <p className="text-[11px] text-[#68736e]">
-              Staff can only clock in through mobile GPS when within {settings?.radiusMeters || 50} meters of restaurant coordinates.
+              Staff can only clock in through mobile GPS when within{" "}
+              {settings?.radiusMeters || 50} meters of restaurant coordinates.
             </p>
           </div>
         </div>
@@ -8722,7 +10050,10 @@ function EmployeesPage({
           {activeTab === "staff" && (
             <div className="flex items-center gap-3">
               <div className="relative w-full sm:w-64">
-                <Search size={16} className="absolute left-3 top-2.5 text-[#84908a]" />
+                <Search
+                  size={16}
+                  className="absolute left-3 top-2.5 text-[#84908a]"
+                />
                 <input
                   type="text"
                   placeholder="Search name, role, phone..."
@@ -8750,7 +10081,9 @@ function EmployeesPage({
           <div className="mt-4">
             {/* Department Filter Chips */}
             <div className="mb-4 flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-[#84908a] mr-1">Filter Dept:</span>
+              <span className="text-[11px] font-semibold text-[#84908a] mr-1">
+                Filter Dept:
+              </span>
               {filterDepartments.map((dept) => (
                 <div key={dept} className="inline-flex items-center">
                   <button
@@ -8762,28 +10095,38 @@ function EmployeesPage({
                     }`}
                   >
                     <span>{dept}</span>
-                    {onDeleteDepartment && dept !== "All" && !["Floor", "Kitchen", "Management"].includes(dept) && (
-                      <span
-                        role="button"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (confirm(`Delete department "${dept}"? Staff in this department will remain but will need a new department assigned.`)) {
-                            try {
-                              await onDeleteDepartment(dept);
-                              if (deptFilter === dept) setDeptFilter("All");
-                            } catch (err) {
-                              alert("Failed to delete department: " + String(err));
+                    {onDeleteDepartment &&
+                      dept !== "All" &&
+                      !["Floor", "Kitchen", "Management"].includes(dept) && (
+                        <span
+                          role="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (
+                              confirm(
+                                `Delete department "${dept}"? Staff in this department will remain but will need a new department assigned.`,
+                              )
+                            ) {
+                              try {
+                                await onDeleteDepartment(dept);
+                                if (deptFilter === dept) setDeptFilter("All");
+                              } catch (err) {
+                                alert(
+                                  "Failed to delete department: " + String(err),
+                                );
+                              }
                             }
-                          }
-                        }}
-                        className={`rounded-full p-0.5 hover:bg-rose-500 hover:text-white transition cursor-pointer ${
-                          deptFilter === dept ? "text-white/80" : "text-[#84908a]"
-                        }`}
-                        title={`Delete ${dept} department`}
-                      >
-                        <X size={11} />
-                      </span>
-                    )}
+                          }}
+                          className={`rounded-full p-0.5 hover:bg-rose-500 hover:text-white transition cursor-pointer ${
+                            deptFilter === dept
+                              ? "text-white/80"
+                              : "text-[#84908a]"
+                          }`}
+                          title={`Delete ${dept} department`}
+                        >
+                          <X size={11} />
+                        </span>
+                      )}
                   </button>
                 </div>
               ))}
@@ -8792,8 +10135,16 @@ function EmployeesPage({
                 <>
                   {!showAddDept ? (
                     <button
-                      onClick={() => setShowAddDept(true)}
-                      className="flex items-center gap-1 rounded-lg border border-dashed border-[#315a3d]/50 bg-[#e8f1e8]/50 px-2.5 py-1 text-[11px] font-bold text-[#315a3d] hover:bg-[#e8f1e8] transition cursor-pointer"
+                      onClick={() => {
+                        if (blockDemoAction("Adding departments")) return;
+                        setShowAddDept(true);
+                      }}
+                      aria-disabled={currentUser?.isDemoAccount}
+                      className={`flex items-center gap-1 rounded-lg border border-dashed border-[#315a3d]/50 bg-[#e8f1e8]/50 px-2.5 py-1 text-[11px] font-bold text-[#315a3d] transition ${
+                        currentUser?.isDemoAccount
+                          ? "cursor-not-allowed opacity-60"
+                          : "cursor-pointer hover:bg-[#e8f1e8]"
+                      }`}
                       title="Add a new restaurant department"
                     >
                       <Plus size={13} />
@@ -8869,8 +10220,12 @@ function EmployeesPage({
                               .join("")}
                           </div>
                           <div>
-                            <p className="font-bold text-[#24312e] group-hover:text-[#315a3d] transition">{person.name}</p>
-                            <span className="text-[10px] text-[#84908a]">{person.phone}</span>
+                            <p className="font-bold text-[#24312e] group-hover:text-[#315a3d] transition">
+                              {person.name}
+                            </p>
+                            <span className="text-[10px] text-[#84908a]">
+                              {person.phone}
+                            </span>
                           </div>
                         </div>
                       </td>
@@ -8880,14 +10235,17 @@ function EmployeesPage({
                       <td className="py-3.5 text-[#68736e]">{person.shift}</td>
                       <td className="py-3.5">
                         <div className="font-mono text-[11px] text-[#24312e]">
-                          <span>PIN: <strong>{person.pin}</strong></span>
+                          <span>
+                            PIN: <strong>{person.pin}</strong>
+                          </span>
                         </div>
                       </td>
                       <td className="py-3.5">
                         <StatusPill status={person.todayStatus} />
                       </td>
                       <td className="py-3.5 text-[#68736e]">
-                        {person.lastDistanceMeters !== null && person.lastDistanceMeters !== undefined ? (
+                        {person.lastDistanceMeters !== null &&
+                        person.lastDistanceMeters !== undefined ? (
                           <span className="font-semibold text-emerald-700">
                             {person.lastDistanceMeters}m (Verified)
                           </span>
@@ -8913,7 +10271,10 @@ function EmployeesPage({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleToggleAttendance(person.id, person.todayStatus);
+                              handleToggleAttendance(
+                                person.id,
+                                person.todayStatus,
+                              );
                             }}
                             className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${
                               person.todayStatus === "Clocked in"
@@ -8922,15 +10283,22 @@ function EmployeesPage({
                             }`}
                             title="Manager manual punch override"
                           >
-                            {person.todayStatus === "Clocked in" ? "Clock Out" : "Clock In"}
+                            {person.todayStatus === "Clocked in"
+                              ? "Clock Out"
+                              : "Clock In"}
                           </button>
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (blockDemoAction("Editing employees")) return;
                               setEditingStaff(person);
                             }}
-                            className="rounded-lg border border-[#dfe1dc] bg-white p-1.5 text-stone-600 hover:text-[#315a3d] hover:border-[#315a3d] transition cursor-pointer shadow-2xs"
+                            className={`rounded-lg border border-[#dfe1dc] bg-white p-1.5 text-stone-600 transition shadow-2xs ${
+                              currentUser?.isDemoAccount
+                                ? "cursor-not-allowed opacity-60"
+                                : "cursor-pointer hover:text-[#315a3d] hover:border-[#315a3d]"
+                            }`}
                             title="Edit employee details"
                           >
                             <Pencil size={14} />
@@ -8977,7 +10345,10 @@ function EmployeesPage({
                 </thead>
                 <tbody>
                   {leaves.map((l) => (
-                    <tr key={l.id} className="border-b border-[#f0f1ed] last:border-0 text-xs">
+                    <tr
+                      key={l.id}
+                      className="border-b border-[#f0f1ed] last:border-0 text-xs"
+                    >
                       <td className="py-3.5 font-bold text-[#24312e]">
                         {l.staffName} ({l.department})
                       </td>
@@ -8985,15 +10356,17 @@ function EmployeesPage({
                       <td className="py-3.5 text-[#68736e]">
                         {l.startDate} to {l.endDate}
                       </td>
-                      <td className="py-3.5 text-[#55615b] max-w-64 truncate">{l.reason}</td>
+                      <td className="py-3.5 text-[#55615b] max-w-64 truncate">
+                        {l.reason}
+                      </td>
                       <td className="py-3.5">
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                             l.status === "Approved"
                               ? "bg-emerald-100 text-emerald-800"
                               : l.status === "Rejected"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-amber-100 text-amber-800"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-amber-100 text-amber-800"
                           }`}
                         >
                           {l.status}
@@ -9003,20 +10376,26 @@ function EmployeesPage({
                         {l.status === "Pending" ? (
                           <div className="flex items-center justify-end gap-1.5">
                             <button
-                              onClick={() => handleLeaveStatusChange(l.id, "Approved")}
+                              onClick={() =>
+                                handleLeaveStatusChange(l.id, "Approved")
+                              }
                               className="rounded-lg bg-emerald-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-800 cursor-pointer"
                             >
                               Approve
                             </button>
                             <button
-                              onClick={() => handleLeaveStatusChange(l.id, "Rejected")}
+                              onClick={() =>
+                                handleLeaveStatusChange(l.id, "Rejected")
+                              }
                               className="rounded-lg bg-red-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-red-800 cursor-pointer"
                             >
                               Reject
                             </button>
                           </div>
                         ) : (
-                          <span className="text-[11px] text-[#84908a]">Reviewed</span>
+                          <span className="text-[11px] text-[#84908a]">
+                            Reviewed
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -9032,7 +10411,8 @@ function EmployeesPage({
           <div className="mt-4 space-y-3">
             {announcements.length === 0 ? (
               <p className="text-center py-8 text-xs text-[#84908a]">
-                No broadcast notices sent yet. Click "New Broadcast Notice" above to compose one.
+                No broadcast notices sent yet. Click "New Broadcast Notice"
+                above to compose one.
               </p>
             ) : (
               announcements.map((item) => (
@@ -9044,17 +10424,26 @@ function EmployeesPage({
                     <div className="flex items-center gap-2 mb-1">
                       <span
                         className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                          item.priority === "Urgent" ? "bg-red-600 text-white" : "bg-[#315a3d] text-white"
+                          item.priority === "Urgent"
+                            ? "bg-red-600 text-white"
+                            : "bg-[#315a3d] text-white"
                         }`}
                       >
                         {item.priority}
                       </span>
                       <span className="text-[10px] text-[#84908a]">
-                        Target: {item.targetType === "All" ? "All Employees" : `Staff ID: ${item.targetStaffId}`}
+                        Target:{" "}
+                        {item.targetType === "All"
+                          ? "All Employees"
+                          : `Staff ID: ${item.targetStaffId}`}
                       </span>
                     </div>
-                    <h4 className="font-bold text-sm text-[#24312e]">{item.title}</h4>
-                    <p className="mt-1 text-[#55615b] leading-relaxed">{item.message}</p>
+                    <h4 className="font-bold text-sm text-[#24312e]">
+                      {item.title}
+                    </h4>
+                    <p className="mt-1 text-[#55615b] leading-relaxed">
+                      {item.message}
+                    </p>
                   </div>
                   <span className="text-[10px] text-[#a1aaa4] shrink-0">
                     From: {item.senderName}
@@ -9114,19 +10503,29 @@ function EmployeesPage({
 
 function DashboardAccessPage({
   onOpenPortal,
-  departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
+  departments = [
+    "Floor",
+    "Kitchen",
+    "Bar",
+    "Cleaning",
+    "Utility",
+    "Management",
+  ],
   onAddDepartment,
   currentUser,
+  showToast: showAppToast,
 }: {
   onOpenPortal?: () => void;
   departments?: string[];
   onAddDepartment?: (name: string) => Promise<any>;
   currentUser?: any;
-  showToast?: any; // Ignored as DashboardAccessPage has its own
+  showToast?: any;
 }) {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"All" | "Manager" | "Server" | "Kitchen">("All");
+  const [roleFilter, setRoleFilter] = useState<
+    "All" | "Manager" | "Server" | "Kitchen"
+  >("All");
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
@@ -9152,12 +10551,21 @@ function DashboardAccessPage({
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 4000);
   };
+  const blockDemoAction = (action: string) => {
+    if (!currentUser?.isDemoAccount) return false;
+    showAppToast?.(
+      "error",
+      "Demo access only",
+      `${action} is disabled for the demo account.`,
+    );
+    return true;
+  };
 
-  const handleRoleChange = async (staffId: string, newRole: StaffMember["systemRole"]) => {
-    if (currentUser?.isDemoAccount) {
-      alert("This feature is disabled for the demo account.");
-      return;
-    }
+  const handleRoleChange = async (
+    staffId: string,
+    newRole: StaffMember["systemRole"],
+  ) => {
+    if (blockDemoAction("Changing dashboard access")) return;
     try {
       const updated = await updateStaff(staffId, { systemRole: newRole });
       showToast(`✓ Updated ${updated.name}'s station role to "${newRole}"!`);
@@ -9168,11 +10576,13 @@ function DashboardAccessPage({
   };
 
   const handleRevokeRole = async (staffId: string, name: string) => {
-    if (currentUser?.isDemoAccount) {
-      alert("This feature is disabled for the demo account.");
+    if (blockDemoAction("Revoking dashboard access")) return;
+    if (
+      !confirm(
+        `Revoke dashboard station access for ${name}? They will no longer be able to log into the web dashboard.`,
+      )
+    )
       return;
-    }
-    if (!confirm(`Revoke dashboard station access for ${name}? They will no longer be able to log into the web dashboard.`)) return;
     try {
       await updateStaff(staffId, { systemRole: "None" });
       showToast(`✓ Revoked dashboard access for ${name}`);
@@ -9190,10 +10600,7 @@ function DashboardAccessPage({
     department: string;
     phone?: string;
   }) => {
-    if (currentUser?.isDemoAccount) {
-      alert("This feature is disabled for the demo account.");
-      return;
-    }
+    if (blockDemoAction("Adding dashboard members")) return;
     await createStaff({
       name: data.name,
       email: data.email,
@@ -9208,11 +10615,11 @@ function DashboardAccessPage({
     loadData();
   };
 
-  const handleUpdateDashboardMember = async (id: string, data: Partial<StaffMember>) => {
-    if (currentUser?.isDemoAccount) {
-      alert("This feature is disabled for the demo account.");
-      return;
-    }
+  const handleUpdateDashboardMember = async (
+    id: string,
+    data: Partial<StaffMember>,
+  ) => {
+    if (blockDemoAction("Editing dashboard members")) return;
     await updateStaff(id, data);
     showToast("✓ Dashboard credentials updated successfully!");
     loadData();
@@ -9257,7 +10664,10 @@ function DashboardAccessPage({
             <CheckCircle2 size={16} className="text-emerald-700" />
             <span>{toastMsg}</span>
           </div>
-          <button onClick={() => setToastMsg(null)} className="text-emerald-700 hover:text-emerald-950 cursor-pointer">
+          <button
+            onClick={() => setToastMsg(null)}
+            className="text-emerald-700 hover:text-emerald-950 cursor-pointer"
+          >
             <X size={14} />
           </button>
         </div>
@@ -9295,8 +10705,6 @@ function DashboardAccessPage({
         />
       </div>
 
-
-
       {/* Dashboard Accounts Matrix */}
       <div className="mt-6 rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-5 sm:p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#e9eae6] pb-4">
@@ -9305,13 +10713,17 @@ function DashboardAccessPage({
               Station Login Accounts
             </h3>
             <p className="mt-0.5 text-xs text-[#68736e]">
-              Staff listed here have direct email and password access to the restaurant dashboard.
+              Staff listed here have direct email and password access to the
+              restaurant dashboard.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="relative w-full sm:w-64">
-              <Search size={16} className="absolute left-3 top-2.5 text-[#84908a]" />
+              <Search
+                size={16}
+                className="absolute left-3 top-2.5 text-[#84908a]"
+              />
               <input
                 type="text"
                 placeholder="Search station members..."
@@ -9321,8 +10733,16 @@ function DashboardAccessPage({
               />
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
-              className="rounded-xl bg-[#24312e] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition flex items-center gap-1.5 shrink-0 cursor-pointer"
+              onClick={() => {
+                if (blockDemoAction("Adding dashboard members")) return;
+                setShowAddModal(true);
+              }}
+              aria-disabled={currentUser?.isDemoAccount}
+              className={`rounded-xl bg-[#24312e] px-3.5 py-2 text-xs font-bold text-white transition flex items-center gap-1.5 shrink-0 ${
+                currentUser?.isDemoAccount
+                  ? "cursor-not-allowed opacity-60"
+                  : "cursor-pointer hover:bg-[#315a3d]"
+              }`}
             >
               <Plus size={14} />
               Add Member
@@ -9332,7 +10752,9 @@ function DashboardAccessPage({
 
         {/* Role Filters (No Staff Only filter) */}
         <div className="mt-4 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-semibold text-[#84908a] mr-1">Filter by role:</span>
+          <span className="text-[11px] font-semibold text-[#84908a] mr-1">
+            Filter by role:
+          </span>
           {(["All", "Manager", "Server", "Kitchen"] as const).map((r) => (
             <button
               key={r}
@@ -9346,10 +10768,10 @@ function DashboardAccessPage({
               {r === "All"
                 ? `All Dashboard (${dashboardMembers.length})`
                 : r === "Manager"
-                ? `Managers (${managers.length})`
-                : r === "Server"
-                ? `Servants (${servers.length})`
-                : `Kitchen (${kitchens.length})`}
+                  ? `Managers (${managers.length})`
+                  : r === "Server"
+                    ? `Servants (${servers.length})`
+                    : `Kitchen (${kitchens.length})`}
             </button>
           ))}
         </div>
@@ -9368,13 +10790,20 @@ function DashboardAccessPage({
             <tbody>
               {filteredMembers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-xs text-[#84908a]">
-                    No dashboard members found matching your filter. Click <strong>"Add Member"</strong> to create one.
+                  <td
+                    colSpan={4}
+                    className="py-8 text-center text-xs text-[#84908a]"
+                  >
+                    No dashboard members found matching your filter. Click{" "}
+                    <strong>"Add Member"</strong> to create one.
                   </td>
                 </tr>
               ) : (
                 filteredMembers.map((person) => (
-                  <tr key={person.id} className="border-b border-[#f0f1ed] last:border-0 text-xs">
+                  <tr
+                    key={person.id}
+                    className="border-b border-[#f0f1ed] last:border-0 text-xs"
+                  >
                     <td className="py-3.5">
                       <div className="flex items-center gap-2.5">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e5c7a6] text-[11px] font-bold text-[#684f37]">
@@ -9384,8 +10813,12 @@ function DashboardAccessPage({
                             .join("")}
                         </div>
                         <div>
-                          <p className="font-bold text-[#24312e]">{person.name}</p>
-                          <span className="text-[10px] text-[#84908a]">{person.phone}</span>
+                          <p className="font-bold text-[#24312e]">
+                            {person.name}
+                          </p>
+                          <span className="text-[10px] text-[#84908a]">
+                            {person.phone}
+                          </span>
                         </div>
                       </div>
                     </td>
@@ -9396,16 +10829,19 @@ function DashboardAccessPage({
                       <select
                         value={person.systemRole}
                         onChange={(e) =>
-                          handleRoleChange(person.id, e.target.value as StaffMember["systemRole"])
+                          handleRoleChange(
+                            person.id,
+                            e.target.value as StaffMember["systemRole"],
+                          )
                         }
                         className={`rounded-xl border px-3 py-1.5 text-xs font-bold outline-hidden transition cursor-pointer ${
                           person.systemRole === "Manager"
                             ? "border-amber-400 bg-amber-50 text-amber-900"
                             : person.systemRole === "Server"
-                            ? "border-emerald-400 bg-emerald-50 text-emerald-900"
-                            : person.systemRole === "Kitchen"
-                            ? "border-purple-400 bg-purple-50 text-purple-900"
-                            : "border-gray-300 bg-gray-50 text-gray-700"
+                              ? "border-emerald-400 bg-emerald-50 text-emerald-900"
+                              : person.systemRole === "Kitchen"
+                                ? "border-purple-400 bg-purple-50 text-purple-900"
+                                : "border-gray-300 bg-gray-50 text-gray-700"
                         }`}
                       >
                         <option value="Server">Servant / Floor Station</option>
@@ -9416,15 +10852,29 @@ function DashboardAccessPage({
                     <td className="py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => setEditingStaff(person)}
-                          className="rounded-lg border border-[#dfe1dc] bg-white p-1.5 text-stone-600 hover:text-[#315a3d] hover:border-[#315a3d] transition cursor-pointer shadow-2xs"
+                          onClick={() => {
+                            if (blockDemoAction("Editing dashboard members"))
+                              return;
+                            setEditingStaff(person);
+                          }}
+                          className={`rounded-lg border border-[#dfe1dc] bg-white p-1.5 text-stone-600 transition shadow-2xs ${
+                            currentUser?.isDemoAccount
+                              ? "cursor-not-allowed opacity-60"
+                              : "cursor-pointer hover:text-[#315a3d] hover:border-[#315a3d]"
+                          }`}
                           title="Edit station credentials"
                         >
                           <Pencil size={14} />
                         </button>
                         <button
-                          onClick={() => handleRevokeRole(person.id, person.name)}
-                          className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-100 transition cursor-pointer shadow-2xs"
+                          onClick={() =>
+                            handleRevokeRole(person.id, person.name)
+                          }
+                          className={`rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700 transition shadow-2xs ${
+                            currentUser?.isDemoAccount
+                              ? "cursor-not-allowed opacity-60"
+                              : "cursor-pointer hover:bg-red-100"
+                          }`}
                           title="Revoke station access"
                         >
                           Revoke Access
@@ -9464,7 +10914,8 @@ function DashboardAccessPage({
             <h4 className="font-bold text-sm">Servant / Floor Capabilities</h4>
           </div>
           <p className="text-xs text-emerald-800/90 leading-relaxed mb-3">
-            Dedicated station for front-of-house floor operations & POS ordering.
+            Dedicated station for front-of-house floor operations & POS
+            ordering.
           </p>
           <ul className="text-[11px] text-emerald-900 space-y-1 list-disc list-inside">
             <li>Table seating & live occupancy status</li>
@@ -9480,7 +10931,8 @@ function DashboardAccessPage({
             <ChefHat size={18} />
             <h4 className="font-bold text-sm">Kitchen Head Capabilities</h4>
             <p className="text-xs text-purple-800/90 leading-relaxed mb-3">
-              High-speed Kitchen Display System (KDS) for cooking line execution.
+              High-speed Kitchen Display System (KDS) for cooking line
+              execution.
             </p>
             <ul className="text-[11px] text-purple-900 space-y-1 list-disc list-inside">
               <li>Real-time ticket queue with prep timer</li>
@@ -9541,7 +10993,11 @@ function TimeSelectionModal({
       const numH = parseInt(match24[1], 10);
       const p = numH >= 12 ? "PM" : "AM";
       const h12 = numH % 12 === 0 ? 12 : numH % 12;
-      return { hour: String(h12).padStart(2, "0"), minute: match24[2], period: p };
+      return {
+        hour: String(h12).padStart(2, "0"),
+        minute: match24[2],
+        period: p,
+      };
     }
     return { hour: "07", minute: "30", period: "PM" };
   };
@@ -9551,7 +11007,20 @@ function TimeSelectionModal({
   const [selectedMinute, setSelectedMinute] = useState(initial.minute);
   const [selectedPeriod, setSelectedPeriod] = useState(initial.period);
 
-  const hours = ["12", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11"];
+  const hours = [
+    "12",
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "08",
+    "09",
+    "10",
+    "11",
+  ];
   const minutes = ["00", "15", "30", "45"];
 
   const currentPreview = `${selectedHour}:${selectedMinute} ${selectedPeriod}`;
@@ -9565,7 +11034,14 @@ function TimeSelectionModal({
     applyTime(currentPreview);
   };
 
-  const lunchSlots = ["12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM", "02:30 PM"];
+  const lunchSlots = [
+    "12:00 PM",
+    "12:30 PM",
+    "01:00 PM",
+    "01:30 PM",
+    "02:00 PM",
+    "02:30 PM",
+  ];
   const dinnerSlots = [
     "06:30 PM",
     "07:00 PM",
@@ -9586,8 +11062,12 @@ function TimeSelectionModal({
               <Clock3 size={19} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#24312e]">Select Booking Time</h3>
-              <p className="text-[11px] text-[#84908a]">Choose service time or pick a dining slot</p>
+              <h3 className="text-base font-bold text-[#24312e]">
+                Select Booking Time
+              </h3>
+              <p className="text-[11px] text-[#84908a]">
+                Choose service time or pick a dining slot
+              </p>
             </div>
           </div>
           <button
@@ -9616,7 +11096,9 @@ function TimeSelectionModal({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-bold text-[#68736e]">Hour</span>
-              <span className="text-[11px] font-semibold text-[#b7623d]">{selectedHour}</span>
+              <span className="text-[11px] font-semibold text-[#b7623d]">
+                {selectedHour}
+              </span>
             </div>
             <div className="grid grid-cols-6 gap-1.5">
               {hours.map((h) => (
@@ -9640,7 +11122,9 @@ function TimeSelectionModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-bold text-[#68736e]">Minute</span>
-                <span className="text-[11px] font-semibold text-[#b7623d]">:{selectedMinute}</span>
+                <span className="text-[11px] font-semibold text-[#b7623d]">
+                  :{selectedMinute}
+                </span>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
                 {minutes.map((m) => (
@@ -9663,7 +11147,9 @@ function TimeSelectionModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-bold text-[#68736e]">Period</span>
-                <span className="text-[11px] font-semibold text-[#b7623d]">{selectedPeriod}</span>
+                <span className="text-[11px] font-semibold text-[#b7623d]">
+                  {selectedPeriod}
+                </span>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
                 {["AM", "PM"].map((p) => (
@@ -9791,23 +11277,37 @@ function BookingModal({
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [confirmedBooking, setConfirmedBooking] = useState<TableBooking | null>(null);
+  const [confirmedBooking, setConfirmedBooking] = useState<TableBooking | null>(
+    null,
+  );
 
   const [guests, setGuests] = useState<number>(2);
   const [bookingTime, setBookingTime] = useState<string>("07:30 PM");
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
 
   // Determine valid initial table: must be Available and have >= 2 seats
-  const initialTable = initialTableId ? tables.find((t) => t.id === initialTableId) : null;
-  const isInitialValid = initialTable && initialTable.status === "Available" && initialTable.seats >= 2;
-  const [selectedTableId, setSelectedTableId] = useState<string>(isInitialValid ? initialTableId! : "Pending");
+  const initialTable = initialTableId
+    ? tables.find((t) => t.id === initialTableId)
+    : null;
+  const isInitialValid =
+    initialTable &&
+    initialTable.status === "Available" &&
+    initialTable.seats >= 2;
+  const [selectedTableId, setSelectedTableId] = useState<string>(
+    isInitialValid ? initialTableId! : "Pending",
+  );
 
   // Keep selected table valid when guests count changes
   useEffect(() => {
     if (selectedTableId && selectedTableId !== "Pending") {
       const current = tables.find((t) => t.id === selectedTableId);
-      if (current && (current.status !== "Available" || current.seats < guests)) {
-        const firstValid = tables.find((t) => t.status === "Available" && t.seats >= guests);
+      if (
+        current &&
+        (current.status !== "Available" || current.seats < guests)
+      ) {
+        const firstValid = tables.find(
+          (t) => t.status === "Available" && t.seats >= guests,
+        );
         setSelectedTableId(firstValid ? firstValid.id : "Pending");
       }
     }
@@ -9822,14 +11322,19 @@ function BookingModal({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (kitchenClosed) {
-      setError("Kitchen is closed. Cannot accept new table bookings at this time.");
+      setError(
+        "Kitchen is closed. Cannot accept new table bookings at this time.",
+      );
       return;
     }
     setSubmitting(true);
     setError("");
     const form = new FormData(event.currentTarget);
 
-    const tableId = selectedTableId === "Pending" || !selectedTableId ? null : selectedTableId;
+    const tableId =
+      selectedTableId === "Pending" || !selectedTableId
+        ? null
+        : selectedTableId;
 
     if (tableId) {
       const targetTable = tables.find((t) => t.id === tableId);
@@ -9839,12 +11344,16 @@ function BookingModal({
         return;
       }
       if (targetTable.status !== "Available") {
-        setError(`Table ${targetTable.id} is currently ${targetTable.status} and cannot be booked.`);
+        setError(
+          `Table ${targetTable.id} is currently ${targetTable.status} and cannot be booked.`,
+        );
         setSubmitting(false);
         return;
       }
       if (targetTable.seats < guests) {
-        setError(`Table ${targetTable.id} only has ${targetTable.seats} seats, which is not enough for ${guests} guests.`);
+        setError(
+          `Table ${targetTable.id} only has ${targetTable.seats} seats, which is not enough for ${guests} guests.`,
+        );
         setSubmitting(false);
         return;
       }
@@ -9856,7 +11365,9 @@ function BookingModal({
         phone: String(form.get("phone") || "").trim(),
         email: String(form.get("email") || "").trim(),
         bookingDate: String(form.get("bookingDate") || todayStr).trim(),
-        bookingTime: String(bookingTime || form.get("bookingTime") || "").trim(),
+        bookingTime: String(
+          bookingTime || form.get("bookingTime") || "",
+        ).trim(),
         guests: Number(guests) || 2,
         tableId: tableId,
         source: (form.get("source") as any) || "Phone",
@@ -9883,375 +11394,434 @@ function BookingModal({
         />
       )}
       <div className="fixed inset-0 z-20 flex items-center justify-center overflow-y-auto bg-[#24312e]/40 p-3 sm:p-4 backdrop-blur-sm">
-      <div className="my-auto w-full max-w-xl rounded-2xl bg-[#fbfaf7] p-4 sm:p-7 shadow-2xl max-h-[92vh] overflow-y-auto">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.15em] text-[#b7623d]">
-              <CalendarCheck size={15} />
-              Reservation
-            </div>
-            <h2 className="display-font text-2xl font-bold text-[#24312e]">
-              Book a table
-            </h2>
-            <p className="mt-1 text-xs text-[#84908a]">
-              Select party size, booking time, and an available table with sufficient seating capacity.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-2 text-[#84908a] hover:bg-black/5 transition"
-            aria-label="Close booking dialog"
-          >
-            <X size={19} />
-          </button>
-        </div>
-
-        {kitchenClosed && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 flex items-center gap-2">
-            <AlertTriangle size={16} className="shrink-0 text-red-600" />
+        <div className="my-auto w-full max-w-xl rounded-2xl bg-[#fbfaf7] p-4 sm:p-7 shadow-2xl max-h-[92vh] overflow-y-auto">
+          <div className="flex items-start justify-between">
             <div>
-              <span className="font-bold">Kitchen is Closed:</span> Table bookings are paused until the kitchen reopens.
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.15em] text-[#b7623d]">
+                <CalendarCheck size={15} />
+                Reservation
+              </div>
+              <h2 className="display-font text-2xl font-bold text-[#24312e]">
+                Book a table
+              </h2>
+              <p className="mt-1 text-xs text-[#84908a]">
+                Select party size, booking time, and an available table with
+                sufficient seating capacity.
+              </p>
             </div>
-          </div>
-        )}
-
-        {confirmed ? (
-          <div className="mt-8 rounded-xl border border-[#cfe0d0] bg-[#e8f1e8] p-5 text-center">
-            <CheckCircle2 className="mx-auto text-[#3b724c]" size={34} />
-            <h3 className="mt-3 font-bold text-[#315a3d]">
-              Table reserved successfully
-            </h3>
-            <p className="mt-2 text-sm text-[#58715e]">
-              Booking confirmed for {confirmedBooking?.customer} on{" "}
-              {confirmedBooking?.bookingDate} at {confirmedBooking?.bookingTime}
-              {confirmedBooking?.tableId ? ` (Table ${confirmedBooking.tableId})` : " (Auto-allocated)"}.
-            </p>
-            <p className="mt-1 text-xs text-[#58715e]">
-              The {currencySymbol || "₹"}{defaultDeposit} booking deposit is recorded and will be adjusted on final billing.
-            </p>
             <button
               onClick={onClose}
-              className="mt-5 rounded-xl bg-[#24312e] px-5 py-3 text-sm font-bold text-white hover:bg-[#315a3d]"
+              className="rounded-lg p-2 text-[#84908a] hover:bg-black/5 transition"
+              aria-label="Close booking dialog"
             >
-              Done
+              <X size={19} />
             </button>
           </div>
-        ) : (
-          <form onSubmit={submit} className="mt-6">
-            {error && (
-              <div className="mb-4 rounded-xl border border-[#f5c6cb] bg-[#f8d7da] p-3 text-xs text-[#721c24] flex items-center gap-2">
-                <AlertTriangle size={15} className="shrink-0 text-[#721c24]" />
-                <span>{error}</span>
-              </div>
-            )}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="text-xs font-bold text-[#68736e]">
-                Guest name <span className="text-[#b7623d]">*</span>
-                <input
-                  required
-                  name="customer"
-                  type="text"
-                  placeholder="e.g. Maya Kapoor"
-                  className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none placeholder:text-[#aab1ac] focus:border-[#b7623d]"
-                />
-              </label>
 
-              <label className="text-xs font-bold text-[#68736e]">
-                Contact number <span className="text-[#b7623d]">*</span>
-                <input
-                  required
-                  name="phone"
-                  type="tel"
-                  placeholder="e.g. +91 98765 43210"
-                  className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none placeholder:text-[#aab1ac] focus:border-[#b7623d]"
-                />
-              </label>
-
-              <label className="text-xs font-bold text-[#68736e]">
-                Email address
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="e.g. guest@example.com"
-                  className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none placeholder:text-[#aab1ac] focus:border-[#b7623d]"
-                />
-              </label>
-
-              <label className="text-xs font-bold text-[#68736e]">
-                Date <span className="text-[#b7623d]">*</span>
-                <input
-                  required
-                  name="bookingDate"
-                  type="date"
-                  defaultValue={todayStr}
-                  className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none focus:border-[#b7623d]"
-                />
-              </label>
-
-              {/* Time selection with Popup Trigger */}
+          {kitchenClosed && (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 flex items-center gap-2">
+              <AlertTriangle size={16} className="shrink-0 text-red-600" />
               <div>
-                <label className="text-xs font-bold text-[#68736e] block">
-                  Time <span className="text-[#b7623d]">*</span>
-                </label>
-                <div className="mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowTimePicker(true)}
-                    className="flex w-full items-center justify-between rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none hover:border-[#b7623d] focus:border-[#b7623d] transition shadow-xs group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#fbe8dc] text-[#b7623d] group-hover:bg-[#b7623d] group-hover:text-white transition">
-                        <Clock3 size={16} />
-                      </div>
-                      <div className="text-left">
-                        <span className="text-[10px] text-[#84908a] block -mb-0.5">Booking time</span>
-                        <span className="text-sm font-bold text-[#24312e]">{bookingTime}</span>
-                      </div>
-                    </div>
-                    <span className="text-xs font-bold text-[#b7623d] bg-[#fff5ed] px-2.5 py-1 rounded-lg border border-[#fbd3bf] group-hover:bg-[#b7623d] group-hover:text-white transition flex items-center gap-1">
-                      <Clock3 size={12} />
-                      Select Time ▾
-                    </span>
-                  </button>
-                  <input
-                    type="hidden"
-                    name="bookingTime"
-                    value={bookingTime}
+                <span className="font-bold">Kitchen is Closed:</span> Table
+                bookings are paused until the kitchen reopens.
+              </div>
+            </div>
+          )}
+
+          {confirmed ? (
+            <div className="mt-8 rounded-xl border border-[#cfe0d0] bg-[#e8f1e8] p-5 text-center">
+              <CheckCircle2 className="mx-auto text-[#3b724c]" size={34} />
+              <h3 className="mt-3 font-bold text-[#315a3d]">
+                Table reserved successfully
+              </h3>
+              <p className="mt-2 text-sm text-[#58715e]">
+                Booking confirmed for {confirmedBooking?.customer} on{" "}
+                {confirmedBooking?.bookingDate} at{" "}
+                {confirmedBooking?.bookingTime}
+                {confirmedBooking?.tableId
+                  ? ` (Table ${confirmedBooking.tableId})`
+                  : " (Auto-allocated)"}
+                .
+              </p>
+              <p className="mt-1 text-xs text-[#58715e]">
+                The {currencySymbol || "₹"}
+                {defaultDeposit} booking deposit is recorded and will be
+                adjusted on final billing.
+              </p>
+              <button
+                onClick={onClose}
+                className="mt-5 rounded-xl bg-[#24312e] px-5 py-3 text-sm font-bold text-white hover:bg-[#315a3d]"
+              >
+                Done
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={submit} className="mt-6">
+              {error && (
+                <div className="mb-4 rounded-xl border border-[#f5c6cb] bg-[#f8d7da] p-3 text-xs text-[#721c24] flex items-center gap-2">
+                  <AlertTriangle
+                    size={15}
+                    className="shrink-0 text-[#721c24]"
                   />
+                  <span>{error}</span>
                 </div>
-              </div>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="text-xs font-bold text-[#68736e]">
+                  Guest name <span className="text-[#b7623d]">*</span>
+                  <input
+                    required
+                    name="customer"
+                    type="text"
+                    placeholder="e.g. Maya Kapoor"
+                    className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none placeholder:text-[#aab1ac] focus:border-[#b7623d]"
+                  />
+                </label>
 
-              {/* Number of guests: Controls table eligibility */}
-              <div className="sm:col-span-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-[#68736e]">
-                    Number of guests <span className="text-[#b7623d]">*</span>
+                <label className="text-xs font-bold text-[#68736e]">
+                  Contact number <span className="text-[#b7623d]">*</span>
+                  <input
+                    required
+                    name="phone"
+                    type="tel"
+                    placeholder="e.g. +91 98765 43210"
+                    className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none placeholder:text-[#aab1ac] focus:border-[#b7623d]"
+                  />
+                </label>
+
+                <label className="text-xs font-bold text-[#68736e]">
+                  Email address
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="e.g. guest@example.com"
+                    className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none placeholder:text-[#aab1ac] focus:border-[#b7623d]"
+                  />
+                </label>
+
+                <label className="text-xs font-bold text-[#68736e]">
+                  Date <span className="text-[#b7623d]">*</span>
+                  <input
+                    required
+                    name="bookingDate"
+                    type="date"
+                    defaultValue={todayStr}
+                    className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none focus:border-[#b7623d]"
+                  />
+                </label>
+
+                {/* Time selection with Popup Trigger */}
+                <div>
+                  <label className="text-xs font-bold text-[#68736e] block">
+                    Time <span className="text-[#b7623d]">*</span>
                   </label>
-                  <span className="text-[11px] font-semibold text-[#b7623d]">
-                    Showing eligible tables with {guests}+ seats
-                  </span>
-                </div>
-                <div className="mt-2 flex gap-1.5 sm:gap-2">
-                  {[1, 2, 3, 4, 5, 6, 8, 10].map((num) => (
+                  <div className="mt-2">
                     <button
-                      key={num}
                       type="button"
-                      onClick={() => setGuests(num)}
-                      className={`flex-1 rounded-xl py-2 text-xs font-bold transition ${
-                        guests === num
-                          ? "bg-[#24312e] text-white shadow-sm ring-2 ring-[#24312e] ring-offset-1"
-                          : "border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f2f3ef]"
-                      }`}
+                      onClick={() => setShowTimePicker(true)}
+                      className="flex w-full items-center justify-between rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none hover:border-[#b7623d] focus:border-[#b7623d] transition shadow-xs group cursor-pointer"
                     >
-                      {num}{num === 10 ? "+" : ""}
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#fbe8dc] text-[#b7623d] group-hover:bg-[#b7623d] group-hover:text-white transition">
+                          <Clock3 size={16} />
+                        </div>
+                        <div className="text-left">
+                          <span className="text-[10px] text-[#84908a] block -mb-0.5">
+                            Booking time
+                          </span>
+                          <span className="text-sm font-bold text-[#24312e]">
+                            {bookingTime}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold text-[#b7623d] bg-[#fff5ed] px-2.5 py-1 rounded-lg border border-[#fbd3bf] group-hover:bg-[#b7623d] group-hover:text-white transition flex items-center gap-1">
+                        <Clock3 size={12} />
+                        Select Time ▾
+                      </span>
                     </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Assign Table: Disables Booked, Occupied, Needs cleaning, and tables with seats < guests */}
-              <div className="sm:col-span-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-[#68736e]">
-                    Select Table ({eligibleTables.length} available for {guests}+ guests)
-                  </label>
-                  <span className="text-[11px] font-bold text-[#315a3d]">
-                    {eligibleTables.length > 0
-                      ? `✓ ${eligibleTables.length} tables fit ${guests} guests`
-                      : `⚠️ No available table with ${guests}+ seats`}
-                  </span>
+                    <input
+                      type="hidden"
+                      name="bookingTime"
+                      value={bookingTime}
+                    />
+                  </div>
                 </div>
 
-                <select
-                  name="tableId"
-                  value={selectedTableId}
-                  onChange={(e) => setSelectedTableId(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none focus:border-[#b7623d]"
-                >
-                  <option value="Pending">Auto-allocate (Pending)</option>
-                  {eligibleTables.length > 0 && (
-                    <optgroup label={`Eligible Tables (${guests}+ Seats & Available)`}>
-                      {eligibleTables.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.id} ({t.seats} seats · {t.zone}) - Available ✓
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {tables.filter((t) => t.status !== "Available" || t.seats < guests).length > 0 && (
-                    <optgroup label="Unselectable (Occupied / Booked / Needs cleaning / Too small)">
-                      {tables
-                        .filter((t) => t.status !== "Available" || t.seats < guests)
-                        .map((t) => {
-                          let reason = "";
-                          if (t.status === "Occupied") reason = "Occupied";
-                          else if (t.status === "Booked") reason = "Booked";
-                          else if (t.status === "Needs cleaning") reason = "Needs cleaning";
-                          else if (t.seats < guests) reason = `Too small (${t.seats} < ${guests} seats)`;
-
-                          return (
-                            <option key={t.id} value={t.id} disabled>
-                              {t.id} ({t.seats} seats · {t.zone}) - Unselectable [{reason}]
-                            </option>
-                          );
-                        })}
-                    </optgroup>
-                  )}
-                </select>
-
-                {/* Visual table quick picker cards */}
-                <div className="mt-3 rounded-xl border border-[#e2e4dd] bg-[#f7f8f4] p-3 space-y-3">
-                  {/* Eligible Section (Tables >= guests & Available) */}
-                  <div>
-                    <div className="mb-2 flex items-center justify-between text-[11px] font-semibold text-[#315a3d]">
-                      <span className="flex items-center gap-1">
-                        <Table2 size={13} />
-                        Eligible Tables ({guests}+ seats & Available):
-                      </span>
-                      <span className="text-[10px] text-[#24312e]">
-                        Selected: <strong>{selectedTableId}</strong>
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {/* Number of guests: Controls table eligibility */}
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-[#68736e]">
+                      Number of guests <span className="text-[#b7623d]">*</span>
+                    </label>
+                    <span className="text-[11px] font-semibold text-[#b7623d]">
+                      Showing eligible tables with {guests}+ seats
+                    </span>
+                  </div>
+                  <div className="mt-2 flex gap-1.5 sm:gap-2">
+                    {[1, 2, 3, 4, 5, 6, 8, 10].map((num) => (
                       <button
+                        key={num}
                         type="button"
-                        onClick={() => setSelectedTableId("Pending")}
-                        className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition ${
-                          selectedTableId === "Pending"
-                            ? "border-[#315a3d] bg-[#e8f1e8] ring-2 ring-[#315a3d] text-[#315a3d] font-bold shadow-sm"
-                            : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-white/80"
+                        onClick={() => setGuests(num)}
+                        className={`flex-1 rounded-xl py-2 text-xs font-bold transition ${
+                          guests === num
+                            ? "bg-[#24312e] text-white shadow-sm ring-2 ring-[#24312e] ring-offset-1"
+                            : "border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f2f3ef]"
                         }`}
                       >
-                        <span className="text-xs font-bold">Auto</span>
-                        <span className="text-[10px] text-[#84908a]">Pending</span>
+                        {num}
+                        {num === 10 ? "+" : ""}
                       </button>
+                    ))}
+                  </div>
+                </div>
 
-                      {eligibleTables.map((t) => {
-                        const isSelected = selectedTableId === t.id;
-                        return (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => setSelectedTableId(t.id)}
-                            className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition ${
-                              isSelected
-                                ? "border-[#315a3d] bg-[#e8f1e8] ring-2 ring-[#315a3d] text-[#315a3d] font-bold shadow-sm"
-                                : "border-[#9ac49f] bg-white text-[#24312e] hover:bg-[#f0f1ed] hover:border-[#315a3d]"
-                            }`}
-                          >
-                            <span className="text-xs font-extrabold">{t.id}</span>
-                            <span className="text-[10px] font-semibold">{t.seats} seats • {t.zone}</span>
-                            <span className="mt-1 rounded px-1.5 py-0.2 text-[8.5px] font-bold uppercase tracking-tight bg-[#cfe0d0] text-[#315a3d]">
-                              Available ✓
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {eligibleTables.length === 0 && (
-                      <p className="mt-2 text-xs text-[#b7623d] bg-[#fff5ed] p-2 rounded-lg border border-[#fbd3bf]">
-                        No available table currently has {guests}+ seats. Please choose <strong>Auto-allocate</strong> or select fewer guests.
-                      </p>
-                    )}
+                {/* Assign Table: Disables Booked, Occupied, Needs cleaning, and tables with seats < guests */}
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-[#68736e]">
+                      Select Table ({eligibleTables.length} available for{" "}
+                      {guests}+ guests)
+                    </label>
+                    <span className="text-[11px] font-bold text-[#315a3d]">
+                      {eligibleTables.length > 0
+                        ? `✓ ${eligibleTables.length} tables fit ${guests} guests`
+                        : `⚠️ No available table with ${guests}+ seats`}
+                    </span>
                   </div>
 
-                  {/* Unselectable Tables Section (Occupied, Booked, Cleaning, or seats < guests) */}
-                  {tables.some((t) => t.status !== "Available" || t.seats < guests) && (
-                    <div className="pt-2 border-t border-[#e2e4dd]">
-                      <div className="mb-2 flex items-center justify-between text-[10.5px] font-semibold text-[#84908a]">
-                        <span>Unselectable Tables (Occupied / Booked / Cleaning / Below {guests} Seats):</span>
-                        <span className="text-[9px] uppercase tracking-wider text-[#9ba39e]">Disabled</span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 max-h-32 overflow-y-auto pr-1">
+                  <select
+                    name="tableId"
+                    value={selectedTableId}
+                    onChange={(e) => setSelectedTableId(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none focus:border-[#b7623d]"
+                  >
+                    <option value="Pending">Auto-allocate (Pending)</option>
+                    {eligibleTables.length > 0 && (
+                      <optgroup
+                        label={`Eligible Tables (${guests}+ Seats & Available)`}
+                      >
+                        {eligibleTables.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.id} ({t.seats} seats · {t.zone}) - Available ✓
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {tables.filter(
+                      (t) => t.status !== "Available" || t.seats < guests,
+                    ).length > 0 && (
+                      <optgroup label="Unselectable (Occupied / Booked / Needs cleaning / Too small)">
                         {tables
-                          .filter((t) => t.status !== "Available" || t.seats < guests)
+                          .filter(
+                            (t) => t.status !== "Available" || t.seats < guests,
+                          )
                           .map((t) => {
-                            let unselectableTag = "";
-                            if (t.status === "Occupied") unselectableTag = "Occupied";
-                            else if (t.status === "Booked") unselectableTag = "Booked";
-                            else if (t.status === "Needs cleaning") unselectableTag = "Cleaning";
-                            else if (t.seats < guests) unselectableTag = `${t.seats} seats (< ${guests})`;
+                            let reason = "";
+                            if (t.status === "Occupied") reason = "Occupied";
+                            else if (t.status === "Booked") reason = "Booked";
+                            else if (t.status === "Needs cleaning")
+                              reason = "Needs cleaning";
+                            else if (t.seats < guests)
+                              reason = `Too small (${t.seats} < ${guests} seats)`;
 
                             return (
-                              <button
-                                key={t.id}
-                                type="button"
-                                disabled
-                                className="flex flex-col items-center justify-center p-2 rounded-xl border border-dashed border-[#dcded8] bg-[#eceeea]/70 text-[#9ba39e] cursor-not-allowed opacity-60 text-center"
-                                title={`Table ${t.id} cannot be booked: ${unselectableTag}`}
-                              >
-                                <span className="text-xs font-bold">{t.id}</span>
-                                <span className="text-[10px]">{t.seats} seats • {t.zone}</span>
-                                <span className="mt-1 rounded px-1.5 py-0.2 text-[8px] font-bold uppercase tracking-tight bg-[#dedfd9] text-[#78827c]">
-                                  {unselectableTag}
-                                </span>
-                              </button>
+                              <option key={t.id} value={t.id} disabled>
+                                {t.id} ({t.seats} seats · {t.zone}) -
+                                Unselectable [{reason}]
+                              </option>
                             );
                           })}
+                      </optgroup>
+                    )}
+                  </select>
+
+                  {/* Visual table quick picker cards */}
+                  <div className="mt-3 rounded-xl border border-[#e2e4dd] bg-[#f7f8f4] p-3 space-y-3">
+                    {/* Eligible Section (Tables >= guests & Available) */}
+                    <div>
+                      <div className="mb-2 flex items-center justify-between text-[11px] font-semibold text-[#315a3d]">
+                        <span className="flex items-center gap-1">
+                          <Table2 size={13} />
+                          Eligible Tables ({guests}+ seats & Available):
+                        </span>
+                        <span className="text-[10px] text-[#24312e]">
+                          Selected: <strong>{selectedTableId}</strong>
+                        </span>
                       </div>
+
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTableId("Pending")}
+                          className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition ${
+                            selectedTableId === "Pending"
+                              ? "border-[#315a3d] bg-[#e8f1e8] ring-2 ring-[#315a3d] text-[#315a3d] font-bold shadow-sm"
+                              : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-white/80"
+                          }`}
+                        >
+                          <span className="text-xs font-bold">Auto</span>
+                          <span className="text-[10px] text-[#84908a]">
+                            Pending
+                          </span>
+                        </button>
+
+                        {eligibleTables.map((t) => {
+                          const isSelected = selectedTableId === t.id;
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => setSelectedTableId(t.id)}
+                              className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition ${
+                                isSelected
+                                  ? "border-[#315a3d] bg-[#e8f1e8] ring-2 ring-[#315a3d] text-[#315a3d] font-bold shadow-sm"
+                                  : "border-[#9ac49f] bg-white text-[#24312e] hover:bg-[#f0f1ed] hover:border-[#315a3d]"
+                              }`}
+                            >
+                              <span className="text-xs font-extrabold">
+                                {t.id}
+                              </span>
+                              <span className="text-[10px] font-semibold">
+                                {t.seats} seats • {t.zone}
+                              </span>
+                              <span className="mt-1 rounded px-1.5 py-0.2 text-[8.5px] font-bold uppercase tracking-tight bg-[#cfe0d0] text-[#315a3d]">
+                                Available ✓
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {eligibleTables.length === 0 && (
+                        <p className="mt-2 text-xs text-[#b7623d] bg-[#fff5ed] p-2 rounded-lg border border-[#fbd3bf]">
+                          No available table currently has {guests}+ seats.
+                          Please choose <strong>Auto-allocate</strong> or select
+                          fewer guests.
+                        </p>
+                      )}
                     </div>
-                  )}
+
+                    {/* Unselectable Tables Section (Occupied, Booked, Cleaning, or seats < guests) */}
+                    {tables.some(
+                      (t) => t.status !== "Available" || t.seats < guests,
+                    ) && (
+                      <div className="pt-2 border-t border-[#e2e4dd]">
+                        <div className="mb-2 flex items-center justify-between text-[10.5px] font-semibold text-[#84908a]">
+                          <span>
+                            Unselectable Tables (Occupied / Booked / Cleaning /
+                            Below {guests} Seats):
+                          </span>
+                          <span className="text-[9px] uppercase tracking-wider text-[#9ba39e]">
+                            Disabled
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 max-h-32 overflow-y-auto pr-1">
+                          {tables
+                            .filter(
+                              (t) =>
+                                t.status !== "Available" || t.seats < guests,
+                            )
+                            .map((t) => {
+                              let unselectableTag = "";
+                              if (t.status === "Occupied")
+                                unselectableTag = "Occupied";
+                              else if (t.status === "Booked")
+                                unselectableTag = "Booked";
+                              else if (t.status === "Needs cleaning")
+                                unselectableTag = "Cleaning";
+                              else if (t.seats < guests)
+                                unselectableTag = `${t.seats} seats (< ${guests})`;
+
+                              return (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  disabled
+                                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-dashed border-[#dcded8] bg-[#eceeea]/70 text-[#9ba39e] cursor-not-allowed opacity-60 text-center"
+                                  title={`Table ${t.id} cannot be booked: ${unselectableTag}`}
+                                >
+                                  <span className="text-xs font-bold">
+                                    {t.id}
+                                  </span>
+                                  <span className="text-[10px]">
+                                    {t.seats} seats • {t.zone}
+                                  </span>
+                                  <span className="mt-1 rounded px-1.5 py-0.2 text-[8px] font-bold uppercase tracking-tight bg-[#dedfd9] text-[#78827c]">
+                                    {unselectableTag}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <label className="text-xs font-bold text-[#68736e] sm:col-span-2">
+                  Booking source
+                  <select
+                    required
+                    name="source"
+                    defaultValue="Phone"
+                    className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none"
+                  >
+                    <option value="Phone">Phone</option>
+                    <option value="Walk-in">Walk-in</option>
+                    <option value="Web link">Web link</option>
+                    <option value="Online">Online</option>
+                    <option value="Website">Website</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="mt-4 block text-xs font-bold text-[#68736e]">
+                Special requests
+                <textarea
+                  name="specialRequests"
+                  rows={2}
+                  placeholder="Birthday celebration, high chair, dietary needs, preferred seating..."
+                  className="mt-2 w-full resize-none rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none"
+                />
+              </label>
+
+              <div className="mt-4 flex items-start gap-3 rounded-xl border border-[#ead7c8] bg-[#fff5ed] p-3.5">
+                <CreditCard
+                  className="mt-0.5 shrink-0 text-[#b7623d]"
+                  size={18}
+                />
+                <div className="flex-1 text-xs">
+                  <p className="font-bold text-[#684f37]">
+                    Booking deposit{" "}
+                    <span className="float-right text-sm font-extrabold">
+                      {currencySymbol || "₹"}
+                      {defaultDeposit}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[#8f7055]">
+                    Recorded and adjusted against guest’s final bill.
+                  </p>
                 </div>
               </div>
 
-              <label className="text-xs font-bold text-[#68736e] sm:col-span-2">
-                Booking source
-                <select
-                  required
-                  name="source"
-                  defaultValue="Phone"
-                  className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none"
-                >
-                  <option value="Phone">Phone</option>
-                  <option value="Walk-in">Walk-in</option>
-                  <option value="Web link">Web link</option>
-                  <option value="Online">Online</option>
-                  <option value="Website">Website</option>
-                </select>
-              </label>
-            </div>
-
-            <label className="mt-4 block text-xs font-bold text-[#68736e]">
-              Special requests
-              <textarea
-                name="specialRequests"
-                rows={2}
-                placeholder="Birthday celebration, high chair, dietary needs, preferred seating..."
-                className="mt-2 w-full resize-none rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none"
-              />
-            </label>
-
-            <div className="mt-4 flex items-start gap-3 rounded-xl border border-[#ead7c8] bg-[#fff5ed] p-3.5">
-              <CreditCard
-                className="mt-0.5 shrink-0 text-[#b7623d]"
-                size={18}
-              />
-              <div className="flex-1 text-xs">
-                <p className="font-bold text-[#684f37]">
-                  Booking deposit{" "}
-                  <span className="float-right text-sm font-extrabold">{currencySymbol || "₹"}{defaultDeposit}</span>
-                </p>
-                <p className="mt-0.5 text-[11px] text-[#8f7055]">
-                  Recorded and adjusted against guest’s final bill.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting || kitchenClosed}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#24312e] px-4 py-3.5 text-sm font-bold text-white hover:bg-[#315a3d] disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              <CreditCard size={17} />
-              {kitchenClosed ? "Kitchen Closed (Bookings Paused)" : submitting ? "Booking table..." : "Confirm & Book Table"}
-            </button>
-          </form>
-        )}
+              <button
+                type="submit"
+                disabled={submitting || kitchenClosed}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#24312e] px-4 py-3.5 text-sm font-bold text-white hover:bg-[#315a3d] disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                <CreditCard size={17} />
+                {kitchenClosed
+                  ? "Kitchen Closed (Bookings Paused)"
+                  : submitting
+                    ? "Booking table..."
+                    : "Confirm & Book Table"}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
-    </div>
     </>
   );
 }
@@ -10287,10 +11857,14 @@ function NewOrderModal({
   const [table, setTable] = useState(
     initialTableId && !isInitialTakeaway
       ? initialTableId
-      : tables.find((t) => t.status === "Available")?.id || tables[0]?.id || "T01",
+      : tables.find((t) => t.status === "Available")?.id ||
+          tables[0]?.id ||
+          "T01",
   );
   const [servantName, setServantName] = useState<string>("");
-  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>(
+    {},
+  );
   const [dishSearch, setDishSearch] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [submitting, setSubmitting] = useState(false);
@@ -10304,14 +11878,19 @@ function NewOrderModal({
     );
   };
 
-  const categories = ["All", ...Array.from(new Set(menuItems.map((m) => m.category || "General")))];
+  const categories = [
+    "All",
+    ...Array.from(new Set(menuItems.map((m) => m.category || "General"))),
+  ];
 
   const filteredMenuItems = menuItems
     .filter((item) => {
-      const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+      const matchesCategory =
+        selectedCategory === "All" || item.category === selectedCategory;
       const matchesSearch =
         item.name.toLowerCase().includes(dishSearch.toLowerCase()) ||
-        (item.category && item.category.toLowerCase().includes(dishSearch.toLowerCase()));
+        (item.category &&
+          item.category.toLowerCase().includes(dishSearch.toLowerCase()));
       return matchesCategory && matchesSearch;
     })
     .sort((a, b) => {
@@ -10342,7 +11921,10 @@ function NewOrderModal({
     });
   };
 
-  const totalItemCount = Object.values(itemQuantities).reduce((sum, q) => sum + q, 0);
+  const totalItemCount = Object.values(itemQuantities).reduce(
+    (sum, q) => sum + q,
+    0,
+  );
   const orderTotal = menuItems.reduce(
     (sum, item) => sum + item.price * (itemQuantities[item.id] || 0),
     0,
@@ -10355,17 +11937,30 @@ function NewOrderModal({
       return;
     }
     if (!customer.trim()) {
-      setError("Guest name is mandatory. Please enter the customer / guest name.");
+      setError(
+        "Guest name is mandatory. Please enter the customer / guest name.",
+      );
       return;
     }
-    if (orderType === "Dine in" && (!table || table.trim() === "" || table === "Takeaway")) {
-      setError("Assigning a table is mandatory for dine-in orders. Please select an available table.");
+    if (
+      orderType === "Dine in" &&
+      (!table || table.trim() === "" || table === "Takeaway")
+    ) {
+      setError(
+        "Assigning a table is mandatory for dine-in orders. Please select an available table.",
+      );
       return;
     }
     if (orderType === "Dine in") {
       const assignedTable = tables.find((t) => t.id === table);
-      if (assignedTable && assignedTable.status !== "Available" && assignedTable.id !== initialTableId) {
-        setError(`Table ${table} is currently ${assignedTable.status.toLowerCase()}. Please assign an available table.`);
+      if (
+        assignedTable &&
+        assignedTable.status !== "Available" &&
+        assignedTable.id !== initialTableId
+      ) {
+        setError(
+          `Table ${table} is currently ${assignedTable.status.toLowerCase()}. Please assign an available table.`,
+        );
         return;
       }
     }
@@ -10374,8 +11969,12 @@ function NewOrderModal({
       return;
     }
 
-    const selectedItems = menuItems.filter((i) => (itemQuantities[i.id] || 0) > 0);
-    const unavailableInOrder = selectedItems.filter((i) => isDishUnavailable(i));
+    const selectedItems = menuItems.filter(
+      (i) => (itemQuantities[i.id] || 0) > 0,
+    );
+    const unavailableInOrder = selectedItems.filter((i) =>
+      isDishUnavailable(i),
+    );
     if (unavailableInOrder.length > 0) {
       setError(
         `Unavailable dish selected: ${unavailableInOrder.map((i) => i.name).join(", ")}. Please remove before ordering.`,
@@ -10422,7 +12021,9 @@ function NewOrderModal({
               <ShoppingBag size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-[#24312e]">Book New Order</h3>
+              <h3 className="font-bold text-lg text-[#24312e]">
+                Book New Order
+              </h3>
               <p className="text-xs text-[#84908a]">
                 Create and dispatch an order to the kitchen.
               </p>
@@ -10442,7 +12043,8 @@ function NewOrderModal({
           <div className="mx-5 sm:mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 flex items-center gap-2 shrink-0">
             <AlertTriangle size={15} className="shrink-0 text-red-600" />
             <div>
-              <span className="font-bold">Kitchen is Closed:</span> New orders cannot be taken until the kitchen reopens.
+              <span className="font-bold">Kitchen is Closed:</span> New orders
+              cannot be taken until the kitchen reopens.
             </div>
           </div>
         )}
@@ -10454,7 +12056,10 @@ function NewOrderModal({
           </div>
         )}
 
-        <form onSubmit={submit} className="flex flex-col flex-1 overflow-hidden">
+        <form
+          onSubmit={submit}
+          className="flex flex-col flex-1 overflow-hidden"
+        >
           {/* Scrollable Form Content */}
           <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
             {/* Order Type Buttons */}
@@ -10495,12 +12100,16 @@ function NewOrderModal({
                   type="text"
                   required
                   placeholder={
-                    orderType === "Dine in" ? "e.g. Rahul Sharma (Required)" : "e.g. Rahul (Required)"
+                    orderType === "Dine in"
+                      ? "e.g. Rahul Sharma (Required)"
+                      : "e.g. Rahul (Required)"
                   }
                   value={customer}
                   onChange={(e) => setCustomer(e.target.value)}
                   className={`w-full rounded-xl border px-3 py-2 text-xs outline-none focus:border-[#24312e] ${
-                    !customer.trim() && error ? "border-red-400 bg-red-50/50" : "border-[#dfe1dc] bg-white"
+                    !customer.trim() && error
+                      ? "border-red-400 bg-red-50/50"
+                      : "border-[#dfe1dc] bg-white"
                   }`}
                 />
               </div>
@@ -10508,22 +12117,29 @@ function NewOrderModal({
               {orderType === "Dine in" ? (
                 <div>
                   <label className="text-xs font-bold text-[#68736e] block mb-1">
-                    Assign Table <span className="text-red-500 font-bold">*</span>
+                    Assign Table{" "}
+                    <span className="text-red-500 font-bold">*</span>
                   </label>
                   <select
                     required
                     value={table}
                     onChange={(e) => setTable(e.target.value)}
                     className={`w-full rounded-xl border px-3 py-2 text-xs outline-none focus:border-[#24312e] cursor-pointer ${
-                      !table && error ? "border-red-400 bg-red-50/50" : "border-[#dfe1dc] bg-white"
+                      !table && error
+                        ? "border-red-400 bg-red-50/50"
+                        : "border-[#dfe1dc] bg-white"
                     }`}
                   >
-                    <option value="" disabled>-- Select Table (Required) --</option>
+                    <option value="" disabled>
+                      -- Select Table (Required) --
+                    </option>
                     {tables.map((t) => {
-                      const isAvailable = t.status === "Available" || t.id === initialTableId;
+                      const isAvailable =
+                        t.status === "Available" || t.id === initialTableId;
                       return (
                         <option key={t.id} value={t.id} disabled={!isAvailable}>
-                          {t.id} ({t.seats} seats · {t.zone}) - {t.status} {!isAvailable ? "[Unselectable]" : ""}
+                          {t.id} ({t.seats} seats · {t.zone}) - {t.status}{" "}
+                          {!isAvailable ? "[Unselectable]" : ""}
                         </option>
                       );
                     })}
@@ -10570,7 +12186,8 @@ function NewOrderModal({
                 </span>
                 {totalItemCount > 0 && (
                   <span className="rounded-full bg-[#e8f1e8] px-2.5 py-0.5 text-[11px] font-bold text-[#315a3d]">
-                    {totalItemCount} {totalItemCount === 1 ? "dish" : "dishes"} selected
+                    {totalItemCount} {totalItemCount === 1 ? "dish" : "dishes"}{" "}
+                    selected
                   </span>
                 )}
               </div>
@@ -10578,7 +12195,10 @@ function NewOrderModal({
               {/* Dish Search & Category Filters */}
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
-                  <Search size={13} className="absolute left-2.5 top-2.5 text-[#84908a]" />
+                  <Search
+                    size={13}
+                    className="absolute left-2.5 top-2.5 text-[#84908a]"
+                  />
                   <input
                     type="text"
                     placeholder="Search menu dishes..."
@@ -10625,8 +12245,8 @@ function NewOrderModal({
                             unavailable
                               ? "bg-[#f4f5f1] border-dashed border-[#dfe1dc] opacity-65"
                               : inCartQty > 0
-                              ? "bg-[#f2f7f3] border-[#315a3d]/50 shadow-xs ring-1 ring-[#315a3d]/20"
-                              : "bg-white border-[#eef0eb] hover:border-[#dfe1dc] hover:shadow-2xs"
+                                ? "bg-[#f2f7f3] border-[#315a3d]/50 shadow-xs ring-1 ring-[#315a3d]/20"
+                                : "bg-white border-[#eef0eb] hover:border-[#dfe1dc] hover:shadow-2xs"
                           }`}
                         >
                           {/* Dish Image */}
@@ -10636,19 +12256,26 @@ function NewOrderModal({
                                 src={dish.image}
                                 alt={dish.name}
                                 className={`h-full w-full object-cover transition-transform duration-300 ${
-                                  unavailable ? "grayscale contrast-75" : "group-hover:scale-105"
+                                  unavailable
+                                    ? "grayscale contrast-75"
+                                    : "group-hover:scale-105"
                                 }`}
                                 onError={(e) => {
                                   e.currentTarget.style.display = "none";
                                 }}
                               />
                             ) : (
-                              <Utensils size={28} className="text-[#315a3d]/50" />
+                              <Utensils
+                                size={28}
+                                className="text-[#315a3d]/50"
+                              />
                             )}
                             <div className="absolute top-2 left-2 flex items-center gap-1 rounded-md bg-white/90 backdrop-blur-xs px-1.5 py-0.5 shadow-2xs">
                               <span
                                 className={`inline-block h-2 w-2 rounded-full ${
-                                  dish.type === "veg" ? "bg-[#3b724c]" : "bg-[#b7623d]"
+                                  dish.type === "veg"
+                                    ? "bg-[#3b724c]"
+                                    : "bg-[#b7623d]"
                                 }`}
                               />
                               <span className="text-[9px] font-bold uppercase tracking-wider text-[#24312e]">
@@ -10677,9 +12304,12 @@ function NewOrderModal({
                               {dish.name}
                             </h4>
                             <div className="mt-0.5 flex items-center justify-between">
-                              <span className="text-[10px] text-[#84908a] line-clamp-1">{dish.category}</span>
+                              <span className="text-[10px] text-[#84908a] line-clamp-1">
+                                {dish.category}
+                              </span>
                               <span className="text-xs font-black text-[#24312e]">
-                                {currencySymbol || "₹"}{dish.price}
+                                {currencySymbol || "₹"}
+                                {dish.price}
                               </span>
                             </div>
                           </div>
@@ -10700,7 +12330,9 @@ function NewOrderModal({
                                 >
                                   <Minus size={12} />
                                 </button>
-                                <span className="text-xs font-black text-[#315a3d] px-1">{inCartQty}</span>
+                                <span className="text-xs font-black text-[#315a3d] px-1">
+                                  {inCartQty}
+                                </span>
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateQty(dish.id, 1)}
@@ -10733,10 +12365,13 @@ function NewOrderModal({
           {/* Sticky Modal Footer */}
           <div className="border-t border-[#e9eae6] bg-white p-3.5 sm:p-5 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
-              <span className="text-xs font-bold text-[#84908a]">Order Total:</span>
+              <span className="text-xs font-bold text-[#84908a]">
+                Order Total:
+              </span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-lg sm:text-xl font-black text-[#24312e]">
-                  {currencySymbol || "₹"}{orderTotal.toLocaleString("en-IN")}
+                  {currencySymbol || "₹"}
+                  {orderTotal.toLocaleString("en-IN")}
                 </span>
                 {totalItemCount > 0 && (
                   <span className="text-[11px] text-[#84908a]">
@@ -10764,10 +12399,10 @@ function NewOrderModal({
                   {kitchenClosed
                     ? "Kitchen Closed"
                     : submitting
-                    ? "Booking..."
-                    : totalItemCount > 0
-                    ? `Book Order (${totalItemCount})`
-                    : "Book Order"}
+                      ? "Booking..."
+                      : totalItemCount > 0
+                        ? `Book Order (${totalItemCount})`
+                        : "Book Order"}
                 </span>
               </button>
             </div>
@@ -10780,6 +12415,20 @@ function NewOrderModal({
 
 function getRoleEmail(role: StaffRole) {
   return `${role.toLowerCase()}@tableandthyme.com`;
+}
+
+const demoAccountEmails: Record<StaffRole, string> = {
+  Manager: "demomanager@restrostack.com",
+  Kitchen: "demokitchen@restrostack.com",
+  Server: "demoservant@restrostack.com",
+};
+
+function isDemoAccountEmail(email?: string) {
+  const normalizedEmail = email?.trim().toLowerCase();
+  return (
+    normalizedEmail === "demo@tableandthyme.com" ||
+    Object.values(demoAccountEmails).includes(normalizedEmail || "")
+  );
 }
 
 function LoginPage({
@@ -10798,9 +12447,9 @@ function LoginPage({
       pin?: string;
       department?: string;
       systemRole: StaffRole;
-    isDemoAccount?: boolean;
-  }
-) => void;
+      isDemoAccount?: boolean;
+    },
+  ) => void;
   restaurantSettings?: StoreSettings;
   onNavigateWebsite?: () => void;
   onNavigateEmployeePortal?: () => void;
@@ -10825,15 +12474,17 @@ function LoginPage({
       const user = await loginWebStaff(email.trim(), password);
       if (user && user.id) {
         if (!user.systemRole || user.systemRole === "None") {
-          setError("This employee does not have dashboard station access. Only staff with Manager, Servant, or Kitchen access can log in here.");
+          setError(
+            "This employee does not have dashboard station access. Only staff with Manager, Servant, or Kitchen access can log in here.",
+          );
           return;
         }
         const mappedRole: StaffRole =
           user.systemRole === "Kitchen"
             ? "Kitchen"
             : user.systemRole === "Manager"
-            ? "Manager"
-            : "Server";
+              ? "Manager"
+              : "Server";
         onLogin(mappedRole, {
           id: user.id,
           name: user.name,
@@ -10850,26 +12501,40 @@ function LoginPage({
     }
 
     const expectedEmail = getRoleEmail(role);
-    const isDemoLogin = email.trim().toLowerCase() === "demo@tableandthyme.com" && password === "demo123";
+    const normalizedEmail = email.trim().toLowerCase();
+    const demoRoleEmail = demoAccountEmails[role];
+    const isDemoLogin =
+      (normalizedEmail === "demo@tableandthyme.com" ||
+        normalizedEmail === demoRoleEmail) &&
+      password === "demo123";
 
     if (
-      email.trim().toLowerCase() !== expectedEmail && !isDemoLogin ||
+      (normalizedEmail !== expectedEmail && !isDemoLogin) ||
       password !== "demo123"
     ) {
-      setError("Invalid email or password. Use your station credentials or the demo accounts below.");
+      setError(
+        "Invalid email or password. Use your station credentials or a demo account below.",
+      );
       return;
     }
 
     const demoNames: Record<StaffRole, string> = {
-      Manager: "Priya Shah",
-      Kitchen: "Chef Sunita",
-      Server: "Aarav Rao",
+      Manager: "Demo Manager",
+      Kitchen: "Demo Kitchen",
+      Server: "Demo Servant",
     };
 
     onLogin(role, {
-      name: isDemoLogin ? `Demo ${role}` : demoNames[role] || `${role} Operator`,
-      email: email.trim().toLowerCase(),
-      department: role === "Manager" ? "Management" : role === "Kitchen" ? "Kitchen" : "Floor Service",
+      name: isDemoLogin
+        ? demoNames[role] || `Demo ${role}`
+        : `${role} Operator`,
+      email: isDemoLogin ? demoRoleEmail : normalizedEmail,
+      department:
+        role === "Manager"
+          ? "Management"
+          : role === "Kitchen"
+            ? "Kitchen"
+            : "Floor Service",
       systemRole: role,
       isDemoAccount: isDemoLogin,
     });
@@ -10983,24 +12648,21 @@ function LoginPage({
               Sign in as {role}
             </button>
           </form>
-          <div className="mt-6 rounded-xl border border-[#e0e2dc] bg-[#f7f7f3] p-4 text-xs text-[#68736e]">
+          <div className="mt-6 rounded-xl border border-[#ead7c8] bg-[#fff5ed] p-4 text-xs text-[#68736e]">
             <p className="font-bold text-[#24312e]">
-              Station Operator Credentials
+              Demo Accounts (No Access)
             </p>
             <p className="mt-2">
-              Manager: <strong>manager@tableandthyme.com</strong> (Priya Shah)
+              Manager: <strong>demomanager@restrostack.com</strong>
             </p>
             <p className="mt-1">
-              Kitchen: <strong>kitchen@tableandthyme.com</strong> (Chef Sunita)
+              Kitchen: <strong>demokitchen@restrostack.com</strong>
             </p>
             <p className="mt-1">
-              Server / Servant: <strong>server@tableandthyme.com</strong> (Aarav Rao)
+              Servant: <strong>demoservant@restrostack.com</strong>
             </p>
             <p className="mt-2 text-[#b7623d]">
-              Demo Account (No Access): <strong>demo@tableandthyme.com</strong>
-            </p>
-            <p className="mt-1">
-              Password: <strong>demo123</strong>
+              Password for all demo accounts: <strong>demo123</strong>
             </p>
           </div>
           <div className="mt-5 flex items-center justify-between border-t border-[#e0e2dc] pt-4 text-xs font-semibold text-[#68736e]">
@@ -11066,7 +12728,9 @@ function CustomerWebsite({
   }, 0);
   const submitOrder = async () => {
     if (kitchenClosed) {
-      setOrderMessage("Kitchen is closed. We are currently not accepting new orders.");
+      setOrderMessage(
+        "Kitchen is closed. We are currently not accepting new orders.",
+      );
       return;
     }
     if (cart.length === 0) return;
@@ -11082,7 +12746,9 @@ function CustomerWebsite({
       });
       onOrderCreated(order);
       setCart([]);
-      setOrderMessage(`Order ${formatOrderLabel(order.id, order.customer)} sent to the kitchen.`);
+      setOrderMessage(
+        `Order ${formatOrderLabel(order.id, order.customer)} sent to the kitchen.`,
+      );
     } catch {
       setOrderMessage("Unable to send the order. Please try again.");
     } finally {
@@ -11151,7 +12817,8 @@ function CustomerWebsite({
               Kitchen is Currently Closed
             </div>
             <p className="mt-1 text-xs text-red-600">
-              We are temporarily not taking new orders. You are welcome to browse the digital menu.
+              We are temporarily not taking new orders. You are welcome to
+              browse the digital menu.
             </p>
           </div>
         )}
@@ -11214,7 +12881,8 @@ function CustomerWebsite({
                 </p>
                 <div className="mt-4 flex items-center justify-between">
                   <span className="font-extrabold text-[#24312e]">
-                    {currencySymbol || "₹"}{item.price}
+                    {currencySymbol || "₹"}
+                    {item.price}
                   </span>
                   <button
                     onClick={() => setCart((prev) => [...prev, item.name])}
@@ -11237,14 +12905,19 @@ function CustomerWebsite({
               />
             </label>
             <div className="text-sm font-bold text-[#24312e]">
-              {cart.length} items · {currencySymbol || "₹"}{cartTotal.toLocaleString("en-IN")}
+              {cart.length} items · {currencySymbol || "₹"}
+              {cartTotal.toLocaleString("en-IN")}
             </div>
             <button
               onClick={submitOrder}
               disabled={submitting || cart.length === 0 || kitchenClosed}
               className="rounded-xl bg-[#24312e] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {kitchenClosed ? "Kitchen Closed" : submitting ? "Sending..." : "Place order"}
+              {kitchenClosed
+                ? "Kitchen Closed"
+                : submitting
+                  ? "Sending..."
+                  : "Place order"}
             </button>
           </div>
           {orderMessage && (
@@ -11299,7 +12972,11 @@ export default function RestaurantApp() {
   const [role, setRole] = useState<StaffRole | null>(() => {
     try {
       const savedRole = localStorage.getItem("restro-active-role");
-      if (savedRole === "Manager" || savedRole === "Server" || savedRole === "Kitchen") {
+      if (
+        savedRole === "Manager" ||
+        savedRole === "Server" ||
+        savedRole === "Kitchen"
+      ) {
         return savedRole as StaffRole;
       }
     } catch {}
@@ -11313,29 +12990,47 @@ export default function RestaurantApp() {
     pin?: string;
     department?: string;
     systemRole: StaffRole;
+    isDemoAccount?: boolean;
   } | null>(() => {
     try {
       const savedUser = localStorage.getItem("restro-active-user");
-      if (savedUser) return JSON.parse(savedUser);
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        return {
+          ...user,
+          isDemoAccount:
+            Boolean(user.isDemoAccount) || isDemoAccountEmail(user.email),
+        };
+      }
     } catch {}
     return null;
   });
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() =>
-    getRouteFromPath(window.location.pathname)
+    getRouteFromPath(window.location.pathname),
   );
   const [selectedBlogId, setSelectedBlogId] = useState<string>(() => {
     try {
-      return extractBlogIdentifier(window.location.pathname, window.location.search) || "blog_1";
+      return (
+        extractBlogIdentifier(
+          window.location.pathname,
+          window.location.search,
+        ) || "blog_1"
+      );
     } catch {}
     return "blog_1";
   });
 
   const navigateTo = (path: string) => {
-    if (window.location.pathname !== path && window.location.pathname + window.location.search !== path) {
+    if (
+      window.location.pathname !== path &&
+      window.location.pathname + window.location.search !== path
+    ) {
       window.history.pushState({}, "", path);
     }
     const cleanPath = path.split("?")[0];
-    const search = path.includes("?") ? "?" + path.split("?").slice(1).join("?") : "";
+    const search = path.includes("?")
+      ? "?" + path.split("?").slice(1).join("?")
+      : "";
     const nextRoute = getRouteFromPath(cleanPath);
     if (nextRoute === "blog") {
       const extracted = extractBlogIdentifier(cleanPath, search);
@@ -11350,7 +13045,10 @@ export default function RestaurantApp() {
       const nextRoute = getRouteFromPath(window.location.pathname);
       setCurrentRoute(nextRoute);
       if (nextRoute === "blog") {
-        const extracted = extractBlogIdentifier(window.location.pathname, window.location.search);
+        const extracted = extractBlogIdentifier(
+          window.location.pathname,
+          window.location.search,
+        );
         if (extracted) setSelectedBlogId(extracted);
       }
     };
@@ -11378,6 +13076,18 @@ export default function RestaurantApp() {
     } catch {}
   }, [currentUser]);
 
+  useEffect(() => {
+    if (
+      currentUser &&
+      !currentUser.isDemoAccount &&
+      isDemoAccountEmail(currentUser.email)
+    ) {
+      setCurrentUser((user) =>
+        user ? { ...user, isDemoAccount: true } : user,
+      );
+    }
+  }, [currentUser]);
+
   const handleSignOut = () => {
     setRole(null);
     setCurrentUser(null);
@@ -11387,16 +13097,17 @@ export default function RestaurantApp() {
     } catch {}
     navigateTo("/dashboard");
   };
-  const [stationPreferences, setStationPreferences] = useState<StationDisplayPreferences>(() => {
-    try {
-      const saved = localStorage.getItem("restro-station-preferences");
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return {
-      ticketDensity: "comfortable",
-      tableAlerts: true,
-    };
-  });
+  const [stationPreferences, setStationPreferences] =
+    useState<StationDisplayPreferences>(() => {
+      try {
+        const saved = localStorage.getItem("restro-station-preferences");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+      return {
+        ticketDensity: "comfortable",
+        tableAlerts: true,
+      };
+    });
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
     restaurantName: "Table & Thyme",
     branchName: "Downtown branch",
@@ -11427,17 +13138,24 @@ export default function RestaurantApp() {
             branchName: data.branchName || "Downtown branch",
             currencySymbol: data.currencySymbol || "₹",
             taxRate: data.taxRate !== undefined ? data.taxRate : 5.0,
-            serviceCharge: data.serviceCharge !== undefined ? data.serviceCharge : 5.0,
-            receiptFooter: data.receiptFooter || "Thank you for dining with Table & Thyme!",
+            serviceCharge:
+              data.serviceCharge !== undefined ? data.serviceCharge : 5.0,
+            receiptFooter:
+              data.receiptFooter || "Thank you for dining with Table & Thyme!",
             estimatedPrepTimeMinutes: data.estimatedPrepTimeMinutes || 20,
             tableTurnTimeMinutes: data.tableTurnTimeMinutes || 60,
             logoUrl: data.logoUrl || "",
             faviconUrl: data.faviconUrl || "",
             isCurrencyLocked: Boolean(data.isCurrencyLocked),
             gstNumber: data.gstNumber || "07AAAAA0000A1Z5",
-            address: data.address || "Connaught Place, Central Boulevard, New Delhi 110001",
+            address:
+              data.address ||
+              "Connaught Place, Central Boulevard, New Delhi 110001",
             websiteTheme: data.websiteTheme || "system",
-            reservationDeposit: data.reservationDeposit !== undefined ? data.reservationDeposit : 500,
+            reservationDeposit:
+              data.reservationDeposit !== undefined
+                ? data.reservationDeposit
+                : 500,
             payuMerchantKey: data.payuMerchantKey || "",
             payuMerchantSalt: data.payuMerchantSalt || "",
             payuTestMode: data.payuTestMode ?? true,
@@ -11462,11 +13180,19 @@ export default function RestaurantApp() {
   const handleUpdatePreferences = (nextPrefs: StationDisplayPreferences) => {
     setStationPreferences(nextPrefs);
     try {
-      localStorage.setItem("restro-station-preferences", JSON.stringify(nextPrefs));
+      localStorage.setItem(
+        "restro-station-preferences",
+        JSON.stringify(nextPrefs),
+      );
     } catch {}
   };
 
   const handleUpdateStoreSettings = async (updated: StoreSettings) => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
+
     setStoreSettings(updated);
     try {
       const result = await updateRestaurantSettings(updated);
@@ -11477,20 +13203,43 @@ export default function RestaurantApp() {
           branchName: result.branchName || prev.branchName,
           currencySymbol: result.currencySymbol || prev.currencySymbol,
           taxRate: result.taxRate !== undefined ? result.taxRate : prev.taxRate,
-          serviceCharge: result.serviceCharge !== undefined ? result.serviceCharge : prev.serviceCharge,
+          serviceCharge:
+            result.serviceCharge !== undefined
+              ? result.serviceCharge
+              : prev.serviceCharge,
           receiptFooter: result.receiptFooter || prev.receiptFooter,
-          estimatedPrepTimeMinutes: result.estimatedPrepTimeMinutes || prev.estimatedPrepTimeMinutes,
-          tableTurnTimeMinutes: result.tableTurnTimeMinutes || prev.tableTurnTimeMinutes,
+          estimatedPrepTimeMinutes:
+            result.estimatedPrepTimeMinutes || prev.estimatedPrepTimeMinutes,
+          tableTurnTimeMinutes:
+            result.tableTurnTimeMinutes || prev.tableTurnTimeMinutes,
           logoUrl: result.logoUrl !== undefined ? result.logoUrl : prev.logoUrl,
-          faviconUrl: result.faviconUrl !== undefined ? result.faviconUrl : prev.faviconUrl,
-          isCurrencyLocked: result.isCurrencyLocked !== undefined ? result.isCurrencyLocked : prev.isCurrencyLocked,
+          faviconUrl:
+            result.faviconUrl !== undefined
+              ? result.faviconUrl
+              : prev.faviconUrl,
+          isCurrencyLocked:
+            result.isCurrencyLocked !== undefined
+              ? result.isCurrencyLocked
+              : prev.isCurrencyLocked,
           gstNumber: result.gstNumber || prev.gstNumber,
           address: result.address || prev.address,
           websiteTheme: result.websiteTheme || prev.websiteTheme,
-          reservationDeposit: result.reservationDeposit !== undefined ? result.reservationDeposit : prev.reservationDeposit,
-          payuMerchantKey: result.payuMerchantKey !== undefined ? result.payuMerchantKey : prev.payuMerchantKey,
-          payuMerchantSalt: result.payuMerchantSalt !== undefined ? result.payuMerchantSalt : prev.payuMerchantSalt,
-          payuTestMode: result.payuTestMode !== undefined ? result.payuTestMode : prev.payuTestMode,
+          reservationDeposit:
+            result.reservationDeposit !== undefined
+              ? result.reservationDeposit
+              : prev.reservationDeposit,
+          payuMerchantKey:
+            result.payuMerchantKey !== undefined
+              ? result.payuMerchantKey
+              : prev.payuMerchantKey,
+          payuMerchantSalt:
+            result.payuMerchantSalt !== undefined
+              ? result.payuMerchantSalt
+              : prev.payuMerchantSalt,
+          payuTestMode:
+            result.payuTestMode !== undefined
+              ? result.payuTestMode
+              : prev.payuTestMode,
         }));
       }
     } catch (err) {
@@ -11523,6 +13272,11 @@ export default function RestaurantApp() {
   }, []);
 
   const handleAddDepartment = async (name: string): Promise<string[]> => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return departments;
+    }
+
     const trimmed = name.trim();
     if (!trimmed) return departments;
     try {
@@ -11536,6 +13290,11 @@ export default function RestaurantApp() {
   };
 
   const handleDeleteDepartment = async (name: string): Promise<string[]> => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return departments;
+    }
+
     try {
       const updated = await deleteDepartment(name);
       setDepartments(updated);
@@ -11571,10 +13330,23 @@ export default function RestaurantApp() {
     );
   });
 
-  const availableServants = servantStaff.length > 0 ? servantStaff : [
-    { id: "staff_103", name: "Arjun Rao", department: "Floor", systemRole: "Server" as const },
-    { id: "staff_104", name: "Neha Joshi", department: "Floor", systemRole: "Server" as const },
-  ];
+  const availableServants =
+    servantStaff.length > 0
+      ? servantStaff
+      : [
+          {
+            id: "staff_103",
+            name: "Arjun Rao",
+            department: "Floor",
+            systemRole: "Server" as const,
+          },
+          {
+            id: "staff_104",
+            name: "Neha Joshi",
+            department: "Floor",
+            systemRole: "Server" as const,
+          },
+        ];
   const [orders, setOrders] = useState<Order[]>(() => {
     const savedOrders = window.localStorage.getItem("table-thyme-orders");
     if (!savedOrders) return initialOrders;
@@ -11600,10 +13372,28 @@ export default function RestaurantApp() {
   const [showBooking, setShowBooking] = useState(false);
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [kitchenClosed, setKitchenClosed] = useState<boolean>(false);
-  const [selectedTableForBooking, setSelectedTableForBooking] = useState<string | undefined>();
-  const [selectedTableForOrder, setSelectedTableForOrder] = useState<string | undefined>();
+  const [selectedTableForBooking, setSelectedTableForBooking] = useState<
+    string | undefined
+  >();
+  const [selectedTableForOrder, setSelectedTableForOrder] = useState<
+    string | undefined
+  >();
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [appToasts, setAppToasts] = useState<ToastItem[]>([]);
+
+  const appShowToast = (
+    type: "success" | "error" | "info",
+    title: string,
+    message: string,
+  ) => {
+    const id = Math.random().toString(36).slice(2, 9);
+    setAppToasts((toasts) => [...toasts, { id, type, title, message }]);
+  };
+
+  const removeAppToast = (id: string) => {
+    setAppToasts((toasts) => toasts.filter((toast) => toast.id !== id));
+  };
 
   const handleOpenBooking = (tableId?: string) => {
     setSelectedTableForBooking(tableId);
@@ -11611,11 +13401,20 @@ export default function RestaurantApp() {
   };
 
   const handleOpenNewOrder = (tableId?: string) => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
     setSelectedTableForOrder(tableId);
     setShowNewOrder(true);
   };
 
   const handleToggleKitchenClosed = async () => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
+
     try {
       const res = await toggleKitchenStatus();
       setKitchenClosed(res.closed);
@@ -11650,7 +13449,9 @@ export default function RestaurantApp() {
         const unavailable = list
           .filter((item) => item.available === false)
           .map((item) => item.name);
-        setSoldOutItems((prev) => Array.from(new Set([...prev, ...unavailable])));
+        setSoldOutItems((prev) =>
+          Array.from(new Set([...prev, ...unavailable])),
+        );
       })
       .catch(() => {
         // Keep the local menu available when the API is offline.
@@ -11678,6 +13479,11 @@ export default function RestaurantApp() {
     status: OrderStatus,
     actingRole?: StaffRole,
   ) => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
+
     const effectiveRole = actingRole || role || undefined;
     const previousOrders = orders;
 
@@ -11693,7 +13499,9 @@ export default function RestaurantApp() {
       setOrders((currentOrders) =>
         currentOrders.map((order) => (order.id === id ? updatedOrder : order)),
       );
-      fetchTables().then(setTables).catch(() => {});
+      fetchTables()
+        .then(setTables)
+        .catch(() => {});
     } catch (err: unknown) {
       console.error("Failed to update order status on server:", err);
       // Rollback optimistic state on error
@@ -11705,6 +13513,11 @@ export default function RestaurantApp() {
   };
 
   const handleTableStatusChange = async (id: string, status: TableStatus) => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
+
     try {
       const updated = await updateTableStatus(id, status);
       setTables((current) => current.map((t) => (t.id === id ? updated : t)));
@@ -11719,11 +13532,14 @@ export default function RestaurantApp() {
     id: string,
     status: BookingStatus,
   ) => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
+
     try {
       const updated = await updateBookingStatus(id, status);
-      setBookings((current) =>
-        current.map((b) => (b.id === id ? updated : b)),
-      );
+      setBookings((current) => current.map((b) => (b.id === id ? updated : b)));
       if ((status === "Arrived" || status === "Seated") && updated.tableId) {
         setTables((prev) =>
           prev.map((tbl) =>
@@ -11731,7 +13547,9 @@ export default function RestaurantApp() {
           ),
         );
       }
-      fetchTables().then(setTables).catch(() => {});
+      fetchTables()
+        .then(setTables)
+        .catch(() => {});
     } catch {
       setBookings((current) =>
         current.map((b) => (b.id === id ? { ...b, status } : b)),
@@ -11750,10 +13568,17 @@ export default function RestaurantApp() {
   };
 
   const handleCancelBooking = async (id: string) => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
+
     try {
       await cancelBooking(id);
       setBookings((current) => current.filter((b) => b.id !== id));
-      fetchTables().then(setTables).catch(() => {});
+      fetchTables()
+        .then(setTables)
+        .catch(() => {});
     } catch {
       setBookings((current) => current.filter((b) => b.id !== id));
     }
@@ -11769,19 +13594,25 @@ export default function RestaurantApp() {
         if (Array.isArray(data)) setBookings(data);
       })
       .catch(() => {});
-    fetchTables().then(setTables).catch(() => {});
+    fetchTables()
+      .then(setTables)
+      .catch(() => {});
   };
 
   const handleOrderCreated = (newOrder: Order) => {
     setOrders((current) => [newOrder, ...current]);
-    fetchTables().then(setTables).catch(() => {});
+    fetchTables()
+      .then(setTables)
+      .catch(() => {});
   };
 
   const handleOrderUpdated = (updatedOrder: Order) => {
     setOrders((current) =>
       current.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)),
     );
-    fetchTables().then(setTables).catch(() => {});
+    fetchTables()
+      .then(setTables)
+      .catch(() => {});
   };
 
   const handleAddTable = async (newTable: {
@@ -11792,7 +13623,7 @@ export default function RestaurantApp() {
     serverName: string;
   }) => {
     if (currentUser?.isDemoAccount) {
-      showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      alert("This feature is disabled for the demo account.");
       return;
     }
 
@@ -11803,13 +13634,22 @@ export default function RestaurantApp() {
         ? current.map((t) => (t.id === created.id ? created : t))
         : [...current, created];
     });
-    fetchTables().then(setTables).catch(() => {});
+    fetchTables()
+      .then(setTables)
+      .catch(() => {});
   };
 
   const handleDeleteTable = async (id: string) => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
+
     await deleteTable(id);
     setTables((current) => current.filter((t) => t.id !== id));
-    fetchTables().then(setTables).catch(() => {});
+    fetchTables()
+      .then(setTables)
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -11929,22 +13769,43 @@ export default function RestaurantApp() {
         onNavigateEmployeePortal={() => navigateTo("/employe")}
         onLogin={(nextRole, staff) => {
           setRole(nextRole);
-          const defaultId = nextRole === "Kitchen" ? "staff_102" : nextRole === "Server" ? "staff_103" : "staff_101";
-          const user = staff ? {
-            id: staff.id || defaultId,
-            name: staff.name,
-            email: staff.email,
-            phone: staff.phone,
-            pin: staff.pin,
-            department: staff.department,
-            systemRole: staff.systemRole || nextRole,
-          } : {
-            id: defaultId,
-            name: nextRole === "Kitchen" ? "Chef Sunita" : nextRole === "Server" ? "Aarav Rao" : "Priya Shah",
-            email: `${nextRole.toLowerCase()}@tableandthyme.com`,
-            systemRole: nextRole,
-            department: nextRole === "Kitchen" ? "Kitchen" : nextRole === "Server" ? "Floor Service" : "Management",
-          };
+          const defaultId =
+            nextRole === "Kitchen"
+              ? "staff_102"
+              : nextRole === "Server"
+                ? "staff_103"
+                : "staff_101";
+          const user = staff
+            ? {
+                id: staff.id || defaultId,
+                name: staff.name,
+                email: staff.email,
+                phone: staff.phone,
+                pin: staff.pin,
+                department: staff.department,
+                systemRole: staff.systemRole || nextRole,
+                isDemoAccount:
+                  Boolean(staff.isDemoAccount) ||
+                  isDemoAccountEmail(staff.email),
+              }
+            : {
+                id: defaultId,
+                name:
+                  nextRole === "Kitchen"
+                    ? "Chef Sunita"
+                    : nextRole === "Server"
+                      ? "Aarav Rao"
+                      : "Priya Shah",
+                email: `${nextRole.toLowerCase()}@tableandthyme.com`,
+                systemRole: nextRole,
+                department:
+                  nextRole === "Kitchen"
+                    ? "Kitchen"
+                    : nextRole === "Server"
+                      ? "Floor Service"
+                      : "Management",
+                isDemoAccount: false,
+              };
           setCurrentUser(user);
           try {
             localStorage.setItem("restro-active-role", nextRole);
@@ -11957,11 +13818,13 @@ export default function RestaurantApp() {
     );
   }
 
+  const isDemoAccountUser = Boolean(currentUser?.isDemoAccount);
   const visibleNavGroups = getNavGroups(role);
   const allowedPages = role ? roleNavGroups[role] : [];
-  const safeActiveNav = (role && allowedPages.includes(activeNav))
-    ? activeNav
-    : (allowedPages[0] || "Overview");
+  const safeActiveNav =
+    role && allowedPages.includes(activeNav)
+      ? activeNav
+      : allowedPages[0] || "Overview";
 
   const pageProps = {
     onBook: handleOpenBooking,
@@ -12006,6 +13869,14 @@ export default function RestaurantApp() {
         onAddTable={handleAddTable}
         onDeleteTable={handleDeleteTable}
         kitchenClosed={kitchenClosed}
+        isDemoAccount={isDemoAccountUser}
+        onDemoAction={(action) =>
+          appShowToast(
+            "error",
+            "Demo access only",
+            `${action} is disabled for the demo account.`,
+          )
+        }
       />
     ) : safeActiveNav === "Orders" ? (
       <OrdersPage
@@ -12037,13 +13908,14 @@ export default function RestaurantApp() {
         canManage={role === "Manager"}
         currencySymbol={storeSettings.currencySymbol || "₹"}
         currentUser={currentUser}
-        showToast={showToast}
+        showToast={appShowToast}
       />
     ) : safeActiveNav === "Inventory" ? (
       <InventoryPage
         currencySymbol={storeSettings.currencySymbol || "₹"}
         role={role}
         currentUser={currentUser}
+        showToast={appShowToast}
       />
     ) : safeActiveNav === "Billing" ? (
       <BillingPage
@@ -12078,7 +13950,7 @@ export default function RestaurantApp() {
         departments={departments}
         onAddDepartment={handleAddDepartment}
         currentUser={currentUser}
-        showToast={showToast}
+        showToast={appShowToast}
       />
     ) : safeActiveNav === "Employees" || safeActiveNav === "Team" ? (
       <EmployeesPage
@@ -12087,15 +13959,20 @@ export default function RestaurantApp() {
         onAddDepartment={handleAddDepartment}
         onDeleteDepartment={handleDeleteDepartment}
         currentUser={currentUser}
-        showToast={showToast}
+        showToast={appShowToast}
       />
     ) : safeActiveNav === "Website CMS" ? (
-      <WebsiteCmsPage />
+      <WebsiteCmsPage
+        isDemoAccount={isDemoAccountUser}
+        showToast={appShowToast}
+      />
     ) : safeActiveNav === "Settings" ? (
       <SettingsPage
         currentUser={currentUser}
         onUpdateCurrentUser={(updated) => {
-          setCurrentUser((prev) => (prev ? { ...prev, ...updated, systemRole: prev.systemRole } : null));
+          setCurrentUser((prev) =>
+            prev ? { ...prev, ...updated, systemRole: prev.systemRole } : null,
+          );
         }}
         stationPreferences={stationPreferences}
         onUpdatePreferences={handleUpdatePreferences}
@@ -12106,7 +13983,9 @@ export default function RestaurantApp() {
         onDeleteDepartment={handleDeleteDepartment}
       />
     ) : (
-      <div className="p-8 text-center text-[#84908a]">Page not available for this role.</div>
+      <div className="p-8 text-center text-[#84908a]">
+        Page not available for this role.
+      </div>
     );
 
   return (
@@ -12124,7 +14003,10 @@ export default function RestaurantApp() {
           >
             <MenuIcon size={18} />
           </button>
-          <div className="flex items-center gap-2 min-w-0 cursor-pointer" onClick={() => setActiveNav("Overview")}>
+          <div
+            className="flex items-center gap-2 min-w-0 cursor-pointer"
+            onClick={() => setActiveNav("Overview")}
+          >
             {storeSettings.logoUrl ? (
               <img
                 src={storeSettings.logoUrl}
@@ -12170,7 +14052,9 @@ export default function RestaurantApp() {
           <button
             onClick={() => setActiveNav("Settings")}
             className={`rounded-lg border border-[#dfe1dc] p-1.5 sm:p-2 transition cursor-pointer ${
-              safeActiveNav === "Settings" ? "bg-[#24312e] text-white" : "bg-white text-[#68736e]"
+              safeActiveNav === "Settings"
+                ? "bg-[#24312e] text-white"
+                : "bg-white text-[#68736e]"
             }`}
             aria-label="Settings"
             title="Settings"
@@ -12192,20 +14076,22 @@ export default function RestaurantApp() {
       {/* MOBILE FAST-SWITCH CATEGORY CHIPS                    */}
       {/* ==================================================== */}
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-[#dfe1dc] bg-[#f8f7f4] px-3 py-1.5 lg:hidden">
-        {visibleNavGroups.flatMap((g) => g.items).map(({ label, icon: NavIcon }) => (
-          <button
-            key={label}
-            onClick={() => setActiveNav(label)}
-            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-              safeActiveNav === label
-                ? "bg-[#24312e] text-white shadow-2xs font-bold"
-                : "bg-white border border-[#dfe1dc] text-[#68736e] hover:bg-[#f0f1ed]"
-            }`}
-          >
-            <NavIcon size={13} />
-            <span>{label}</span>
-          </button>
-        ))}
+        {visibleNavGroups
+          .flatMap((g) => g.items)
+          .map(({ label, icon: NavIcon }) => (
+            <button
+              key={label}
+              onClick={() => setActiveNav(label)}
+              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+                safeActiveNav === label
+                  ? "bg-[#24312e] text-white shadow-2xs font-bold"
+                  : "bg-white border border-[#dfe1dc] text-[#68736e] hover:bg-[#f0f1ed]"
+              }`}
+            >
+              <NavIcon size={13} />
+              <span>{label}</span>
+            </button>
+          ))}
       </div>
 
       {/* ==================================================== */}
@@ -12257,12 +14143,26 @@ export default function RestaurantApp() {
             <div className="border-b border-[#e9eae6] bg-[#f0f1ed]/60 px-5 py-3 flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f4bc83] text-xs font-bold text-[#684f37] shrink-0">
                 {currentUser?.name
-                  ? currentUser.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
-                  : role === "Kitchen" ? "CS" : role === "Server" ? "AR" : "PS"}
+                  ? currentUser.name
+                      .split(" ")
+                      .map((w) => w[0])
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase()
+                  : role === "Kitchen"
+                    ? "CS"
+                    : role === "Server"
+                      ? "AR"
+                      : "PS"}
               </div>
               <div className="min-w-0">
                 <p className="truncate text-xs font-bold text-[#24312e]">
-                  {currentUser?.name || (role === "Kitchen" ? "Chef Sunita" : role === "Server" ? "Aarav Rao" : "Priya Shah")}
+                  {currentUser?.name ||
+                    (role === "Kitchen"
+                      ? "Chef Sunita"
+                      : role === "Server"
+                        ? "Aarav Rao"
+                        : "Priya Shah")}
                 </p>
                 <p className="truncate text-[10px] text-[#84908a]">
                   {currentUser?.department || role} ({role})
@@ -12273,7 +14173,9 @@ export default function RestaurantApp() {
             {/* Drawer Nav Items */}
             <div className="flex-1 overflow-y-auto sidebar-scroll px-3 py-3 space-y-4">
               {visibleNavGroups.map((group) => {
-                const navItems = group.items.filter((item) => item.label !== "Settings");
+                const navItems = group.items.filter(
+                  (item) => item.label !== "Settings",
+                );
                 if (navItems.length === 0) return null;
                 return (
                   <div key={group.title}>
@@ -12350,7 +14252,10 @@ export default function RestaurantApp() {
               </div>
             )}
             <div className="min-w-0">
-              <p className="display-font text-lg font-bold text-[#24312e] truncate max-w-[130px]" title={storeSettings.restaurantName}>
+              <p
+                className="display-font text-lg font-bold text-[#24312e] truncate max-w-[130px]"
+                title={storeSettings.restaurantName}
+              >
                 {storeSettings.restaurantName || "Table & Thyme"}
               </p>
               <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-[#84908a] truncate">
@@ -12361,7 +14266,9 @@ export default function RestaurantApp() {
         </div>
         <nav className="flex flex-col gap-1 px-3 py-3">
           {visibleNavGroups.map((group) => {
-            const navItems = group.items.filter((item) => item.label !== "Settings");
+            const navItems = group.items.filter(
+              (item) => item.label !== "Settings",
+            );
             if (navItems.length === 0) return null;
             return (
               <div key={group.title} className="mb-6">
@@ -12408,23 +14315,28 @@ export default function RestaurantApp() {
                     .join("")
                     .toUpperCase()
                 : role === "Kitchen"
-                ? "CS"
-                : role === "Server"
-                ? "AR"
-                : "PS"}
+                  ? "CS"
+                  : role === "Server"
+                    ? "AR"
+                    : "PS"}
             </div>
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-[#24312e]">
-                {currentUser?.name || (role === "Kitchen" ? "Chef Sunita" : role === "Server" ? "Aarav Rao" : "Priya Shah")}
+                {currentUser?.name ||
+                  (role === "Kitchen"
+                    ? "Chef Sunita"
+                    : role === "Server"
+                      ? "Aarav Rao"
+                      : "Priya Shah")}
               </p>
               <p className="truncate text-[11px] text-[#84908a]">
                 {currentUser?.department
                   ? `${currentUser.department} (${role})`
                   : role === "Kitchen"
-                  ? "Kitchen Lead (Kitchen)"
-                  : role === "Server"
-                  ? "Floor Server (Server)"
-                  : "General Manager (Manager)"}
+                    ? "Kitchen Lead (Kitchen)"
+                    : role === "Server"
+                      ? "Floor Server (Server)"
+                      : "General Manager (Manager)"}
               </p>
             </div>
             <ChevronDown className="ml-auto text-[#84908a]" size={15} />
@@ -12442,7 +14354,9 @@ export default function RestaurantApp() {
               <UserRound size={15} />
             </div>
             <span className="truncate">
-              <span className="font-bold text-[#24312e]">{storeSettings.restaurantName || "Table & Thyme"}</span>
+              <span className="font-bold text-[#24312e]">
+                {storeSettings.restaurantName || "Table & Thyme"}
+              </span>
               {storeSettings.branchName ? ` · ${storeSettings.branchName}` : ""}{" "}
               <span className="mx-1 text-[#c0c5c1]">/</span>{" "}
               <span className="text-[#315a3d] font-bold">{safeActiveNav}</span>
@@ -12477,7 +14391,9 @@ export default function RestaurantApp() {
               <Bell size={16} />
               {unreadNotificationCount > 0 ? (
                 <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b7623d] px-1 text-[9px] font-bold text-white shadow-xs">
-                  {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                  {unreadNotificationCount > 99
+                    ? "99+"
+                    : unreadNotificationCount}
                 </span>
               ) : (
                 <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -12493,7 +14409,11 @@ export default function RestaurantApp() {
                       : "text-[#315a3d] bg-white hover:bg-[#f0f1ed] shadow-2xs"
                   }`}
                   onClick={() => handleOpenBooking()}
-                  title={kitchenClosed ? "Kitchen is closed. Cannot book tables." : undefined}
+                  title={
+                    kitchenClosed
+                      ? "Kitchen is closed. Cannot book tables."
+                      : undefined
+                  }
                 >
                   <CalendarCheck size={13} />
                   <span>Book table</span>
@@ -12506,7 +14426,11 @@ export default function RestaurantApp() {
                       : "bg-[#24312e] hover:bg-[#315a3d]"
                   }`}
                   onClick={() => handleOpenNewOrder()}
-                  title={kitchenClosed ? "Kitchen is closed. Cannot place new orders." : undefined}
+                  title={
+                    kitchenClosed
+                      ? "Kitchen is closed. Cannot place new orders."
+                      : undefined
+                  }
                 >
                   <Plus size={13} />
                   <span>New order</span>
@@ -12542,7 +14466,8 @@ export default function RestaurantApp() {
                     Kitchen is Closed — Intake Suspended
                   </h3>
                   <p className="text-xs text-red-700">
-                    New orders and table bookings are disabled restaurant-wide until the kitchen is reopened.
+                    New orders and table bookings are disabled restaurant-wide
+                    until the kitchen is reopened.
                   </p>
                 </div>
               </div>
@@ -12600,6 +14525,7 @@ export default function RestaurantApp() {
           onUnreadCountChange={(cnt) => setUnreadNotificationCount(cnt)}
         />
       )}
+      <ToastContainer toasts={appToasts} onDismiss={removeAppToast} />
     </div>
   );
 }

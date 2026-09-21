@@ -45,18 +45,47 @@ import type { StaffRole } from "../types";
 interface InventoryPageProps {
   currencySymbol?: string;
   role?: StaffRole | null;
-  currentUser?: { name?: string; role?: string } | null;
-  showToast?: (type: "success" | "error" | "info", title: string, message: string) => void;
+  currentUser?: {
+    name?: string;
+    role?: string;
+    isDemoAccount?: boolean;
+  } | null;
+  showToast?: (
+    type: "success" | "error" | "info",
+    title: string,
+    message: string,
+  ) => void;
 }
 
 const PRESET_STOCK_IMAGES = [
-  { label: "🧀 Paneer / Cheese", url: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80" },
-  { label: "🍗 Chicken / Meat", url: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=600&q=80" },
-  { label: "🥦 Fresh Veggies", url: "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?auto=format&fit=crop&w=600&q=80" },
-  { label: "🍚 Rice & Grains", url: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80" },
-  { label: "🧈 Butter & Ghee", url: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&w=600&q=80" },
-  { label: "🫒 Oils & Spices", url: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80" },
-  { label: "📦 Packaging", url: "https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=600&q=80" },
+  {
+    label: "🧀 Paneer / Cheese",
+    url: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "🍗 Chicken / Meat",
+    url: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "🥦 Fresh Veggies",
+    url: "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "🍚 Rice & Grains",
+    url: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "🧈 Butter & Ghee",
+    url: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "🫒 Oils & Spices",
+    url: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "📦 Packaging",
+    url: "https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=600&q=80",
+  },
 ];
 
 export default function InventoryPage({
@@ -65,6 +94,18 @@ export default function InventoryPage({
   currentUser,
   showToast,
 }: InventoryPageProps) {
+  const blockDemoAction = (action: string) => {
+    if (!currentUser?.isDemoAccount) return false;
+    showToast?.(
+      "error",
+      "Demo access only",
+      `${action} is disabled for the demo account.`,
+    );
+    return true;
+  };
+  const demoActionClass = currentUser?.isDemoAccount
+    ? "cursor-not-allowed opacity-60"
+    : "cursor-pointer";
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [metrics, setMetrics] = useState<InventoryMetrics>({
     totalStockValue: 0,
@@ -90,7 +131,9 @@ export default function InventoryPage({
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [statusFilter, setStatusFilter] = useState<"All" | "Low" | "Out" | "In">("All");
+  const [statusFilter, setStatusFilter] = useState<
+    "All" | "Low" | "Out" | "In"
+  >("All");
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -163,7 +206,9 @@ export default function InventoryPage({
     if (currentUser?.name) {
       return `${currentUser.name} (${role || "Staff"})`;
     }
-    return role === "Kitchen" ? "Chef Sunita (Kitchen)" : "Priya Shah (Manager)";
+    return role === "Kitchen"
+      ? "Chef Sunita (Kitchen)"
+      : "Priya Shah (Manager)";
   }, [currentUser, role]);
 
   // Image Upload handler via FileReader
@@ -204,10 +249,16 @@ export default function InventoryPage({
             const compressed = canvas.toDataURL("image/webp", 0.9);
             setAddForm((prev) => ({ ...prev, image: compressed }));
           } else {
-            setAddForm((prev) => ({ ...prev, image: ev.target?.result as string }));
+            setAddForm((prev) => ({
+              ...prev,
+              image: ev.target?.result as string,
+            }));
           }
         } catch {
-          setAddForm((prev) => ({ ...prev, image: ev.target?.result as string }));
+          setAddForm((prev) => ({
+            ...prev,
+            image: ev.target?.result as string,
+          }));
         }
       };
       img.src = ev.target?.result as string;
@@ -229,6 +280,7 @@ export default function InventoryPage({
 
   // Open Restock Modal for an item
   const openRestock = (item: InventoryItem) => {
+    if (blockDemoAction("Restocking products")) return;
     setActiveItem(item);
     setRestockForm({
       quantity: 10,
@@ -257,6 +309,7 @@ export default function InventoryPage({
 
   // Open Edit Modal for an item
   const openEdit = (item: InventoryItem) => {
+    if (blockDemoAction("Editing products")) return;
     setActiveItem(item);
     setAddForm({
       name: item.name,
@@ -277,7 +330,12 @@ export default function InventoryPage({
     e.preventDefault();
 
     if (currentUser?.isDemoAccount) {
-      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      if (showToast)
+        showToast(
+          "error",
+          "Access Denied",
+          "This feature is disabled for the demo account.",
+        );
       return;
     }
 
@@ -306,7 +364,11 @@ export default function InventoryPage({
       });
 
       if (showToast) {
-        showToast("success", "Product Added", `${addForm.name} has been added to inventory.`);
+        showToast(
+          "success",
+          "Product Added",
+          `${addForm.name} has been added to inventory.`,
+        );
       }
       setIsAddModalOpen(false);
       loadData();
@@ -323,7 +385,12 @@ export default function InventoryPage({
     if (!activeItem) return;
 
     if (currentUser?.isDemoAccount) {
-      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      if (showToast)
+        showToast(
+          "error",
+          "Access Denied",
+          "This feature is disabled for the demo account.",
+        );
       return;
     }
 
@@ -346,7 +413,11 @@ export default function InventoryPage({
       });
 
       if (showToast) {
-        showToast("success", "Product Updated", `${addForm.name} updated successfully.`);
+        showToast(
+          "success",
+          "Product Updated",
+          `${addForm.name} updated successfully.`,
+        );
       }
       setIsEditModalOpen(false);
       loadData();
@@ -361,6 +432,7 @@ export default function InventoryPage({
   const handleRestockSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeItem) return;
+    if (blockDemoAction("Restocking products")) return;
     const addQty = Number(restockForm.quantity);
     if (isNaN(addQty) || addQty <= 0) {
       setFormError("Please enter a valid positive quantity to add.");
@@ -382,7 +454,7 @@ export default function InventoryPage({
         showToast(
           "success",
           "Stock Added",
-          `Added ${addQty} ${activeItem.unit} to ${activeItem.name}. New total: ${res.newStock} ${activeItem.unit}.`
+          `Added ${addQty} ${activeItem.unit} to ${activeItem.name}. New total: ${res.newStock} ${activeItem.unit}.`,
         );
       }
       setIsRestockModalOpen(false);
@@ -421,7 +493,7 @@ export default function InventoryPage({
         showToast(
           "success",
           "Daily Usage Logged",
-          `Deducted ${totalDeducted} ${activeItem.unit} from ${activeItem.name}. Remaining: ${res.newStock} ${activeItem.unit}.`
+          `Deducted ${totalDeducted} ${activeItem.unit} from ${activeItem.name}. Remaining: ${res.newStock} ${activeItem.unit}.`,
         );
       }
       setIsDailyLogModalOpen(false);
@@ -435,23 +507,32 @@ export default function InventoryPage({
 
   // Handle Delete
   const handleDeleteItem = async (item: InventoryItem) => {
-    if (currentUser?.isDemoAccount) {
-      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
-      return;
-    }
+    if (blockDemoAction("Deleting products")) return;
 
-    if (!window.confirm(`Are you sure you want to remove "${item.name}" from inventory?`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to remove "${item.name}" from inventory?`,
+      )
+    ) {
       return;
     }
     try {
       await deleteInventoryItem(item.id);
       if (showToast) {
-        showToast("info", "Item Deleted", `${item.name} was removed from inventory.`);
+        showToast(
+          "info",
+          "Item Deleted",
+          `${item.name} was removed from inventory.`,
+        );
       }
       loadData();
     } catch (err: any) {
       if (showToast) {
-        showToast("error", "Delete Failed", err.message || "Could not delete item.");
+        showToast(
+          "error",
+          "Delete Failed",
+          err.message || "Could not delete item.",
+        );
       }
     }
   };
@@ -463,14 +544,17 @@ export default function InventoryPage({
       const searchMatch =
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.supplier && item.supplier.toLowerCase().includes(searchTerm.toLowerCase()));
+        (item.supplier &&
+          item.supplier.toLowerCase().includes(searchTerm.toLowerCase()));
 
       // Category
-      const categoryMatch = selectedCategory === "All" || item.category === selectedCategory;
+      const categoryMatch =
+        selectedCategory === "All" || item.category === selectedCategory;
 
       // Status
       const isOut = item.currentStock <= 0;
-      const isLow = item.currentStock > 0 && item.currentStock <= item.minStockLimit;
+      const isLow =
+        item.currentStock > 0 && item.currentStock <= item.minStockLimit;
       const isIn = item.currentStock > item.minStockLimit;
 
       let statusMatch = true;
@@ -490,9 +574,12 @@ export default function InventoryPage({
           <span className="text-[11px] font-bold uppercase tracking-[.2em] text-[#84908a]">
             Stock & Raw Materials
           </span>
-          <h1 className="display-font text-2xl font-bold text-[#24312e]">Inventory</h1>
+          <h1 className="display-font text-2xl font-bold text-[#24312e]">
+            Inventory
+          </h1>
           <p className="text-xs text-[#84908a] mt-0.5">
-            Real-time stock tracking with configurable low-stock alerts and daily usage deduction.
+            Real-time stock tracking with configurable low-stock alerts and
+            daily usage deduction.
           </p>
         </div>
 
@@ -520,6 +607,7 @@ export default function InventoryPage({
 
           <button
             onClick={() => {
+              if (blockDemoAction("Adding products")) return;
               setAddForm({
                 name: "",
                 category: categories.find((c) => c !== "All") || "Dairy",
@@ -533,7 +621,13 @@ export default function InventoryPage({
               setFormError("");
               setIsAddModalOpen(true);
             }}
-            className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#24312e] px-3 py-2 sm:px-4 sm:py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-xs"
+            aria-disabled={currentUser?.isDemoAccount}
+            title={
+              currentUser?.isDemoAccount
+                ? "This feature is disabled for the demo account"
+                : "Add Product"
+            }
+            className={`flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#24312e] px-3 py-2 sm:px-4 sm:py-2.5 text-xs font-bold text-white transition shadow-xs ${demoActionClass}`}
           >
             <Plus size={14} />
             <span>Add Product</span>
@@ -546,13 +640,16 @@ export default function InventoryPage({
         {/* Total Stock Value */}
         <div className="rounded-2xl border border-[#e0e2dc] bg-white p-3.5 sm:p-4.5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">Total Stock Value</span>
+            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">
+              Total Stock Value
+            </span>
             <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-xl bg-[#e8f1e8] text-[#315a3d] shrink-0">
               <Package size={15} />
             </div>
           </div>
           <div className="mt-1.5 sm:mt-2 text-lg sm:text-xl font-black text-[#24312e] truncate">
-            {currencySymbol}{metrics.totalStockValue.toLocaleString("en-IN")}
+            {currencySymbol}
+            {metrics.totalStockValue.toLocaleString("en-IN")}
           </div>
           <div className="mt-0.5 sm:mt-1 flex items-center gap-1 text-[10px] sm:text-[11px] text-[#84908a] truncate">
             <span>Active raw materials value</span>
@@ -561,7 +658,9 @@ export default function InventoryPage({
 
         {/* Low Stock Items Alert */}
         <div
-          onClick={() => setStatusFilter(statusFilter === "Low" ? "All" : "Low")}
+          onClick={() =>
+            setStatusFilter(statusFilter === "Low" ? "All" : "Low")
+          }
           className={`rounded-2xl border p-3.5 sm:p-4.5 transition cursor-pointer shadow-2xs ${
             metrics.lowStockCount > 0
               ? "border-[#fbd3bf] bg-[#fffaf5] ring-1 ring-[#b7623d]/20"
@@ -569,24 +668,37 @@ export default function InventoryPage({
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">Low Stock Items</span>
-            <div className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-xl shrink-0 ${
-              metrics.lowStockCount > 0 ? "bg-[#ffe7d6] text-[#b7623d]" : "bg-[#f0f2ed] text-[#84908a]"
-            }`}>
+            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">
+              Low Stock Items
+            </span>
+            <div
+              className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-xl shrink-0 ${
+                metrics.lowStockCount > 0
+                  ? "bg-[#ffe7d6] text-[#b7623d]"
+                  : "bg-[#f0f2ed] text-[#84908a]"
+              }`}
+            >
               <AlertTriangle size={15} />
             </div>
           </div>
-          <div className={`mt-1.5 sm:mt-2 text-lg sm:text-xl font-black truncate ${metrics.lowStockCount > 0 ? "text-[#b7623d]" : "text-[#24312e]"}`}>
-            {metrics.lowStockCount} {metrics.lowStockCount === 1 ? "item" : "items"}
+          <div
+            className={`mt-1.5 sm:mt-2 text-lg sm:text-xl font-black truncate ${metrics.lowStockCount > 0 ? "text-[#b7623d]" : "text-[#24312e]"}`}
+          >
+            {metrics.lowStockCount}{" "}
+            {metrics.lowStockCount === 1 ? "item" : "items"}
           </div>
           <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] font-semibold text-[#84908a] truncate">
-            {metrics.lowStockCount > 0 ? "Below safety limit · Click to filter" : "All products within safe limit"}
+            {metrics.lowStockCount > 0
+              ? "Below safety limit · Click to filter"
+              : "All products within safe limit"}
           </div>
         </div>
 
         {/* Out of Stock */}
         <div
-          onClick={() => setStatusFilter(statusFilter === "Out" ? "All" : "Out")}
+          onClick={() =>
+            setStatusFilter(statusFilter === "Out" ? "All" : "Out")
+          }
           className={`rounded-2xl border p-3.5 sm:p-4.5 transition cursor-pointer shadow-2xs ${
             metrics.outOfStockCount > 0
               ? "border-red-200 bg-red-50/60 ring-1 ring-red-500/20"
@@ -594,31 +706,45 @@ export default function InventoryPage({
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">Out of Stock</span>
-            <div className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-xl shrink-0 ${
-              metrics.outOfStockCount > 0 ? "bg-red-100 text-red-700" : "bg-[#f0f2ed] text-[#84908a]"
-            }`}>
+            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">
+              Out of Stock
+            </span>
+            <div
+              className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-xl shrink-0 ${
+                metrics.outOfStockCount > 0
+                  ? "bg-red-100 text-red-700"
+                  : "bg-[#f0f2ed] text-[#84908a]"
+              }`}
+            >
               <Flame size={15} />
             </div>
           </div>
-          <div className={`mt-1.5 sm:mt-2 text-lg sm:text-xl font-black truncate ${metrics.outOfStockCount > 0 ? "text-red-700" : "text-[#24312e]"}`}>
-            {metrics.outOfStockCount} {metrics.outOfStockCount === 1 ? "item" : "items"}
+          <div
+            className={`mt-1.5 sm:mt-2 text-lg sm:text-xl font-black truncate ${metrics.outOfStockCount > 0 ? "text-red-700" : "text-[#24312e]"}`}
+          >
+            {metrics.outOfStockCount}{" "}
+            {metrics.outOfStockCount === 1 ? "item" : "items"}
           </div>
           <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] font-semibold text-[#84908a] truncate">
-            {metrics.outOfStockCount > 0 ? "Depleted stock · Needs refill" : "Zero depleted stock"}
+            {metrics.outOfStockCount > 0
+              ? "Depleted stock · Needs refill"
+              : "Zero depleted stock"}
           </div>
         </div>
 
         {/* Today's Usage */}
         <div className="rounded-2xl border border-[#e0e2dc] bg-white p-3.5 sm:p-4.5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">Today's Usage</span>
+            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">
+              Today's Usage
+            </span>
             <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-xl bg-[#e6eee5] text-[#315a3d] shrink-0">
               <TrendingDown size={15} />
             </div>
           </div>
           <div className="mt-1.5 sm:mt-2 text-lg sm:text-xl font-black text-[#24312e] truncate">
-            {metrics.todayUsageCount} {metrics.todayUsageCount === 1 ? "entry" : "entries"}
+            {metrics.todayUsageCount}{" "}
+            {metrics.todayUsageCount === 1 ? "entry" : "entries"}
           </div>
           <div className="mt-0.5 sm:mt-1 flex items-center gap-1 text-[10px] sm:text-[11px] text-[#84908a] truncate">
             <span>Logged inventory deductions</span>
@@ -632,7 +758,10 @@ export default function InventoryPage({
         <div className="border-b border-[#dfe1dc] bg-[#fbfaf7] p-3.5 sm:p-4 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-md">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#84908a]" />
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#84908a]"
+              />
               <input
                 type="text"
                 placeholder="Search by ingredient, category, or vendor..."
@@ -662,10 +791,10 @@ export default function InventoryPage({
                     {st === "All"
                       ? "All"
                       : st === "In"
-                      ? "In Stock"
-                      : st === "Low"
-                      ? "Low Stock"
-                      : "Out of Stock"}
+                        ? "In Stock"
+                        : st === "Low"
+                          ? "Low Stock"
+                          : "Out of Stock"}
                   </button>
                 ))}
               </div>
@@ -724,15 +853,26 @@ export default function InventoryPage({
         {/* Loading State */}
         {loading ? (
           <div className="py-16 text-center text-[#84908a]">
-            <RefreshCw size={24} className="mx-auto mb-2 animate-spin text-[#315a3d]" />
-            <p className="text-sm font-bold text-[#24312e]">Loading inventory products...</p>
-            <p className="text-xs text-[#84908a] mt-1">Retrieving stock levels, units, and images.</p>
+            <RefreshCw
+              size={24}
+              className="mx-auto mb-2 animate-spin text-[#315a3d]"
+            />
+            <p className="text-sm font-bold text-[#24312e]">
+              Loading inventory products...
+            </p>
+            <p className="text-xs text-[#84908a] mt-1">
+              Retrieving stock levels, units, and images.
+            </p>
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="py-16 text-center text-[#84908a]">
             <Package size={32} className="mx-auto mb-2 text-[#b0b8b3]" />
-            <p className="font-bold text-sm text-[#24312e]">No inventory items found</p>
-            <p className="text-xs mt-1">Try adjusting your search or category filter.</p>
+            <p className="font-bold text-sm text-[#24312e]">
+              No inventory items found
+            </p>
+            <p className="text-xs mt-1">
+              Try adjusting your search or category filter.
+            </p>
           </div>
         ) : viewMode === "grid" ? (
           /* ========================================================= */
@@ -741,11 +881,16 @@ export default function InventoryPage({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4.5 p-4 sm:p-5">
             {filteredItems.map((item) => {
               const isOut = item.currentStock <= 0;
-              const isLow = item.currentStock > 0 && item.currentStock <= item.minStockLimit;
+              const isLow =
+                item.currentStock > 0 &&
+                item.currentStock <= item.minStockLimit;
               const totalValue = item.currentStock * item.costPerUnit;
               const healthPercent = Math.min(
                 100,
-                Math.round((item.currentStock / Math.max(item.minStockLimit * 2, 1)) * 100)
+                Math.round(
+                  (item.currentStock / Math.max(item.minStockLimit * 2, 1)) *
+                    100,
+                ),
               );
 
               return (
@@ -755,8 +900,8 @@ export default function InventoryPage({
                     isOut
                       ? "border-red-200 ring-1 ring-red-500/20"
                       : isLow
-                      ? "border-[#fbd3bf] ring-1 ring-[#b7623d]/20"
-                      : "border-[#e0e2dc] hover:border-[#24312e]/40"
+                        ? "border-[#fbd3bf] ring-1 ring-[#b7623d]/20"
+                        : "border-[#e0e2dc] hover:border-[#24312e]/40"
                   }`}
                 >
                   {/* Card Image Cover & Status Overlay */}
@@ -767,13 +912,19 @@ export default function InventoryPage({
                         alt={item.name}
                         className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = "none";
+                          (e.currentTarget as HTMLElement).style.display =
+                            "none";
                         }}
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center text-[#84908a]">
-                        <Package size={42} className="stroke-[1.3] text-[#b5beb7]" />
-                        <span className="text-[10px] font-bold mt-1 text-[#a3aca6]">No Image</span>
+                        <Package
+                          size={42}
+                          className="stroke-[1.3] text-[#b5beb7]"
+                        />
+                        <span className="text-[10px] font-bold mt-1 text-[#a3aca6]">
+                          No Image
+                        </span>
                       </div>
                     )}
 
@@ -794,8 +945,8 @@ export default function InventoryPage({
                           isOut
                             ? "bg-red-600 text-white"
                             : isLow
-                            ? "bg-[#b7623d] text-white animate-pulse"
-                            : "bg-[#2d5f39] text-white"
+                              ? "bg-[#b7623d] text-white animate-pulse"
+                              : "bg-[#2d5f39] text-white"
                         }`}
                       >
                         {isOut ? (
@@ -841,11 +992,17 @@ export default function InventoryPage({
                           </span>
                           <span
                             className={`text-2xl font-black ${
-                              isOut ? "text-red-600" : isLow ? "text-[#b7623d]" : "text-[#24312e]"
+                              isOut
+                                ? "text-red-600"
+                                : isLow
+                                  ? "text-[#b7623d]"
+                                  : "text-[#24312e]"
                             }`}
                           >
                             {item.currentStock}{" "}
-                            <span className="text-xs font-bold text-[#84908a]">{item.unit}</span>
+                            <span className="text-xs font-bold text-[#84908a]">
+                              {item.unit}
+                            </span>
                           </span>
                         </div>
                         <div className="text-right">
@@ -863,7 +1020,11 @@ export default function InventoryPage({
                         <div className="h-1.5 w-full rounded-full bg-[#eef0eb] overflow-hidden">
                           <div
                             className={`h-full transition-all duration-300 ${
-                              isOut ? "bg-red-500 w-0" : isLow ? "bg-[#b7623d]" : "bg-[#315a3d]"
+                              isOut
+                                ? "bg-red-500 w-0"
+                                : isLow
+                                  ? "bg-[#b7623d]"
+                                  : "bg-[#315a3d]"
                             }`}
                             style={{ width: `${healthPercent}%` }}
                           />
@@ -873,10 +1034,12 @@ export default function InventoryPage({
                       {/* Cost per unit & Total Value */}
                       <div className="mt-3 pt-2.5 border-t border-[#f0f1ed] flex items-center justify-between text-xs">
                         <span className="text-[#84908a] text-[11px]">
-                          {currencySymbol}{item.costPerUnit} / {item.unit}
+                          {currencySymbol}
+                          {item.costPerUnit} / {item.unit}
                         </span>
                         <span className="font-bold text-[#24312e] text-[11px]">
-                          Total: {currencySymbol}{Math.round(totalValue).toLocaleString("en-IN")}
+                          Total: {currencySymbol}
+                          {Math.round(totalValue).toLocaleString("en-IN")}
                         </span>
                       </div>
                     </div>
@@ -888,7 +1051,7 @@ export default function InventoryPage({
                         <button
                           type="button"
                           onClick={() => openHistory(item)}
-                          className="flex-1 flex items-center justify-center h-8.5 rounded-xl border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f2ed] hover:text-[#24312e] transition cursor-pointer shadow-2xs"
+                          className={`flex-1 flex items-center justify-center h-8.5 rounded-xl border border-[#dfe1dc] bg-white text-[#68736e] transition shadow-2xs ${demoActionClass}`}
                           title="Audit Trail History"
                         >
                           <History size={15} />
@@ -904,7 +1067,7 @@ export default function InventoryPage({
                         <button
                           type="button"
                           onClick={() => handleDeleteItem(item)}
-                          className="flex-1 flex items-center justify-center h-8.5 rounded-xl border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition cursor-pointer shadow-2xs"
+                          className={`flex-1 flex items-center justify-center h-8.5 rounded-xl border border-[#dfe1dc] bg-white text-[#68736e] transition shadow-2xs ${demoActionClass}`}
                           title="Delete Product"
                         >
                           <Trash2 size={15} />
@@ -926,7 +1089,7 @@ export default function InventoryPage({
                       <button
                         type="button"
                         onClick={() => openRestock(item)}
-                        className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#24312e] py-2 px-3 text-[11px] font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-xs"
+                        className={`w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#24312e] py-2 px-3 text-[11px] font-bold text-white transition shadow-xs ${demoActionClass}`}
                         title="Restock Incoming Stock"
                       >
                         <Plus size={13} />
@@ -952,17 +1115,25 @@ export default function InventoryPage({
                   <th className="px-4 py-3.5">Stock Health</th>
                   <th className="px-4 py-3.5 text-right">Cost / Unit</th>
                   <th className="px-4 py-3.5 text-right">Total Value</th>
-                  <th className="px-5 py-3.5 text-center whitespace-nowrap min-w-[270px]">Actions</th>
+                  <th className="px-5 py-3.5 text-center whitespace-nowrap min-w-[270px]">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f0f1ed]">
                 {filteredItems.map((item) => {
                   const isOut = item.currentStock <= 0;
-                  const isLow = item.currentStock > 0 && item.currentStock <= item.minStockLimit;
+                  const isLow =
+                    item.currentStock > 0 &&
+                    item.currentStock <= item.minStockLimit;
                   const totalValue = item.currentStock * item.costPerUnit;
                   const healthPercent = Math.min(
                     100,
-                    Math.round((item.currentStock / Math.max(item.minStockLimit * 2, 1)) * 100)
+                    Math.round(
+                      (item.currentStock /
+                        Math.max(item.minStockLimit * 2, 1)) *
+                        100,
+                    ),
                   );
 
                   return (
@@ -982,7 +1153,9 @@ export default function InventoryPage({
                                 alt={item.name}
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
-                                  (e.currentTarget as HTMLElement).style.display = "none";
+                                  (
+                                    e.currentTarget as HTMLElement
+                                  ).style.display = "none";
                                 }}
                               />
                             ) : (
@@ -990,7 +1163,9 @@ export default function InventoryPage({
                             )}
                           </div>
                           <div>
-                            <div className="font-bold text-sm text-[#24312e]">{item.name}</div>
+                            <div className="font-bold text-sm text-[#24312e]">
+                              {item.name}
+                            </div>
                             <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-[#84908a]">
                               <span className="rounded bg-[#f0f2ed] px-1.5 py-0.5 font-bold text-[#55605b]">
                                 {item.category}
@@ -1006,7 +1181,11 @@ export default function InventoryPage({
                         <div className="flex items-center gap-2">
                           <span
                             className={`font-black text-sm ${
-                              isOut ? "text-red-600" : isLow ? "text-[#b7623d]" : "text-[#24312e]"
+                              isOut
+                                ? "text-red-600"
+                                : isLow
+                                  ? "text-[#b7623d]"
+                                  : "text-[#24312e]"
                             }`}
                           >
                             {item.currentStock} {item.unit}
@@ -1033,12 +1212,18 @@ export default function InventoryPage({
                         <div className="w-28">
                           <div className="flex items-center justify-between text-[10px] text-[#84908a] mb-1">
                             <span>{healthPercent}%</span>
-                            <span>{isOut ? "Empty" : isLow ? "Re-order" : "Good"}</span>
+                            <span>
+                              {isOut ? "Empty" : isLow ? "Re-order" : "Good"}
+                            </span>
                           </div>
                           <div className="h-1.5 w-full rounded-full bg-[#eef0eb] overflow-hidden">
                             <div
                               className={`h-full transition-all duration-300 ${
-                                isOut ? "bg-red-500 w-0" : isLow ? "bg-[#b7623d]" : "bg-[#315a3d]"
+                                isOut
+                                  ? "bg-red-500 w-0"
+                                  : isLow
+                                    ? "bg-[#b7623d]"
+                                    : "bg-[#315a3d]"
                               }`}
                               style={{ width: `${healthPercent}%` }}
                             />
@@ -1048,12 +1233,14 @@ export default function InventoryPage({
 
                       {/* Cost per unit */}
                       <td className="px-4 py-3.5 text-right font-semibold text-[#68736e]">
-                        {currencySymbol}{item.costPerUnit} / {item.unit}
+                        {currencySymbol}
+                        {item.costPerUnit} / {item.unit}
                       </td>
 
                       {/* Total Value */}
                       <td className="px-4 py-3.5 text-right font-black text-[#24312e]">
-                        {currencySymbol}{Math.round(totalValue).toLocaleString("en-IN")}
+                        {currencySymbol}
+                        {Math.round(totalValue).toLocaleString("en-IN")}
                       </td>
 
                       {/* Actions */}
@@ -1070,7 +1257,7 @@ export default function InventoryPage({
 
                           <button
                             onClick={() => openRestock(item)}
-                            className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-[#dfe1dc] bg-white px-2 py-1 text-[10px] font-bold text-[#315a3d] hover:bg-[#e8f1e8] hover:border-[#315a3d] transition cursor-pointer shadow-2xs shrink-0"
+                            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-[#dfe1dc] bg-white px-2 py-1 text-[10px] font-bold text-[#315a3d] transition shadow-2xs shrink-0 ${demoActionClass}`}
                             title="Add Incoming Delivery"
                           >
                             <Plus size={12} />
@@ -1079,7 +1266,7 @@ export default function InventoryPage({
 
                           <button
                             onClick={() => openHistory(item)}
-                            className="rounded-lg p-1.5 text-[#84908a] hover:bg-[#f0f2ed] hover:text-[#24312e] transition cursor-pointer shrink-0"
+                            className={`rounded-lg p-1.5 text-[#84908a] transition shrink-0 ${demoActionClass}`}
                             title="Stock Movement Ledger"
                           >
                             <History size={14} />
@@ -1095,7 +1282,7 @@ export default function InventoryPage({
 
                           <button
                             onClick={() => handleDeleteItem(item)}
-                            className="rounded-lg p-1.5 text-[#84908a] hover:bg-red-50 hover:text-red-600 transition cursor-pointer shrink-0"
+                            className={`rounded-lg p-1.5 text-[#84908a] transition shrink-0 ${demoActionClass}`}
                             title="Delete Product"
                           >
                             <Trash2 size={14} />
@@ -1123,8 +1310,12 @@ export default function InventoryPage({
                   <Package size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-[#24312e]">Add Raw Material</h3>
-                  <p className="text-xs text-[#84908a]">Register new ingredient with photo, unit & category</p>
+                  <h3 className="font-bold text-base text-[#24312e]">
+                    Add Raw Material
+                  </h3>
+                  <p className="text-xs text-[#84908a]">
+                    Register new ingredient with photo, unit & category
+                  </p>
                 </div>
               </div>
               <button
@@ -1153,7 +1344,9 @@ export default function InventoryPage({
                   required
                   placeholder="e.g. Fresh Malai Paneer"
                   value={addForm.name}
-                  onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, name: e.target.value })
+                  }
                   className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                 />
               </div>
@@ -1214,7 +1407,9 @@ export default function InventoryPage({
                     type="url"
                     placeholder="Or paste an Image URL (https://...)"
                     value={addForm.image}
-                    onChange={(e) => setAddForm({ ...addForm, image: e.target.value })}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, image: e.target.value })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs outline-none focus:border-[#24312e]"
                   />
                 </div>
@@ -1229,7 +1424,9 @@ export default function InventoryPage({
                       <button
                         key={preset.label}
                         type="button"
-                        onClick={() => setAddForm({ ...addForm, image: preset.url })}
+                        onClick={() =>
+                          setAddForm({ ...addForm, image: preset.url })
+                        }
                         className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${
                           addForm.image === preset.url
                             ? "bg-[#315a3d] text-white shadow-2xs"
@@ -1247,10 +1444,14 @@ export default function InventoryPage({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {/* Category Column */}
                 <div>
-                  <label className="text-xs font-bold text-[#68736e] block mb-1">Category</label>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Category
+                  </label>
                   <select
                     value={addForm.category}
-                    onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, category: e.target.value })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   >
                     {categories
@@ -1265,10 +1466,14 @@ export default function InventoryPage({
 
                 {/* Unit of Measurement Column */}
                 <div>
-                  <label className="text-xs font-bold text-[#68736e] block mb-1">Unit of Measure</label>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Unit of Measure
+                  </label>
                   <select
                     value={addForm.unit}
-                    onChange={(e) => setAddForm({ ...addForm, unit: e.target.value })}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, unit: e.target.value })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   >
                     {units.map((u) => (
@@ -1291,24 +1496,37 @@ export default function InventoryPage({
                     min={0}
                     step="any"
                     value={addForm.currentStock}
-                    onChange={(e) => setAddForm({ ...addForm, currentStock: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setAddForm({
+                        ...addForm,
+                        currentStock: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-[#68736e] block mb-1">
-                    Low Stock Alert Limit <span className="text-red-500">*</span>
+                    Low Stock Alert Limit{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
                     min={0}
                     step="any"
                     value={addForm.minStockLimit}
-                    onChange={(e) => setAddForm({ ...addForm, minStockLimit: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setAddForm({
+                        ...addForm,
+                        minStockLimit: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   />
-                  <p className="text-[10px] text-[#84908a] mt-0.5">Alerts when stock drops to or below this</p>
+                  <p className="text-[10px] text-[#84908a] mt-0.5">
+                    Alerts when stock drops to or below this
+                  </p>
                 </div>
               </div>
 
@@ -1323,18 +1541,27 @@ export default function InventoryPage({
                     min={0}
                     step="any"
                     value={addForm.costPerUnit}
-                    onChange={(e) => setAddForm({ ...addForm, costPerUnit: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setAddForm({
+                        ...addForm,
+                        costPerUnit: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-[#68736e] block mb-1">Vendor / Supplier (Optional)</label>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Vendor / Supplier (Optional)
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Dairy Pure Farms"
                     value={addForm.supplier}
-                    onChange={(e) => setAddForm({ ...addForm, supplier: e.target.value })}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, supplier: e.target.value })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   />
                 </div>
@@ -1374,8 +1601,12 @@ export default function InventoryPage({
                   <ClipboardList size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-[#24312e]">Log End-of-Day Usage</h3>
-                  <p className="text-xs text-[#84908a]">Deduct day consumption & wastage</p>
+                  <h3 className="font-bold text-base text-[#24312e]">
+                    Log End-of-Day Usage
+                  </h3>
+                  <p className="text-xs text-[#84908a]">
+                    Deduct day consumption & wastage
+                  </p>
                 </div>
               </div>
               <button
@@ -1389,7 +1620,9 @@ export default function InventoryPage({
             {/* Product Quick Info Card */}
             <div className="mt-4 rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-3.5 space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-sm text-[#24312e]">{activeItem.name}</span>
+                <span className="font-bold text-sm text-[#24312e]">
+                  {activeItem.name}
+                </span>
                 <span className="rounded bg-[#f0f2ed] px-2 py-0.5 text-[10px] font-bold text-[#55605b]">
                   {activeItem.category}
                 </span>
@@ -1402,7 +1635,9 @@ export default function InventoryPage({
               </div>
               <div className="flex items-center justify-between text-xs text-[#84908a]">
                 <span>Low Stock Alert Threshold:</span>
-                <span className="font-semibold">{activeItem.minStockLimit} {activeItem.unit}</span>
+                <span className="font-semibold">
+                  {activeItem.minStockLimit} {activeItem.unit}
+                </span>
               </div>
             </div>
 
@@ -1416,7 +1651,8 @@ export default function InventoryPage({
             <form onSubmit={handleDailyLogSubmit} className="mt-4 space-y-3.5">
               <div>
                 <label className="text-xs font-bold text-[#24312e] block mb-1">
-                  Day's Usage Amount ({activeItem.unit}) <span className="text-red-500">*</span>
+                  Day's Usage Amount ({activeItem.unit}){" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -1425,10 +1661,17 @@ export default function InventoryPage({
                   required
                   placeholder="e.g. 5"
                   value={dailyForm.usage}
-                  onChange={(e) => setDailyForm({ ...dailyForm, usage: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setDailyForm({
+                      ...dailyForm,
+                      usage: parseFloat(e.target.value) || 0,
+                    })
+                  }
                   className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#b7623d]"
                 />
-                <p className="text-[10px] text-[#84908a] mt-0.5">Quantity consumed during cooking & preparation</p>
+                <p className="text-[10px] text-[#84908a] mt-0.5">
+                  Quantity consumed during cooking & preparation
+                </p>
               </div>
 
               <div>
@@ -1441,19 +1684,30 @@ export default function InventoryPage({
                   step="any"
                   placeholder="e.g. 0.5"
                   value={dailyForm.waste}
-                  onChange={(e) => setDailyForm({ ...dailyForm, waste: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setDailyForm({
+                      ...dailyForm,
+                      waste: parseFloat(e.target.value) || 0,
+                    })
+                  }
                   className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#b7623d]"
                 />
-                <p className="text-[10px] text-[#84908a] mt-0.5">Burned, expired, or dropped during shift</p>
+                <p className="text-[10px] text-[#84908a] mt-0.5">
+                  Burned, expired, or dropped during shift
+                </p>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-[#68736e] block mb-1">Shift Notes</label>
+                <label className="text-xs font-bold text-[#68736e] block mb-1">
+                  Shift Notes
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Dinner shift bulk prep"
                   value={dailyForm.notes}
-                  onChange={(e) => setDailyForm({ ...dailyForm, notes: e.target.value })}
+                  onChange={(e) =>
+                    setDailyForm({ ...dailyForm, notes: e.target.value })
+                  }
                   className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#b7623d]"
                 />
               </div>
@@ -1462,29 +1716,49 @@ export default function InventoryPage({
               <div className="rounded-xl border border-[#e9eae6] bg-[#f0f2ed] p-3 text-xs space-y-1">
                 <div className="flex items-center justify-between text-[#68736e]">
                   <span>Previous Stock:</span>
-                  <span className="font-bold">{activeItem.currentStock} {activeItem.unit}</span>
+                  <span className="font-bold">
+                    {activeItem.currentStock} {activeItem.unit}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-[#b7623d]">
                   <span>Total Deduction:</span>
-                  <span className="font-bold">-{(dailyForm.usage + dailyForm.waste).toFixed(2)} {activeItem.unit}</span>
+                  <span className="font-bold">
+                    -{(dailyForm.usage + dailyForm.waste).toFixed(2)}{" "}
+                    {activeItem.unit}
+                  </span>
                 </div>
                 <div className="border-t border-[#dfe1dc] pt-1 flex items-center justify-between text-sm font-black text-[#24312e]">
                   <span>New Remaining Stock:</span>
                   <span
                     className={
-                      activeItem.currentStock - (dailyForm.usage + dailyForm.waste) <= activeItem.minStockLimit
+                      activeItem.currentStock -
+                        (dailyForm.usage + dailyForm.waste) <=
+                      activeItem.minStockLimit
                         ? "text-[#b7623d]"
                         : "text-[#315a3d]"
                     }
                   >
-                    {Math.max(0, Number((activeItem.currentStock - (dailyForm.usage + dailyForm.waste)).toFixed(2)))}{" "}
+                    {Math.max(
+                      0,
+                      Number(
+                        (
+                          activeItem.currentStock -
+                          (dailyForm.usage + dailyForm.waste)
+                        ).toFixed(2),
+                      ),
+                    )}{" "}
                     {activeItem.unit}
                   </span>
                 </div>
-                {activeItem.currentStock - (dailyForm.usage + dailyForm.waste) <= activeItem.minStockLimit && (
+                {activeItem.currentStock -
+                  (dailyForm.usage + dailyForm.waste) <=
+                  activeItem.minStockLimit && (
                   <div className="pt-1 flex items-center gap-1 text-[11px] font-bold text-[#b7623d]">
                     <AlertTriangle size={12} />
-                    <span>Warning: Will drop below low-stock limit ({activeItem.minStockLimit} {activeItem.unit})</span>
+                    <span>
+                      Warning: Will drop below low-stock limit (
+                      {activeItem.minStockLimit} {activeItem.unit})
+                    </span>
                   </div>
                 )}
               </div>
@@ -1499,7 +1773,9 @@ export default function InventoryPage({
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || dailyForm.usage + dailyForm.waste <= 0}
+                  disabled={
+                    submitting || dailyForm.usage + dailyForm.waste <= 0
+                  }
                   className="rounded-xl bg-[#24312e] px-5 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition disabled:opacity-50"
                 >
                   {submitting ? "Deducting..." : "Record & Deduct"}
@@ -1522,8 +1798,12 @@ export default function InventoryPage({
                   <Truck size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-[#24312e]">Add Stock (Restock)</h3>
-                  <p className="text-xs text-[#84908a]">Receive vendor delivery</p>
+                  <h3 className="font-bold text-base text-[#24312e]">
+                    Add Stock (Restock)
+                  </h3>
+                  <p className="text-xs text-[#84908a]">
+                    Receive vendor delivery
+                  </p>
                 </div>
               </div>
               <button
@@ -1537,13 +1817,19 @@ export default function InventoryPage({
             {/* Product Quick Info Card */}
             <div className="mt-4 rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-3.5 flex items-center justify-between">
               <div>
-                <span className="font-bold text-sm text-[#24312e]">{activeItem.name}</span>
+                <span className="font-bold text-sm text-[#24312e]">
+                  {activeItem.name}
+                </span>
                 <p className="text-[11px] text-[#84908a] mt-0.5">
-                  Current Stock: <strong>{activeItem.currentStock} {activeItem.unit}</strong>
+                  Current Stock:{" "}
+                  <strong>
+                    {activeItem.currentStock} {activeItem.unit}
+                  </strong>
                 </p>
               </div>
               <span className="text-xs font-bold text-[#315a3d] bg-[#e8f1e8] px-2 py-1 rounded-lg">
-                {currencySymbol}{activeItem.costPerUnit} / {activeItem.unit}
+                {currencySymbol}
+                {activeItem.costPerUnit} / {activeItem.unit}
               </span>
             </div>
 
@@ -1557,7 +1843,8 @@ export default function InventoryPage({
             <form onSubmit={handleRestockSubmit} className="mt-4 space-y-3.5">
               <div>
                 <label className="text-xs font-bold text-[#24312e] block mb-1">
-                  Incoming Quantity ({activeItem.unit}) <span className="text-red-500">*</span>
+                  Incoming Quantity ({activeItem.unit}){" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -1566,42 +1853,65 @@ export default function InventoryPage({
                   required
                   placeholder="e.g. 10"
                   value={restockForm.quantity}
-                  onChange={(e) => setRestockForm({ ...restockForm, quantity: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setRestockForm({
+                      ...restockForm,
+                      quantity: parseFloat(e.target.value) || 0,
+                    })
+                  }
                   className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-sm font-bold outline-none focus:border-[#315a3d]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-bold text-[#68736e] block mb-1">Unit Cost ({currencySymbol})</label>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Unit Cost ({currencySymbol})
+                  </label>
                   <input
                     type="number"
                     min={0}
                     step="any"
                     value={restockForm.costPerUnit}
-                    onChange={(e) => setRestockForm({ ...restockForm, costPerUnit: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setRestockForm({
+                        ...restockForm,
+                        costPerUnit: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#315a3d]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-[#68736e] block mb-1">Supplier / Vendor</label>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Supplier / Vendor
+                  </label>
                   <input
                     type="text"
                     value={restockForm.supplier}
-                    onChange={(e) => setRestockForm({ ...restockForm, supplier: e.target.value })}
+                    onChange={(e) =>
+                      setRestockForm({
+                        ...restockForm,
+                        supplier: e.target.value,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#315a3d]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-[#68736e] block mb-1">Invoice / Delivery Notes</label>
+                <label className="text-xs font-bold text-[#68736e] block mb-1">
+                  Invoice / Delivery Notes
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. Invoice #PO-9842 / Morning shipment"
                   value={restockForm.notes}
-                  onChange={(e) => setRestockForm({ ...restockForm, notes: e.target.value })}
+                  onChange={(e) =>
+                    setRestockForm({ ...restockForm, notes: e.target.value })
+                  }
                   className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#315a3d]"
                 />
               </div>
@@ -1610,16 +1920,23 @@ export default function InventoryPage({
               <div className="rounded-xl border border-[#e9eae6] bg-[#f0f2ed] p-3 text-xs space-y-1">
                 <div className="flex items-center justify-between text-[#68736e]">
                   <span>Current:</span>
-                  <span className="font-bold">{activeItem.currentStock} {activeItem.unit}</span>
+                  <span className="font-bold">
+                    {activeItem.currentStock} {activeItem.unit}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-[#315a3d]">
                   <span>Added:</span>
-                  <span className="font-bold">+{restockForm.quantity} {activeItem.unit}</span>
+                  <span className="font-bold">
+                    +{restockForm.quantity} {activeItem.unit}
+                  </span>
                 </div>
                 <div className="border-t border-[#dfe1dc] pt-1 flex items-center justify-between text-sm font-black text-[#24312e]">
                   <span>New Total Stock:</span>
                   <span className="text-[#315a3d]">
-                    {(activeItem.currentStock + restockForm.quantity).toFixed(2)} {activeItem.unit}
+                    {(activeItem.currentStock + restockForm.quantity).toFixed(
+                      2,
+                    )}{" "}
+                    {activeItem.unit}
                   </span>
                 </div>
               </div>
@@ -1657,8 +1974,12 @@ export default function InventoryPage({
                   <History size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-[#24312e]">Stock Audit Ledger</h3>
-                  <p className="text-xs text-[#84908a]">Movement history for {activeItem.name}</p>
+                  <h3 className="font-bold text-base text-[#24312e]">
+                    Stock Audit Ledger
+                  </h3>
+                  <p className="text-xs text-[#84908a]">
+                    Movement history for {activeItem.name}
+                  </p>
                 </div>
               </div>
               <button
@@ -1672,7 +1993,10 @@ export default function InventoryPage({
             <div className="mt-4 flex-1 overflow-y-auto pr-1">
               {loadingLogs ? (
                 <div className="py-12 text-center text-[#84908a]">
-                  <RefreshCw size={18} className="mx-auto mb-2 animate-spin text-[#315a3d]" />
+                  <RefreshCw
+                    size={18}
+                    className="mx-auto mb-2 animate-spin text-[#315a3d]"
+                  />
                   <span>Loading audit records...</span>
                 </div>
               ) : itemLogs.length === 0 ? (
@@ -1682,7 +2006,8 @@ export default function InventoryPage({
               ) : (
                 <div className="space-y-2.5">
                   {itemLogs.map((log) => {
-                    const isPositive = log.type === "RESTOCK" || log.type === "INITIAL";
+                    const isPositive =
+                      log.type === "RESTOCK" || log.type === "INITIAL";
                     return (
                       <div
                         key={log.id}
@@ -1694,10 +2019,10 @@ export default function InventoryPage({
                               log.type === "RESTOCK"
                                 ? "bg-[#e8f1e8] text-[#315a3d]"
                                 : log.type === "USAGE"
-                                ? "bg-[#fff5ed] text-[#b7623d]"
-                                : log.type === "WASTAGE"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-[#f0f2ed] text-[#68736e]"
+                                  ? "bg-[#fff5ed] text-[#b7623d]"
+                                  : log.type === "WASTAGE"
+                                    ? "bg-red-100 text-red-700"
+                                    : "bg-[#f0f2ed] text-[#68736e]"
                             }`}
                           >
                             {isPositive ? (
@@ -1708,14 +2033,19 @@ export default function InventoryPage({
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-[#24312e]">{log.type}</span>
+                              <span className="font-bold text-[#24312e]">
+                                {log.type}
+                              </span>
                               <span className="text-[10px] text-[#84908a]">
-                                {new Date(log.createdAt).toLocaleString("en-IN", {
-                                  day: "numeric",
-                                  month: "short",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
+                                {new Date(log.createdAt).toLocaleString(
+                                  "en-IN",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )}
                               </span>
                             </div>
                             <p className="text-[11px] text-[#68736e] mt-0.5">
@@ -1769,8 +2099,12 @@ export default function InventoryPage({
                   <Edit3 size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-[#24312e]">Edit Product</h3>
-                  <p className="text-xs text-[#84908a]">Update image, category, unit, limit & pricing</p>
+                  <h3 className="font-bold text-base text-[#24312e]">
+                    Edit Product
+                  </h3>
+                  <p className="text-xs text-[#84908a]">
+                    Update image, category, unit, limit & pricing
+                  </p>
                 </div>
               </div>
               <button
@@ -1798,7 +2132,9 @@ export default function InventoryPage({
                   type="text"
                   required
                   value={addForm.name}
-                  onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, name: e.target.value })
+                  }
                   className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                 />
               </div>
@@ -1858,7 +2194,9 @@ export default function InventoryPage({
                     type="url"
                     placeholder="Or paste an Image URL (https://...)"
                     value={addForm.image}
-                    onChange={(e) => setAddForm({ ...addForm, image: e.target.value })}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, image: e.target.value })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs outline-none focus:border-[#24312e]"
                   />
                 </div>
@@ -1873,7 +2211,9 @@ export default function InventoryPage({
                       <button
                         key={preset.label}
                         type="button"
-                        onClick={() => setAddForm({ ...addForm, image: preset.url })}
+                        onClick={() =>
+                          setAddForm({ ...addForm, image: preset.url })
+                        }
                         className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${
                           addForm.image === preset.url
                             ? "bg-[#315a3d] text-white shadow-2xs"
@@ -1891,10 +2231,14 @@ export default function InventoryPage({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {/* Category Column */}
                 <div>
-                  <label className="text-xs font-bold text-[#68736e] block mb-1">Category</label>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Category
+                  </label>
                   <select
                     value={addForm.category}
-                    onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, category: e.target.value })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   >
                     {categories
@@ -1909,10 +2253,14 @@ export default function InventoryPage({
 
                 {/* Unit of Measurement Column */}
                 <div>
-                  <label className="text-xs font-bold text-[#68736e] block mb-1">Unit of Measure</label>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Unit of Measure
+                  </label>
                   <select
                     value={addForm.unit}
-                    onChange={(e) => setAddForm({ ...addForm, unit: e.target.value })}
+                    onChange={(e) =>
+                      setAddForm({ ...addForm, unit: e.target.value })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   >
                     {units.map((u) => (
@@ -1928,17 +2276,25 @@ export default function InventoryPage({
               <div className="grid grid-cols-2 gap-3.5">
                 <div>
                   <label className="text-xs font-bold text-[#68736e] block mb-1">
-                    Alert Limit ({addForm.unit}) <span className="text-red-500">*</span>
+                    Alert Limit ({addForm.unit}){" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
                     min={0}
                     step="any"
                     value={addForm.minStockLimit}
-                    onChange={(e) => setAddForm({ ...addForm, minStockLimit: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setAddForm({
+                        ...addForm,
+                        minStockLimit: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   />
-                  <p className="text-[10px] text-[#84908a] mt-0.5">Low-stock warning threshold</p>
+                  <p className="text-[10px] text-[#84908a] mt-0.5">
+                    Low-stock warning threshold
+                  </p>
                 </div>
 
                 <div>
@@ -1950,7 +2306,12 @@ export default function InventoryPage({
                     min={0}
                     step="any"
                     value={addForm.costPerUnit}
-                    onChange={(e) => setAddForm({ ...addForm, costPerUnit: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setAddForm({
+                        ...addForm,
+                        costPerUnit: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   />
                 </div>
@@ -1958,11 +2319,15 @@ export default function InventoryPage({
 
               {/* Supplier */}
               <div>
-                <label className="text-xs font-bold text-[#68736e] block mb-1">Vendor / Supplier</label>
+                <label className="text-xs font-bold text-[#68736e] block mb-1">
+                  Vendor / Supplier
+                </label>
                 <input
                   type="text"
                   value={addForm.supplier}
-                  onChange={(e) => setAddForm({ ...addForm, supplier: e.target.value })}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, supplier: e.target.value })
+                  }
                   className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                 />
               </div>

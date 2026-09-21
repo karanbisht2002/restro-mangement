@@ -85,6 +85,7 @@ interface SettingsPageProps {
     pin?: string;
     department?: string;
     systemRole: string;
+    isDemoAccount?: boolean;
   } | null;
   onUpdateCurrentUser: (updated: {
     id?: string;
@@ -104,16 +105,42 @@ interface SettingsPageProps {
   onDeleteDepartment: (name: string) => Promise<string[]>;
 }
 
-type SettingsSection = "profile" | "security" | "display" | "restaurant" | "inventory";
+type SettingsSection =
+  | "profile"
+  | "security"
+  | "display"
+  | "restaurant"
+  | "inventory";
 
 const PRESET_STOCK_IMAGES = [
-  { label: "🧀 Paneer / Cheese", url: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80" },
-  { label: "🍗 Chicken / Meat", url: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=600&q=80" },
-  { label: "🥦 Fresh Veggies", url: "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?auto=format&fit=crop&w=600&q=80" },
-  { label: "🍚 Rice & Grains", url: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80" },
-  { label: "🧈 Butter & Ghee", url: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&w=600&q=80" },
-  { label: "🫒 Oils & Spices", url: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80" },
-  { label: "📦 Packaging", url: "https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=600&q=80" },
+  {
+    label: "🧀 Paneer / Cheese",
+    url: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "🍗 Chicken / Meat",
+    url: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "🥦 Fresh Veggies",
+    url: "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "🍚 Rice & Grains",
+    url: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "🧈 Butter & Ghee",
+    url: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "🫒 Oils & Spices",
+    url: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    label: "📦 Packaging",
+    url: "https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=600&q=80",
+  },
 ];
 
 export default function SettingsPage({
@@ -129,7 +156,9 @@ export default function SettingsPage({
 }: SettingsPageProps) {
   const isManager = currentUser?.systemRole === "Manager";
   const canManageInventory = isManager || currentUser?.systemRole === "Kitchen";
-  const [activeSection, setActiveSection] = useState<SettingsSection>("profile");
+  const isDemoAccount = Boolean(currentUser?.isDemoAccount);
+  const [activeSection, setActiveSection] =
+    useState<SettingsSection>("profile");
 
   // Departments input state
   const [newDeptInput, setNewDeptInput] = useState("");
@@ -155,24 +184,53 @@ export default function SettingsPage({
   const [branchName, setBranchName] = useState(restaurantSettings.branchName);
   const [currency, setCurrency] = useState(restaurantSettings.currencySymbol);
   const [taxRate, setTaxRate] = useState(restaurantSettings.taxRate);
-  const [serviceCharge, setServiceCharge] = useState(restaurantSettings.serviceCharge);
-  const [receiptFooter, setReceiptFooter] = useState(restaurantSettings.receiptFooter);
-  const [prepTime, setPrepTime] = useState(restaurantSettings.estimatedPrepTimeMinutes);
-  const [turnTime, setTurnTime] = useState(restaurantSettings.tableTurnTimeMinutes);
+  const [serviceCharge, setServiceCharge] = useState(
+    restaurantSettings.serviceCharge,
+  );
+  const [receiptFooter, setReceiptFooter] = useState(
+    restaurantSettings.receiptFooter,
+  );
+  const [prepTime, setPrepTime] = useState(
+    restaurantSettings.estimatedPrepTimeMinutes,
+  );
+  const [turnTime, setTurnTime] = useState(
+    restaurantSettings.tableTurnTimeMinutes,
+  );
   const [logoUrl, setLogoUrl] = useState(restaurantSettings.logoUrl || "");
-  const [gstNumber, setGstNumber] = useState(restaurantSettings.gstNumber || "07AAAAA0000A1Z5");
-  const [address, setAddress] = useState(restaurantSettings.address || "Connaught Place, Central Boulevard, New Delhi 110001");
-  const [websiteTheme, setWebsiteTheme] = useState<"system" | "light" | "dark">(restaurantSettings.websiteTheme || "system");
-  const [reservationDeposit, setReservationDeposit] = useState(restaurantSettings.reservationDeposit ?? 500);
-  const [payuMerchantKey, setPayuMerchantKey] = useState(restaurantSettings.payuMerchantKey || "");
-  const [payuMerchantSalt, setPayuMerchantSalt] = useState(restaurantSettings.payuMerchantSalt || "");
-  const [payuTestMode, setPayuTestMode] = useState(restaurantSettings.payuTestMode ?? true);
+  const [gstNumber, setGstNumber] = useState(
+    restaurantSettings.gstNumber || "07AAAAA0000A1Z5",
+  );
+  const [address, setAddress] = useState(
+    restaurantSettings.address ||
+      "Connaught Place, Central Boulevard, New Delhi 110001",
+  );
+  const [websiteTheme, setWebsiteTheme] = useState<"system" | "light" | "dark">(
+    restaurantSettings.websiteTheme || "system",
+  );
+  const [reservationDeposit, setReservationDeposit] = useState(
+    restaurantSettings.reservationDeposit ?? 500,
+  );
+  const [payuMerchantKey, setPayuMerchantKey] = useState(
+    restaurantSettings.payuMerchantKey || "",
+  );
+  const [payuMerchantSalt, setPayuMerchantSalt] = useState(
+    restaurantSettings.payuMerchantSalt || "",
+  );
+  const [payuTestMode, setPayuTestMode] = useState(
+    restaurantSettings.payuTestMode ?? true,
+  );
   const [showPayuSalt, setShowPayuSalt] = useState(false);
-  const [isCurrencyLocked, setIsCurrencyLocked] = useState(Boolean(restaurantSettings.isCurrencyLocked));
+  const [isCurrencyLocked, setIsCurrencyLocked] = useState(
+    Boolean(restaurantSettings.isCurrencyLocked),
+  );
   const [unlockCurrencyConfirmed, setUnlockCurrencyConfirmed] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
-  const [faviconUrl, setFaviconUrl] = useState(restaurantSettings.faviconUrl || "");
-  const [faviconUploadError, setFaviconUploadError] = useState<string | null>(null);
+  const [faviconUrl, setFaviconUrl] = useState(
+    restaurantSettings.faviconUrl || "",
+  );
+  const [faviconUploadError, setFaviconUploadError] = useState<string | null>(
+    null,
+  );
   const [savingStore, setSavingStore] = useState(false);
 
   // Inventory & Raw Materials Settings State
@@ -206,9 +264,22 @@ export default function SettingsPage({
 
   // Floating Toast Notifications State
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const showToast = (type: "success" | "error" | "info", title: string, message: string) => {
+  const showToast = (
+    type: "success" | "error" | "info",
+    title: string,
+    message: string,
+  ) => {
     const id = Math.random().toString(36).slice(2, 9);
     setToasts((prev) => [...prev, { id, type, title, message }]);
+  };
+  const blockDemoAction = (action: string) => {
+    if (!isDemoAccount) return false;
+    showToast(
+      "error",
+      "Demo access only",
+      `${action} is disabled for the demo account.`,
+    );
+    return true;
   };
   const dismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -235,7 +306,10 @@ export default function SettingsPage({
     setLogoUrl(restaurantSettings.logoUrl || "");
     setFaviconUrl(restaurantSettings.faviconUrl || "");
     setGstNumber(restaurantSettings.gstNumber || "07AAAAA0000A1Z5");
-    setAddress(restaurantSettings.address || "Connaught Place, Central Boulevard, New Delhi 110001");
+    setAddress(
+      restaurantSettings.address ||
+        "Connaught Place, Central Boulevard, New Delhi 110001",
+    );
     setWebsiteTheme(restaurantSettings.websiteTheme || "system");
     setReservationDeposit(restaurantSettings.reservationDeposit ?? 500);
     setPayuMerchantKey(restaurantSettings.payuMerchantKey || "");
@@ -247,6 +321,7 @@ export default function SettingsPage({
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Saving profile changes")) return;
     if (!name.trim()) {
       showToast("error", "Validation Error", "Full name cannot be empty.");
       return;
@@ -269,9 +344,17 @@ export default function SettingsPage({
         pin: pin.trim(),
         systemRole: currentUser?.systemRole || "Server",
       });
-      showToast("success", "Profile Updated", "Your staff profile details have been saved.");
+      showToast(
+        "success",
+        "Profile Updated",
+        "Your staff profile details have been saved.",
+      );
     } catch (err: unknown) {
-      showToast("error", "Update Failed", err instanceof Error ? err.message : "Failed to save profile changes.");
+      showToast(
+        "error",
+        "Update Failed",
+        err instanceof Error ? err.message : "Failed to save profile changes.",
+      );
     } finally {
       setSavingProfile(false);
     }
@@ -279,12 +362,21 @@ export default function SettingsPage({
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Changing passwords")) return;
     if (!newPassword || newPassword.length < 4) {
-      showToast("error", "Password Too Short", "New password must be at least 4 characters long.");
+      showToast(
+        "error",
+        "Password Too Short",
+        "New password must be at least 4 characters long.",
+      );
       return;
     }
     if (newPassword !== confirmPassword) {
-      showToast("error", "Password Mismatch", "New password and confirmation do not match.");
+      showToast(
+        "error",
+        "Password Mismatch",
+        "New password and confirmation do not match.",
+      );
       return;
     }
 
@@ -296,15 +388,24 @@ export default function SettingsPage({
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      showToast("success", "Password Updated", "Station login credentials changed successfully.");
+      showToast(
+        "success",
+        "Password Updated",
+        "Station login credentials changed successfully.",
+      );
     } catch (err: unknown) {
-      showToast("error", "Security Error", err instanceof Error ? err.message : "Failed to update password.");
+      showToast(
+        "error",
+        "Security Error",
+        err instanceof Error ? err.message : "Failed to update password.",
+      );
     } finally {
       setUpdatingPassword(false);
     }
   };
 
   const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (blockDemoAction("Updating restaurant branding")) return;
     setLogoUploadError(null);
     const file = e.target.files?.[0];
     if (!file) return;
@@ -315,7 +416,11 @@ export default function SettingsPage({
       reader.onload = () => {
         if (typeof reader.result === "string") {
           setLogoUrl(reader.result);
-          showToast("info", "Logo Ready", "Vector SVG logo loaded. Click 'Save Restaurant Settings' to apply.");
+          showToast(
+            "info",
+            "Logo Ready",
+            "Vector SVG logo loaded. Click 'Save Restaurant Settings' to apply.",
+          );
         }
       };
       reader.onerror = () => {
@@ -353,7 +458,11 @@ export default function SettingsPage({
             ctx.drawImage(img, 0, 0, width, height);
             const compressed = canvas.toDataURL("image/webp", 0.92);
             setLogoUrl(compressed);
-            showToast("info", "Logo Prepared", "Image optimized for web display. Click 'Save Restaurant Settings' to apply.");
+            showToast(
+              "info",
+              "Logo Prepared",
+              "Image optimized for web display. Click 'Save Restaurant Settings' to apply.",
+            );
           } else {
             setLogoUrl(ev.target?.result as string);
           }
@@ -363,7 +472,11 @@ export default function SettingsPage({
       };
       img.onerror = () => {
         setLogoUploadError("Could not render the chosen image file.");
-        showToast("error", "Image Error", "Could not render the chosen image file.");
+        showToast(
+          "error",
+          "Image Error",
+          "Could not render the chosen image file.",
+        );
       };
       img.src = ev.target?.result as string;
     };
@@ -375,6 +488,7 @@ export default function SettingsPage({
   };
 
   const handleFaviconFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (blockDemoAction("Updating restaurant branding")) return;
     const file = e.target.files?.[0];
     if (!file) return;
     setFaviconUploadError(null);
@@ -382,7 +496,11 @@ export default function SettingsPage({
     // Limit to 2.5MB
     if (file.size > 2.5 * 1024 * 1024) {
       setFaviconUploadError("Favicon file size must be under 2.5MB.");
-      showToast("error", "File too large", "Favicon file size must be under 2.5MB.");
+      showToast(
+        "error",
+        "File too large",
+        "Favicon file size must be under 2.5MB.",
+      );
       return;
     }
 
@@ -400,7 +518,11 @@ export default function SettingsPage({
             ctx.drawImage(img, 0, 0, size, size);
             const compressed = canvas.toDataURL("image/png");
             setFaviconUrl(compressed);
-            showToast("info", "Favicon Prepared", "Favicon ready. Click 'Save Restaurant Settings' to apply across the whole site.");
+            showToast(
+              "info",
+              "Favicon Prepared",
+              "Favicon ready. Click 'Save Restaurant Settings' to apply across the whole site.",
+            );
           } else {
             setFaviconUrl(ev.target?.result as string);
           }
@@ -409,8 +531,14 @@ export default function SettingsPage({
         }
       };
       img.onerror = () => {
-        setFaviconUploadError("Could not render the chosen favicon image file.");
-        showToast("error", "Image Error", "Could not render the chosen favicon image file.");
+        setFaviconUploadError(
+          "Could not render the chosen favicon image file.",
+        );
+        showToast(
+          "error",
+          "Image Error",
+          "Could not render the chosen favicon image file.",
+        );
       };
       img.src = ev.target?.result as string;
     };
@@ -423,8 +551,13 @@ export default function SettingsPage({
 
   const handleSaveStore = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Saving restaurant settings")) return;
     if (!storeName.trim()) {
-      showToast("error", "Validation Error", "Restaurant name cannot be blank.");
+      showToast(
+        "error",
+        "Validation Error",
+        "Restaurant name cannot be blank.",
+      );
       return;
     }
     setSavingStore(true);
@@ -445,7 +578,8 @@ export default function SettingsPage({
         unlockCurrency: unlockCurrencyConfirmed,
         address: address.trim(),
         websiteTheme: websiteTheme,
-        reservationDeposit: Number(reservationDeposit) >= 0 ? Number(reservationDeposit) : 500,
+        reservationDeposit:
+          Number(reservationDeposit) >= 0 ? Number(reservationDeposit) : 500,
         payuMerchantKey: payuMerchantKey.trim(),
         payuMerchantSalt: payuMerchantSalt.trim(),
         payuTestMode: payuTestMode,
@@ -454,10 +588,16 @@ export default function SettingsPage({
       showToast(
         "success",
         "Settings Saved Successfully",
-        `"${storeName.trim()}" identity, GST (${gstNumber.trim() || "07AAAAA0000A1Z5"}), and billing rates updated across the system!`
+        `"${storeName.trim()}" identity, GST (${gstNumber.trim() || "07AAAAA0000A1Z5"}), and billing rates updated across the system!`,
       );
     } catch (err: unknown) {
-      showToast("error", "Save Failed", err instanceof Error ? err.message : "Failed to save restaurant settings.");
+      showToast(
+        "error",
+        "Save Failed",
+        err instanceof Error
+          ? err.message
+          : "Failed to save restaurant settings.",
+      );
     } finally {
       setSavingStore(false);
     }
@@ -489,13 +629,20 @@ export default function SettingsPage({
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Adding inventory categories")) return;
     if (!newCatInput.trim()) return;
     setAddingCat(true);
     try {
       const res = await createInventoryCategory(newCatInput.trim());
-      setInvCategories((prev) => (prev.includes(res.name) ? prev : [...prev, res.name]));
+      setInvCategories((prev) =>
+        prev.includes(res.name) ? prev : [...prev, res.name],
+      );
       setNewCatInput("");
-      showToast("success", "Category Added", `Category "${res.name}" added successfully.`);
+      showToast(
+        "success",
+        "Category Added",
+        `Category "${res.name}" added successfully.`,
+      );
     } catch (err: any) {
       showToast("error", "Error", err?.message || "Failed to add category");
     } finally {
@@ -504,11 +651,21 @@ export default function SettingsPage({
   };
 
   const handleDeleteCategory = async (catName: string) => {
-    if (!window.confirm(`Are you sure you want to remove the category "${catName}"?`)) return;
+    if (blockDemoAction("Deleting inventory categories")) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to remove the category "${catName}"?`,
+      )
+    )
+      return;
     try {
       await deleteInventoryCategory(catName);
       setInvCategories((prev) => prev.filter((c) => c !== catName));
-      showToast("success", "Category Removed", `Category "${catName}" has been removed.`);
+      showToast(
+        "success",
+        "Category Removed",
+        `Category "${catName}" has been removed.`,
+      );
     } catch (err: any) {
       showToast("error", "Error", err?.message || "Failed to delete category");
     }
@@ -516,16 +673,24 @@ export default function SettingsPage({
 
   const handleAddUnit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Adding inventory units")) return;
     if (!newUnitSym.trim()) return;
     setAddingUnit(true);
     try {
       const cleanSym = newUnitSym.trim();
       const cleanLbl = (newUnitLbl || cleanSym).trim();
       const res = await createInventoryUnit(cleanSym, cleanLbl);
-      setInvUnits((prev) => [...prev.filter((u) => u.name !== cleanSym), res.unit]);
+      setInvUnits((prev) => [
+        ...prev.filter((u) => u.name !== cleanSym),
+        res.unit,
+      ]);
       setNewUnitSym("");
       setNewUnitLbl("");
-      showToast("success", "Unit Added", `Unit "${cleanSym}" added successfully.`);
+      showToast(
+        "success",
+        "Unit Added",
+        `Unit "${cleanSym}" added successfully.`,
+      );
     } catch (err: any) {
       showToast("error", "Error", err?.message || "Failed to add unit");
     } finally {
@@ -534,7 +699,9 @@ export default function SettingsPage({
   };
 
   const handleDeleteUnit = async (unitName: string) => {
-    if (!window.confirm(`Are you sure you want to delete unit "${unitName}"?`)) return;
+    if (blockDemoAction("Deleting inventory units")) return;
+    if (!window.confirm(`Are you sure you want to delete unit "${unitName}"?`))
+      return;
     try {
       await deleteInventoryUnit(unitName);
       setInvUnits((prev) => prev.filter((u) => u.name !== unitName));
@@ -545,6 +712,7 @@ export default function SettingsPage({
   };
 
   const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (blockDemoAction("Updating product images")) return;
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -573,10 +741,16 @@ export default function SettingsPage({
             const compressed = canvas.toDataURL("image/jpeg", 0.85);
             setAddProdForm((prev) => ({ ...prev, image: compressed }));
           } else {
-            setAddProdForm((prev) => ({ ...prev, image: ev.target?.result as string }));
+            setAddProdForm((prev) => ({
+              ...prev,
+              image: ev.target?.result as string,
+            }));
           }
         } catch {
-          setAddProdForm((prev) => ({ ...prev, image: ev.target?.result as string }));
+          setAddProdForm((prev) => ({
+            ...prev,
+            image: ev.target?.result as string,
+          }));
         }
       };
       img.src = ev.target?.result as string;
@@ -586,6 +760,7 @@ export default function SettingsPage({
 
   const handleCreateProductInSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Adding inventory products")) return;
     if (!addProdForm.name.trim()) {
       showToast("error", "Error", "Product name is required.");
       return;
@@ -605,7 +780,11 @@ export default function SettingsPage({
       });
       setInvItems((prev) => [res, ...prev]);
       setIsAddProductOpen(false);
-      showToast("success", "Product Created", `"${res.name}" registered in inventory.`);
+      showToast(
+        "success",
+        "Product Created",
+        `"${res.name}" registered in inventory.`,
+      );
     } catch (err: any) {
       showToast("error", "Error", err?.message || "Failed to create product");
     } finally {
@@ -636,7 +815,8 @@ export default function SettingsPage({
           Settings
         </h1>
         <p className="mt-1 text-xs text-[#68736e] sm:text-sm">
-          Manage your account profile, station security credentials, display layout, and restaurant operations.
+          Manage your account profile, station security credentials, display
+          layout, and restaurant operations.
         </p>
       </div>
 
@@ -815,7 +995,8 @@ export default function SettingsPage({
                   Station Login Password
                 </h2>
                 <p className="mt-0.5 text-xs text-[#84908a]">
-                  Update your dashboard login credentials. Must be at least 4 characters long.
+                  Update your dashboard login credentials. Must be at least 4
+                  characters long.
                 </p>
               </div>
 
@@ -834,10 +1015,16 @@ export default function SettingsPage({
                     />
                     <button
                       type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      onClick={() =>
+                        setShowCurrentPassword(!showCurrentPassword)
+                      }
                       className="absolute right-3 top-2.5 text-[#84908a] hover:text-[#24312e]"
                     >
-                      {showCurrentPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      {showCurrentPassword ? (
+                        <EyeOff size={15} />
+                      ) : (
+                        <Eye size={15} />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -860,7 +1047,11 @@ export default function SettingsPage({
                         onClick={() => setShowNewPassword(!showNewPassword)}
                         className="absolute right-3 top-2.5 text-[#84908a] hover:text-[#24312e]"
                       >
-                        {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        {showNewPassword ? (
+                          <EyeOff size={15} />
+                        ) : (
+                          <Eye size={15} />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -886,7 +1077,9 @@ export default function SettingsPage({
                     className="flex items-center gap-2 rounded-xl bg-[#24312e] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer disabled:opacity-50"
                   >
                     <KeyRound size={14} />
-                    {updatingPassword ? "Updating..." : "Update Station Password"}
+                    {updatingPassword
+                      ? "Updating..."
+                      : "Update Station Password"}
                   </button>
                 </div>
               </form>
@@ -901,18 +1094,24 @@ export default function SettingsPage({
                   Display & Station Layout
                 </h2>
                 <p className="mt-0.5 text-xs text-[#84908a]">
-                  Configure visual densities and table turnaround alert highlights.
+                  Configure visual densities and table turnaround alert
+                  highlights.
                 </p>
               </div>
 
               {/* Layout Density */}
               <div className="space-y-3">
-                <h3 className="text-xs font-bold text-[#24312e]">Ticket & Order Display Density</h3>
+                <h3 className="text-xs font-bold text-[#24312e]">
+                  Ticket & Order Display Density
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <button
                     type="button"
                     onClick={() =>
-                      onUpdatePreferences({ ...stationPreferences, ticketDensity: "comfortable" })
+                      onUpdatePreferences({
+                        ...stationPreferences,
+                        ticketDensity: "comfortable",
+                      })
                     }
                     className={`rounded-2xl border p-4 text-left transition cursor-pointer ${
                       stationPreferences.ticketDensity === "comfortable"
@@ -922,14 +1121,18 @@ export default function SettingsPage({
                   >
                     <p className="text-xs font-bold">Comfortable (Standard)</p>
                     <p className="mt-1 text-[11px] text-[#84908a]">
-                      Spacious ticket cards with visible modifiers, timestamps, and item notes.
+                      Spacious ticket cards with visible modifiers, timestamps,
+                      and item notes.
                     </p>
                   </button>
 
                   <button
                     type="button"
                     onClick={() =>
-                      onUpdatePreferences({ ...stationPreferences, ticketDensity: "compact" })
+                      onUpdatePreferences({
+                        ...stationPreferences,
+                        ticketDensity: "compact",
+                      })
                     }
                     className={`rounded-2xl border p-4 text-left transition cursor-pointer ${
                       stationPreferences.ticketDensity === "compact"
@@ -939,7 +1142,8 @@ export default function SettingsPage({
                   >
                     <p className="text-xs font-bold">Compact (Rush Mode)</p>
                     <p className="mt-1 text-[11px] text-[#84908a]">
-                      Tighter cards designed to fit maximum active tickets on screen during dinner rushes.
+                      Tighter cards designed to fit maximum active tickets on
+                      screen during dinner rushes.
                     </p>
                   </button>
                 </div>
@@ -952,7 +1156,8 @@ export default function SettingsPage({
                     Table Turn Time Visual Warnings
                   </h3>
                   <p className="mt-0.5 text-[11px] text-[#84908a]">
-                    Highlights occupied floor plan tables that have exceeded the standard dining limit (default 60 mins).
+                    Highlights occupied floor plan tables that have exceeded the
+                    standard dining limit (default 60 mins).
                   </p>
                 </div>
                 <button
@@ -963,12 +1168,16 @@ export default function SettingsPage({
                     })
                   }
                   className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer shrink-0 ${
-                    stationPreferences.tableAlerts ? "bg-[#24312e]" : "bg-[#dfe1dc]"
+                    stationPreferences.tableAlerts
+                      ? "bg-[#24312e]"
+                      : "bg-[#dfe1dc]"
                   }`}
                 >
                   <span
                     className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                      stationPreferences.tableAlerts ? "translate-x-5" : "translate-x-0.5"
+                      stationPreferences.tableAlerts
+                        ? "translate-x-5"
+                        : "translate-x-0.5"
                     }`}
                   />
                 </button>
@@ -984,7 +1193,8 @@ export default function SettingsPage({
                   Restaurant Store & Invoicing Configuration
                 </h2>
                 <p className="mt-0.5 text-xs text-[#84908a]">
-                  Store identity, branch names, tax rates, and bill print settings.
+                  Store identity, branch names, tax rates, and bill print
+                  settings.
                 </p>
               </div>
 
@@ -998,7 +1208,8 @@ export default function SettingsPage({
                         Website & Brand Logo
                       </h3>
                       <p className="mt-0.5 text-[11px] text-[#84908a]">
-                        Upload your restaurant logo to display across the sidebar, header, staff login, and digital menu.
+                        Upload your restaurant logo to display across the
+                        sidebar, header, staff login, and digital menu.
                       </p>
                     </div>
                     {logoUrl && (
@@ -1082,7 +1293,9 @@ export default function SettingsPage({
                         Website & App Favicon (Browser Tab Icon)
                       </h3>
                       <p className="mt-0.5 text-[11px] text-[#84908a]">
-                        Upload your restaurant favicon to display in browser tabs across both the public website and management dashboard.
+                        Upload your restaurant favicon to display in browser
+                        tabs across both the public website and management
+                        dashboard.
                       </p>
                     </div>
                     {faviconUrl && (
@@ -1115,7 +1328,10 @@ export default function SettingsPage({
                             className="h-4 w-4 object-contain rounded-xs shrink-0"
                           />
                         ) : (
-                          <Globe size={14} className="text-[#84908a] shrink-0" />
+                          <Globe
+                            size={14}
+                            className="text-[#84908a] shrink-0"
+                          />
                         )}
                         <span className="text-[10px] font-bold text-[#24312e] truncate max-w-[65px]">
                           {storeName || "Website"}
@@ -1140,7 +1356,8 @@ export default function SettingsPage({
                           />
                         </label>
                         <span className="text-[11px] text-[#84908a]">
-                          PNG, ICO, SVG, WebP (Square 32x32 to 128x128 recommended)
+                          PNG, ICO, SVG, WebP (Square 32x32 to 128x128
+                          recommended)
                         </span>
                       </div>
 
@@ -1205,12 +1422,15 @@ export default function SettingsPage({
                       <input
                         type="text"
                         value={gstNumber}
-                        onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
+                        onChange={(e) =>
+                          setGstNumber(e.target.value.toUpperCase())
+                        }
                         className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3.5 py-2.5 text-xs font-mono font-bold text-[#24312e] outline-hidden focus:border-[#24312e]"
                         placeholder="07AAAAA0000A1Z5"
                       />
                       <p className="mt-1 text-[10.5px] text-[#84908a]">
-                        Displayed on tax receipts, billing slips & customer invoices
+                        Displayed on tax receipts, billing slips & customer
+                        invoices
                       </p>
                     </div>
 
@@ -1232,7 +1452,8 @@ export default function SettingsPage({
                         placeholder="Connaught Place, Central Boulevard, New Delhi 110001"
                       />
                       <p className="mt-1 text-[10.5px] text-[#84908a]">
-                        Appears dynamically on the website top bar, footer, and contact section
+                        Appears dynamically on the website top bar, footer, and
+                        contact section
                       </p>
                     </div>
 
@@ -1270,7 +1491,8 @@ export default function SettingsPage({
                         </button>
                       </div>
                       <p className="mt-1 text-[10.5px] text-[#84908a]">
-                        System mode adapts dynamically to the visitor's device light/dark appearance
+                        System mode adapts dynamically to the visitor's device
+                        light/dark appearance
                       </p>
                     </div>
                   </div>
@@ -1284,7 +1506,8 @@ export default function SettingsPage({
                       Restaurant Departments Directory ({departments.length})
                     </h3>
                     <p className="mt-0.5 text-[11px] text-[#84908a]">
-                      Define all official departments available for staff scheduling and dashboard station assignments.
+                      Define all official departments available for staff
+                      scheduling and dashboard station assignments.
                     </p>
                   </div>
 
@@ -1302,9 +1525,17 @@ export default function SettingsPage({
                             onClick={async () => {
                               try {
                                 await onDeleteDepartment(dept);
-                                showToast("success", "Department Removed", `Removed department "${dept}".`);
+                                showToast(
+                                  "success",
+                                  "Department Removed",
+                                  `Removed department "${dept}".`,
+                                );
                               } catch {
-                                showToast("error", "Delete Failed", "Failed to delete department.");
+                                showToast(
+                                  "error",
+                                  "Delete Failed",
+                                  "Failed to delete department.",
+                                );
                               }
                             }}
                             className="ml-1 text-[#84908a] hover:text-rose-600 transition cursor-pointer font-bold"
@@ -1333,9 +1564,19 @@ export default function SettingsPage({
                             .then(() => {
                               const name = newDeptInput.trim();
                               setNewDeptInput("");
-                              showToast("success", "Department Added", `Added department "${name}".`);
+                              showToast(
+                                "success",
+                                "Department Added",
+                                `Added department "${name}".`,
+                              );
                             })
-                            .catch(() => showToast("error", "Action Failed", "Failed to add department."))
+                            .catch(() =>
+                              showToast(
+                                "error",
+                                "Action Failed",
+                                "Failed to add department.",
+                              ),
+                            )
                             .finally(() => setSavingDept(false));
                         }
                       }}
@@ -1351,9 +1592,17 @@ export default function SettingsPage({
                           await onAddDepartment(newDeptInput.trim());
                           const addedName = newDeptInput.trim();
                           setNewDeptInput("");
-                          showToast("success", "Department Added", `Added department "${addedName}".`);
+                          showToast(
+                            "success",
+                            "Department Added",
+                            `Added department "${addedName}".`,
+                          );
                         } catch {
-                          showToast("error", "Action Failed", "Failed to add department.");
+                          showToast(
+                            "error",
+                            "Action Failed",
+                            "Failed to add department.",
+                          );
                         } finally {
                           setSavingDept(false);
                         }
@@ -1378,7 +1627,8 @@ export default function SettingsPage({
                         System-wide Currency
                       </h3>
                       <p className="mt-0.5 text-[11px] text-[#84908a]">
-                        Set one standard currency for all POS terminals, orders, billing, and digital menu.
+                        Set one standard currency for all POS terminals, orders,
+                        billing, and digital menu.
                       </p>
                     </div>
 
@@ -1457,7 +1707,9 @@ export default function SettingsPage({
                             <input
                               type="checkbox"
                               checked={unlockCurrencyConfirmed}
-                              onChange={(e) => setUnlockCurrencyConfirmed(e.target.checked)}
+                              onChange={(e) =>
+                                setUnlockCurrencyConfirmed(e.target.checked)
+                              }
                               className="rounded accent-[#24312e]"
                             />
                             <span>Unlock currency for modifications</span>
@@ -1469,13 +1721,17 @@ export default function SettingsPage({
                             <input
                               type="checkbox"
                               checked={isCurrencyLocked}
-                              onChange={(e) => setIsCurrencyLocked(e.target.checked)}
+                              onChange={(e) =>
+                                setIsCurrencyLocked(e.target.checked)
+                              }
                               className="mt-0.5 rounded accent-[#24312e]"
                             />
                             <div>
                               <span>Lock currency system-wide</span>
                               <p className="font-normal text-[11px] text-[#84908a] mt-0.5">
-                                Once locked, managers cannot change the currency. All orders, tables, and receipts will standardize on this currency.
+                                Once locked, managers cannot change the
+                                currency. All orders, tables, and receipts will
+                                standardize on this currency.
                               </p>
                             </div>
                           </label>
@@ -1493,7 +1749,9 @@ export default function SettingsPage({
                       Dynamic Taxes & Charges
                     </h3>
                     <p className="mt-0.5 text-[11px] text-[#84908a]">
-                      Change GST / VAT and Service Charge anytime. Rates are dynamically calculated on all billing bills and checkout invoices.
+                      Change GST / VAT and Service Charge anytime. Rates are
+                      dynamically calculated on all billing bills and checkout
+                      invoices.
                     </p>
                   </div>
 
@@ -1524,7 +1782,9 @@ export default function SettingsPage({
                         min="0"
                         max="100"
                         value={serviceCharge}
-                        onChange={(e) => setServiceCharge(Number(e.target.value))}
+                        onChange={(e) =>
+                          setServiceCharge(Number(e.target.value))
+                        }
                         className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3.5 py-2.5 text-xs text-[#24312e] outline-hidden focus:border-[#24312e]"
                         placeholder="5.0"
                       />
@@ -1536,20 +1796,26 @@ export default function SettingsPage({
                     <div className="flex items-center gap-2 mb-2 text-[#315a3d]">
                       <Calculator size={15} />
                       <h4 className="text-xs font-bold">
-                        Live Calculation Preview (Sample Bill: {currency}1,000.00)
+                        Live Calculation Preview (Sample Bill: {currency}
+                        1,000.00)
                       </h4>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                       <div className="rounded-xl bg-white p-2.5 border border-[#dfe1dc]">
-                        <span className="text-[10px] text-[#84908a] block uppercase font-semibold">Subtotal</span>
-                        <span className="font-bold text-[#24312e]">{currency}1,000.00</span>
+                        <span className="text-[10px] text-[#84908a] block uppercase font-semibold">
+                          Subtotal
+                        </span>
+                        <span className="font-bold text-[#24312e]">
+                          {currency}1,000.00
+                        </span>
                       </div>
                       <div className="rounded-xl bg-white p-2.5 border border-[#dfe1dc]">
                         <span className="text-[10px] text-[#84908a] block uppercase font-semibold">
                           GST ({Number(taxRate) || 0}%)
                         </span>
                         <span className="font-bold text-emerald-700">
-                          +{currency}{(1000 * ((Number(taxRate) || 0) / 100)).toFixed(2)}
+                          +{currency}
+                          {(1000 * ((Number(taxRate) || 0) / 100)).toFixed(2)}
                         </span>
                       </div>
                       <div className="rounded-xl bg-white p-2.5 border border-[#dfe1dc]">
@@ -1557,11 +1823,17 @@ export default function SettingsPage({
                           Service Chg ({Number(serviceCharge) || 0}%)
                         </span>
                         <span className="font-bold text-indigo-700">
-                          +{currency}{(1000 * ((Number(serviceCharge) || 0) / 100)).toFixed(2)}
+                          +{currency}
+                          {(
+                            1000 *
+                            ((Number(serviceCharge) || 0) / 100)
+                          ).toFixed(2)}
                         </span>
                       </div>
                       <div className="rounded-xl bg-[#24312e] text-white p-2.5">
-                        <span className="text-[10px] text-[#aab8b0] block uppercase font-semibold">Total Payable</span>
+                        <span className="text-[10px] text-[#aab8b0] block uppercase font-semibold">
+                          Total Payable
+                        </span>
                         <span className="font-extrabold text-[#f4bc83]">
                           {currency}
                           {(
@@ -1636,7 +1908,9 @@ export default function SettingsPage({
                         Table Reservation Advance Deposit & PayU Gateway
                       </h3>
                       <p className="mt-0.5 text-[11px] text-[#84908a]">
-                        Configure the advance table reservation deposit and integrate PayU India (UPI, Cards, NetBanking) for real-time payment collection.
+                        Configure the advance table reservation deposit and
+                        integrate PayU India (UPI, Cards, NetBanking) for
+                        real-time payment collection.
                       </p>
                     </div>
 
@@ -1674,12 +1948,17 @@ export default function SettingsPage({
                         min="0"
                         step="50"
                         value={reservationDeposit}
-                        onChange={(e) => setReservationDeposit(Math.max(0, Number(e.target.value)))}
+                        onChange={(e) =>
+                          setReservationDeposit(
+                            Math.max(0, Number(e.target.value)),
+                          )
+                        }
                         className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3.5 py-2.5 text-xs font-bold text-[#24312e] outline-hidden focus:border-[#24312e]"
                         placeholder="500"
                       />
                       <p className="mt-1 text-[10px] text-[#84908a]">
-                        Deducted from final restaurant bill. Set 0 for free table reservations.
+                        Deducted from final restaurant bill. Set 0 for free
+                        table reservations.
                       </p>
                     </div>
 
@@ -1690,7 +1969,9 @@ export default function SettingsPage({
                       <input
                         type="text"
                         value={payuMerchantKey}
-                        onChange={(e) => setPayuMerchantKey(e.target.value.trim())}
+                        onChange={(e) =>
+                          setPayuMerchantKey(e.target.value.trim())
+                        }
                         className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3.5 py-2.5 text-xs font-mono text-[#24312e] outline-hidden focus:border-[#24312e]"
                         placeholder="e.g. gtKFFx or Merchant Key"
                       />
@@ -1707,7 +1988,11 @@ export default function SettingsPage({
                           onClick={() => setShowPayuSalt(!showPayuSalt)}
                           className="text-[10px] font-semibold text-[#68736e] hover:text-[#24312e] flex items-center gap-1 cursor-pointer"
                         >
-                          {showPayuSalt ? <EyeOff size={11} /> : <Eye size={11} />}
+                          {showPayuSalt ? (
+                            <EyeOff size={11} />
+                          ) : (
+                            <Eye size={11} />
+                          )}
                           {showPayuSalt ? "Hide" : "Show"}
                         </button>
                       </label>
@@ -1715,13 +2000,16 @@ export default function SettingsPage({
                         <input
                           type={showPayuSalt ? "text" : "password"}
                           value={payuMerchantSalt}
-                          onChange={(e) => setPayuMerchantSalt(e.target.value.trim())}
+                          onChange={(e) =>
+                            setPayuMerchantSalt(e.target.value.trim())
+                          }
                           className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3.5 py-2.5 text-xs font-mono text-[#24312e] outline-hidden focus:border-[#24312e]"
                           placeholder="e.g. eCwWELxi or Merchant Salt"
                         />
                       </div>
                       <p className="mt-1 text-[10px] text-[#84908a]">
-                        Used on server for SHA-512 cryptographic hash generation.
+                        Used on server for SHA-512 cryptographic hash
+                        generation.
                       </p>
                     </div>
 
@@ -1731,11 +2019,17 @@ export default function SettingsPage({
                       </label>
                       <select
                         value={payuTestMode ? "test" : "live"}
-                        onChange={(e) => setPayuTestMode(e.target.value === "test")}
+                        onChange={(e) =>
+                          setPayuTestMode(e.target.value === "test")
+                        }
                         className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3.5 py-2.5 text-xs font-bold text-[#24312e] outline-hidden focus:border-[#24312e]"
                       >
-                        <option value="test">Test / Sandbox (test.payu.in)</option>
-                        <option value="live">Live Production (secure.payu.in)</option>
+                        <option value="test">
+                          Test / Sandbox (test.payu.in)
+                        </option>
+                        <option value="live">
+                          Live Production (secure.payu.in)
+                        </option>
                       </select>
                       <p className="mt-1 text-[10px] text-[#84908a]">
                         Switch between PayU Sandbox and Live endpoints.
@@ -1744,9 +2038,19 @@ export default function SettingsPage({
                   </div>
 
                   <div className="rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-3.5 text-xs text-[#68736e] flex items-start gap-2.5">
-                    <ShieldCheck size={16} className="text-[#315a3d] shrink-0 mt-0.5" />
+                    <ShieldCheck
+                      size={16}
+                      className="text-[#315a3d] shrink-0 mt-0.5"
+                    />
                     <div>
-                      <span className="font-bold text-[#24312e]">PayU India Dynamic Integration:</span> Changing the advance deposit here immediately updates the public website reservation card, confirmation pricing, and dashboard table allocation. When PayU keys are unconfigured, customers can reserve instantly using the built-in PayU sandbox simulator.
+                      <span className="font-bold text-[#24312e]">
+                        PayU India Dynamic Integration:
+                      </span>{" "}
+                      Changing the advance deposit here immediately updates the
+                      public website reservation card, confirmation pricing, and
+                      dashboard table allocation. When PayU keys are
+                      unconfigured, customers can reserve instantly using the
+                      built-in PayU sandbox simulator.
                     </div>
                   </div>
                 </div>
@@ -1780,7 +2084,9 @@ export default function SettingsPage({
                         Inventory & Stock Management
                       </h2>
                       <p className="mt-0.5 text-xs text-[#68736e]">
-                        Configure stock categories, units of measurement, and register new raw materials with photos and low-stock safety thresholds.
+                        Configure stock categories, units of measurement, and
+                        register new raw materials with photos and low-stock
+                        safety thresholds.
                       </p>
                     </div>
                   </div>
@@ -1813,19 +2119,25 @@ export default function SettingsPage({
                     <span className="text-[10px] font-bold text-[#84908a] uppercase tracking-wider block">
                       Total Stock Products
                     </span>
-                    <span className="text-base sm:text-lg font-black text-[#24312e]">{invItems.length}</span>
+                    <span className="text-base sm:text-lg font-black text-[#24312e]">
+                      {invItems.length}
+                    </span>
                   </div>
                   <div className="rounded-xl border border-[#dfe1dc] bg-white p-3">
                     <span className="text-[10px] font-bold text-[#84908a] uppercase tracking-wider block">
                       Configured Categories
                     </span>
-                    <span className="text-base sm:text-lg font-black text-[#24312e]">{invCategories.length}</span>
+                    <span className="text-base sm:text-lg font-black text-[#24312e]">
+                      {invCategories.length}
+                    </span>
                   </div>
                   <div className="rounded-xl border border-[#dfe1dc] bg-white p-3 col-span-2 sm:col-span-1">
                     <span className="text-[10px] font-bold text-[#84908a] uppercase tracking-wider block">
                       Measurement Units
                     </span>
-                    <span className="text-base sm:text-lg font-black text-[#24312e]">{invUnits.length}</span>
+                    <span className="text-base sm:text-lg font-black text-[#24312e]">
+                      {invUnits.length}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1839,12 +2151,16 @@ export default function SettingsPage({
                       Stock Categories
                     </h3>
                     <p className="text-xs text-[#84908a] mt-0.5">
-                      Define ingredient groupings like Dairy, Produce, Meat, Dry Grocery, Packaging.
+                      Define ingredient groupings like Dairy, Produce, Meat, Dry
+                      Grocery, Packaging.
                     </p>
                   </div>
 
                   {/* Inline Add Category Form */}
-                  <form onSubmit={handleAddCategory} className="flex items-center gap-2 w-full sm:w-auto">
+                  <form
+                    onSubmit={handleAddCategory}
+                    className="flex items-center gap-2 w-full sm:w-auto"
+                  >
                     <input
                       type="text"
                       placeholder="Category name (e.g. Frozen Foods)"
@@ -1866,18 +2182,26 @@ export default function SettingsPage({
                 {/* Categories Badge List */}
                 <div className="flex flex-wrap gap-2 pt-1">
                   {loadingInvData ? (
-                    <span className="text-xs text-[#84908a]">Loading categories...</span>
+                    <span className="text-xs text-[#84908a]">
+                      Loading categories...
+                    </span>
                   ) : invCategories.length === 0 ? (
-                    <span className="text-xs text-[#84908a]">No categories registered yet.</span>
+                    <span className="text-xs text-[#84908a]">
+                      No categories registered yet.
+                    </span>
                   ) : (
                     invCategories.map((cat) => {
-                      const itemCount = invItems.filter((i) => i.category === cat).length;
+                      const itemCount = invItems.filter(
+                        (i) => i.category === cat,
+                      ).length;
                       return (
                         <div
                           key={cat}
                           className="flex items-center gap-2 rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 shadow-2xs group hover:border-[#24312e]/40 transition"
                         >
-                          <span className="text-xs font-bold text-[#24312e]">{cat}</span>
+                          <span className="text-xs font-bold text-[#24312e]">
+                            {cat}
+                          </span>
                           <span className="rounded-md bg-[#f0f2ed] px-1.5 py-0.5 text-[10px] font-bold text-[#68736e]">
                             {itemCount} {itemCount === 1 ? "item" : "items"}
                           </span>
@@ -1905,12 +2229,16 @@ export default function SettingsPage({
                       Units of Measurement
                     </h3>
                     <p className="text-xs text-[#84908a] mt-0.5">
-                      Configure measurement metrics (kg, liters, pcs, boxes, crates, etc.).
+                      Configure measurement metrics (kg, liters, pcs, boxes,
+                      crates, etc.).
                     </p>
                   </div>
 
                   {/* Inline Add Unit Form */}
-                  <form onSubmit={handleAddUnit} className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                  <form
+                    onSubmit={handleAddUnit}
+                    className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto"
+                  >
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <input
                         type="text"
@@ -1941,9 +2269,13 @@ export default function SettingsPage({
                 {/* Units Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5 pt-1">
                   {loadingInvData ? (
-                    <span className="text-xs text-[#84908a]">Loading units...</span>
+                    <span className="text-xs text-[#84908a]">
+                      Loading units...
+                    </span>
                   ) : invUnits.length === 0 ? (
-                    <span className="text-xs text-[#84908a]">No units configured yet.</span>
+                    <span className="text-xs text-[#84908a]">
+                      No units configured yet.
+                    </span>
                   ) : (
                     invUnits.map((u) => (
                       <div
@@ -1951,7 +2283,9 @@ export default function SettingsPage({
                         className="flex items-center justify-between gap-1.5 rounded-xl border border-[#dfe1dc] bg-white p-2 sm:p-2.5 shadow-2xs hover:border-[#24312e]/40 transition min-w-0"
                       >
                         <div className="min-w-0 flex-1">
-                          <span className="text-xs font-black text-[#24312e] block truncate">{u.name}</span>
+                          <span className="text-xs font-black text-[#24312e] block truncate">
+                            {u.name}
+                          </span>
                           <p className="text-[10px] text-[#84908a] truncate">
                             {u.label || u.name}
                           </p>
@@ -1974,9 +2308,12 @@ export default function SettingsPage({
               <div className="rounded-3xl border border-[#dfe1dc] bg-white shadow-xs overflow-hidden">
                 <div className="p-3.5 sm:p-5 border-b border-[#e9eae6] bg-[#fbfaf7] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                   <div>
-                    <h3 className="text-sm font-bold text-[#24312e]">Registered Stock Items</h3>
+                    <h3 className="text-sm font-bold text-[#24312e]">
+                      Registered Stock Items
+                    </h3>
                     <p className="text-xs text-[#84908a] mt-0.5">
-                      Visual catalog showing product photo, category, and threshold limit.
+                      Visual catalog showing product photo, category, and
+                      threshold limit.
                     </p>
                   </div>
                   <button
@@ -2018,7 +2355,9 @@ export default function SettingsPage({
                                 alt={item.name}
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
-                                  (e.currentTarget as HTMLElement).style.display = "none";
+                                  (
+                                    e.currentTarget as HTMLElement
+                                  ).style.display = "none";
                                 }}
                               />
                             ) : (
@@ -2027,7 +2366,9 @@ export default function SettingsPage({
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-1">
-                              <span className="font-bold text-[#24312e] text-xs truncate">{item.name}</span>
+                              <span className="font-bold text-[#24312e] text-xs truncate">
+                                {item.name}
+                              </span>
                               <span className="rounded bg-[#f0f2ed] px-1.5 py-0.5 text-[9px] font-bold text-[#55605b] shrink-0">
                                 {item.category}
                               </span>
@@ -2042,16 +2383,29 @@ export default function SettingsPage({
 
                         <div className="flex items-center justify-between bg-[#fbfaf7] rounded-xl p-2 text-xs">
                           <div>
-                            <span className="text-[10px] text-[#84908a] block font-medium">Current Stock</span>
-                            <span className="font-bold text-[#24312e]">{item.currentStock} {item.unit}</span>
+                            <span className="text-[10px] text-[#84908a] block font-medium">
+                              Current Stock
+                            </span>
+                            <span className="font-bold text-[#24312e]">
+                              {item.currentStock} {item.unit}
+                            </span>
                           </div>
                           <div>
-                            <span className="text-[10px] text-[#84908a] block font-medium">Safety Limit</span>
-                            <span className="text-[#68736e] font-semibold">{item.minStockLimit} {item.unit}</span>
+                            <span className="text-[10px] text-[#84908a] block font-medium">
+                              Safety Limit
+                            </span>
+                            <span className="text-[#68736e] font-semibold">
+                              {item.minStockLimit} {item.unit}
+                            </span>
                           </div>
                           <div className="text-right">
-                            <span className="text-[10px] text-[#84908a] block font-medium">Cost / Unit</span>
-                            <span className="font-bold text-[#315a3d]">{restaurantSettings.currencySymbol}{item.costPerUnit}</span>
+                            <span className="text-[10px] text-[#84908a] block font-medium">
+                              Cost / Unit
+                            </span>
+                            <span className="font-bold text-[#315a3d]">
+                              {restaurantSettings.currencySymbol}
+                              {item.costPerUnit}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -2074,8 +2428,12 @@ export default function SettingsPage({
                     <tbody className="divide-y divide-[#f0f1ed]">
                       {invItems.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="py-8 text-center text-[#84908a]">
-                            No inventory items found. Click "Add New Product" to create one.
+                          <td
+                            colSpan={5}
+                            className="py-8 text-center text-[#84908a]"
+                          >
+                            No inventory items found. Click "Add New Product" to
+                            create one.
                           </td>
                         </tr>
                       ) : (
@@ -2090,15 +2448,22 @@ export default function SettingsPage({
                                       alt={item.name}
                                       className="h-full w-full object-cover"
                                       onError={(e) => {
-                                        (e.currentTarget as HTMLElement).style.display = "none";
+                                        (
+                                          e.currentTarget as HTMLElement
+                                        ).style.display = "none";
                                       }}
                                     />
                                   ) : (
-                                    <Package size={16} className="text-[#84908a]" />
+                                    <Package
+                                      size={16}
+                                      className="text-[#84908a]"
+                                    />
                                   )}
                                 </div>
                                 <div>
-                                  <span className="font-bold text-[#24312e]">{item.name}</span>
+                                  <span className="font-bold text-[#24312e]">
+                                    {item.name}
+                                  </span>
                                   {item.supplier && (
                                     <span className="block text-[10px] text-[#84908a]">
                                       {item.supplier}
@@ -2119,7 +2484,8 @@ export default function SettingsPage({
                               {item.minStockLimit} {item.unit}
                             </td>
                             <td className="px-4 py-2.5 text-right font-semibold text-[#24312e]">
-                              {restaurantSettings.currencySymbol}{item.costPerUnit} / {item.unit}
+                              {restaurantSettings.currencySymbol}
+                              {item.costPerUnit} / {item.unit}
                             </td>
                           </tr>
                         ))
@@ -2143,8 +2509,12 @@ export default function SettingsPage({
                   <Package size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-[#24312e]">Add Raw Material</h3>
-                  <p className="text-xs text-[#84908a]">Register a new product with image, category & unit</p>
+                  <h3 className="font-bold text-base text-[#24312e]">
+                    Add Raw Material
+                  </h3>
+                  <p className="text-xs text-[#84908a]">
+                    Register a new product with image, category & unit
+                  </p>
                 </div>
               </div>
               <button
@@ -2155,7 +2525,10 @@ export default function SettingsPage({
               </button>
             </div>
 
-            <form onSubmit={handleCreateProductInSettings} className="mt-4 space-y-4">
+            <form
+              onSubmit={handleCreateProductInSettings}
+              className="mt-4 space-y-4"
+            >
               {/* Product Name */}
               <div>
                 <label className="text-xs font-bold text-[#68736e] block mb-1">
@@ -2166,7 +2539,9 @@ export default function SettingsPage({
                   required
                   placeholder="e.g. Fresh Malai Paneer"
                   value={addProdForm.name}
-                  onChange={(e) => setAddProdForm({ ...addProdForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setAddProdForm({ ...addProdForm, name: e.target.value })
+                  }
                   className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                 />
               </div>
@@ -2181,7 +2556,9 @@ export default function SettingsPage({
                   {addProdForm.image && (
                     <button
                       type="button"
-                      onClick={() => setAddProdForm({ ...addProdForm, image: "" })}
+                      onClick={() =>
+                        setAddProdForm({ ...addProdForm, image: "" })
+                      }
                       className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer"
                     >
                       Remove Photo
@@ -2226,7 +2603,9 @@ export default function SettingsPage({
                     type="url"
                     placeholder="Or paste an Image URL (https://...)"
                     value={addProdForm.image}
-                    onChange={(e) => setAddProdForm({ ...addProdForm, image: e.target.value })}
+                    onChange={(e) =>
+                      setAddProdForm({ ...addProdForm, image: e.target.value })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs outline-none focus:border-[#24312e]"
                   />
                 </div>
@@ -2241,7 +2620,9 @@ export default function SettingsPage({
                       <button
                         key={preset.label}
                         type="button"
-                        onClick={() => setAddProdForm({ ...addProdForm, image: preset.url })}
+                        onClick={() =>
+                          setAddProdForm({ ...addProdForm, image: preset.url })
+                        }
                         className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${
                           addProdForm.image === preset.url
                             ? "bg-[#315a3d] text-white shadow-2xs"
@@ -2259,10 +2640,17 @@ export default function SettingsPage({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {/* Category */}
                 <div>
-                  <label className="text-xs font-bold text-[#68736e] block mb-1">Category</label>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Category
+                  </label>
                   <select
                     value={addProdForm.category}
-                    onChange={(e) => setAddProdForm({ ...addProdForm, category: e.target.value })}
+                    onChange={(e) =>
+                      setAddProdForm({
+                        ...addProdForm,
+                        category: e.target.value,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   >
                     {invCategories
@@ -2277,10 +2665,14 @@ export default function SettingsPage({
 
                 {/* Unit of Measure */}
                 <div>
-                  <label className="text-xs font-bold text-[#68736e] block mb-1">Unit of Measure</label>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Unit of Measure
+                  </label>
                   <select
                     value={addProdForm.unit}
-                    onChange={(e) => setAddProdForm({ ...addProdForm, unit: e.target.value })}
+                    onChange={(e) =>
+                      setAddProdForm({ ...addProdForm, unit: e.target.value })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   >
                     {invUnits.map((u) => (
@@ -2303,24 +2695,37 @@ export default function SettingsPage({
                     min={0}
                     step="any"
                     value={addProdForm.currentStock}
-                    onChange={(e) => setAddProdForm({ ...addProdForm, currentStock: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setAddProdForm({
+                        ...addProdForm,
+                        currentStock: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-[#68736e] block mb-1">
-                    Low Stock Alert Limit <span className="text-red-500">*</span>
+                    Low Stock Alert Limit{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
                     min={0}
                     step="any"
                     value={addProdForm.minStockLimit}
-                    onChange={(e) => setAddProdForm({ ...addProdForm, minStockLimit: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setAddProdForm({
+                        ...addProdForm,
+                        minStockLimit: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   />
-                  <p className="text-[10px] text-[#84908a] mt-0.5">Threshold for warning alert</p>
+                  <p className="text-[10px] text-[#84908a] mt-0.5">
+                    Threshold for warning alert
+                  </p>
                 </div>
               </div>
 
@@ -2335,18 +2740,30 @@ export default function SettingsPage({
                     min={0}
                     step="any"
                     value={addProdForm.costPerUnit}
-                    onChange={(e) => setAddProdForm({ ...addProdForm, costPerUnit: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setAddProdForm({
+                        ...addProdForm,
+                        costPerUnit: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-[#68736e] block mb-1">Vendor / Supplier</label>
+                  <label className="text-xs font-bold text-[#68736e] block mb-1">
+                    Vendor / Supplier
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Fresh Dairy Farms"
                     value={addProdForm.supplier}
-                    onChange={(e) => setAddProdForm({ ...addProdForm, supplier: e.target.value })}
+                    onChange={(e) =>
+                      setAddProdForm({
+                        ...addProdForm,
+                        supplier: e.target.value,
+                      })
+                    }
                     className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs outline-none focus:border-[#24312e]"
                   />
                 </div>

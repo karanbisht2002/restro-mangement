@@ -50,7 +50,29 @@ import { ImageUploadPicker } from "../components/ImageUploadPicker";
 
 type CmsTab = "gallery" | "offers" | "blogs" | "about_contact";
 
-export default function WebsiteCmsPage() {
+export default function WebsiteCmsPage({
+  isDemoAccount = false,
+  showToast,
+}: {
+  isDemoAccount?: boolean;
+  showToast?: (
+    type: "success" | "error" | "info",
+    title: string,
+    message: string,
+  ) => void;
+}) {
+  const blockDemoAction = (action: string) => {
+    if (!isDemoAccount) return false;
+    showToast?.(
+      "error",
+      "Demo access only",
+      `${action} is disabled for the demo account.`,
+    );
+    return true;
+  };
+  const demoActionClass = isDemoAccount
+    ? "cursor-not-allowed opacity-60"
+    : "cursor-pointer";
   const [activeTab, setActiveTab] = useState<CmsTab>("gallery");
   const [loading, setLoading] = useState(true);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -101,6 +123,7 @@ export default function WebsiteCmsPage() {
   const [editOfferTerms, setEditOfferTerms] = useState("");
 
   const handleStartEditOffer = (offer: OfferItem) => {
+    if (blockDemoAction("Editing website offers")) return;
     setEditingOffer(offer);
     setEditOfferTitle(offer.title);
     setEditOfferSubtitle(offer.subtitle || "");
@@ -113,6 +136,7 @@ export default function WebsiteCmsPage() {
 
   const handleUpdateOffer = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Editing website offers")) return;
     if (!editingOffer) return;
     try {
       const updated = await updateWebsiteOffer(editingOffer.id, {
@@ -124,7 +148,9 @@ export default function WebsiteCmsPage() {
         validUntil: editOfferValid.trim(),
         terms: editOfferTerms.trim(),
       });
-      setOffers((prev) => prev.map((o) => (o.id === editingOffer.id ? updated : o)));
+      setOffers((prev) =>
+        prev.map((o) => (o.id === editingOffer.id ? updated : o)),
+      );
       setEditingOffer(null);
       triggerToast("Offer updated successfully!");
       refreshAll();
@@ -145,6 +171,7 @@ export default function WebsiteCmsPage() {
   const [editBlogUrl, setEditBlogUrl] = useState("");
 
   const handleStartEditBlog = (blog: BlogItem) => {
+    if (blockDemoAction("Editing website blogs")) return;
     setEditingBlog(blog);
     setEditBlogTitle(blog.title);
     setEditBlogCategory(blog.category || "Cocktail Culture");
@@ -158,6 +185,7 @@ export default function WebsiteCmsPage() {
 
   const handleUpdateBlog = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Editing website blogs")) return;
     if (!editingBlog) return;
     try {
       const updated = await updateWebsiteBlog(editingBlog.id, {
@@ -170,7 +198,9 @@ export default function WebsiteCmsPage() {
         content: editBlogContent.trim(),
         imageUrl: editBlogUrl.trim(),
       });
-      setBlogs((prev) => prev.map((b) => (b.id === editingBlog.id ? updated : b)));
+      setBlogs((prev) =>
+        prev.map((b) => (b.id === editingBlog.id ? updated : b)),
+      );
       setEditingBlog(null);
       triggerToast("Blog updated successfully!");
       refreshAll();
@@ -209,6 +239,7 @@ export default function WebsiteCmsPage() {
   // Gallery handlers
   const handleCreatePhoto = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Adding website photos")) return;
     if (!newPhotoTitle.trim() || !newPhotoUrl.trim()) return;
     try {
       await createGalleryPhoto({
@@ -228,7 +259,11 @@ export default function WebsiteCmsPage() {
   };
 
   const handleDeletePhoto = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this photo from the website?")) return;
+    if (blockDemoAction("Deleting website photos")) return;
+    if (
+      !confirm("Are you sure you want to remove this photo from the website?")
+    )
+      return;
     try {
       await deleteGalleryPhoto(id);
       triggerToast("Photo removed from gallery.");
@@ -241,6 +276,7 @@ export default function WebsiteCmsPage() {
   // Offers handlers
   const handleCreateOffer = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Creating website offers")) return;
     if (!newOfferTitle.trim() || !newOfferUrl.trim()) return;
     try {
       await createWebsiteOffer({
@@ -266,6 +302,7 @@ export default function WebsiteCmsPage() {
   };
 
   const handleToggleOffer = async (id: string, currentStatus: boolean) => {
+    if (blockDemoAction("Changing website offers")) return;
     try {
       await updateWebsiteOffer(id, { isActive: !currentStatus });
       triggerToast(`Offer ${!currentStatus ? "activated" : "deactivated"}`);
@@ -276,6 +313,7 @@ export default function WebsiteCmsPage() {
   };
 
   const handleDeleteOffer = async (id: string) => {
+    if (blockDemoAction("Deleting website offers")) return;
     if (!confirm("Delete this promotional offer?")) return;
     try {
       await deleteWebsiteOffer(id);
@@ -289,6 +327,7 @@ export default function WebsiteCmsPage() {
   // Blog handlers
   const handleCreateBlog = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Publishing website blogs")) return;
     if (!newBlogTitle.trim() || !newBlogContent.trim()) return;
     try {
       await createWebsiteBlog({
@@ -303,7 +342,9 @@ export default function WebsiteCmsPage() {
         }),
         excerpt: newBlogExcerpt.trim(),
         content: newBlogContent.trim(),
-        imageUrl: newBlogUrl.trim() || "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80",
+        imageUrl:
+          newBlogUrl.trim() ||
+          "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80",
         isPublished: true,
       });
       setShowAddBlogModal(false);
@@ -319,6 +360,7 @@ export default function WebsiteCmsPage() {
   };
 
   const handleDeleteBlog = async (id: string) => {
+    if (blockDemoAction("Deleting website blogs")) return;
     if (!confirm("Delete this blog post?")) return;
     try {
       await deleteWebsiteBlog(id);
@@ -332,6 +374,7 @@ export default function WebsiteCmsPage() {
   // Content Save handler
   const handleSaveContent = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (blockDemoAction("Saving website content")) return;
     if (!content) return;
     try {
       await updateWebsiteContent(content);
@@ -356,7 +399,8 @@ export default function WebsiteCmsPage() {
             Website Content & Media Management
           </h1>
           <p className="mt-1 text-xs text-[#68736e]">
-            Manage club photos, promotional offers, blog posts, and contact info displayed on your public website.
+            Manage club photos, promotional offers, blog posts, and contact info
+            displayed on your public website.
           </p>
         </div>
 
@@ -439,11 +483,16 @@ export default function WebsiteCmsPage() {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <p className="text-xs font-bold text-[#68736e]">
-              Total Photos Displayed on Website: <strong>{gallery.length}</strong>
+              Total Photos Displayed on Website:{" "}
+              <strong>{gallery.length}</strong>
             </p>
             <button
-              onClick={() => setShowAddPhotoModal(true)}
-              className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-[#24312e] px-3.5 py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] transition shadow-xs cursor-pointer"
+              onClick={() => {
+                if (blockDemoAction("Adding website photos")) return;
+                setShowAddPhotoModal(true);
+              }}
+              aria-disabled={isDemoAccount}
+              className={`flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-[#24312e] px-3.5 py-2.5 text-xs font-bold text-white transition shadow-xs ${demoActionClass}`}
             >
               <Plus size={15} />
               <span>Add New Photo</span>
@@ -483,7 +532,7 @@ export default function WebsiteCmsPage() {
                   </span>
                   <button
                     onClick={() => handleDeletePhoto(photo.id)}
-                    className="flex items-center gap-1 text-[11px] font-bold text-red-600 hover:text-red-800 transition"
+                    className={`flex items-center gap-1 text-[11px] font-bold text-red-600 transition ${demoActionClass}`}
                   >
                     <Trash2 size={13} />
                     <span>Delete</span>
@@ -505,8 +554,12 @@ export default function WebsiteCmsPage() {
               Active Promotions on Website: <strong>{offers.length}</strong>
             </p>
             <button
-              onClick={() => setShowAddOfferModal(true)}
-              className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-[#24312e] px-3.5 py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] transition shadow-xs cursor-pointer"
+              onClick={() => {
+                if (blockDemoAction("Creating website offers")) return;
+                setShowAddOfferModal(true);
+              }}
+              aria-disabled={isDemoAccount}
+              className={`flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-[#24312e] px-3.5 py-2.5 text-xs font-bold text-white transition shadow-xs ${demoActionClass}`}
             >
               <Plus size={15} />
               <span>Create New Offer</span>
@@ -526,7 +579,9 @@ export default function WebsiteCmsPage() {
                         <span className="rounded-md bg-[#f4bc83] px-2 py-0.5 text-[9px] font-black uppercase text-[#141c19]">
                           {offer.badge}
                         </span>
-                        <span className={`text-[10px] font-bold uppercase ${offer.isActive ? "text-emerald-700" : "text-gray-400"}`}>
+                        <span
+                          className={`text-[10px] font-bold uppercase ${offer.isActive ? "text-emerald-700" : "text-gray-400"}`}
+                        >
                           ● {offer.isActive ? "Live on site" : "Deactivated"}
                         </span>
                       </div>
@@ -559,8 +614,10 @@ export default function WebsiteCmsPage() {
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#f0f1ed] pt-3">
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleToggleOffer(offer.id, offer.isActive)}
-                      className={`rounded-lg px-2.5 py-1 text-xs font-bold transition cursor-pointer ${
+                      onClick={() =>
+                        handleToggleOffer(offer.id, offer.isActive)
+                      }
+                      className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${demoActionClass} ${
                         offer.isActive
                           ? "bg-amber-50 text-amber-800 border border-amber-200"
                           : "bg-emerald-50 text-emerald-800 border border-emerald-200"
@@ -571,7 +628,7 @@ export default function WebsiteCmsPage() {
 
                     <button
                       onClick={() => handleStartEditOffer(offer)}
-                      className="flex items-center gap-1.5 rounded-lg border border-[#dfe1dc] bg-[#fbfaf7] px-2.5 py-1 text-xs font-bold text-[#24312e] hover:bg-[#eef1ed] hover:border-[#315a3d] transition shadow-2xs cursor-pointer"
+                      className={`flex items-center gap-1.5 rounded-lg border border-[#dfe1dc] bg-[#fbfaf7] px-2.5 py-1 text-xs font-bold text-[#24312e] transition shadow-2xs ${demoActionClass}`}
                     >
                       <Pencil size={13} className="text-[#315a3d]" />
                       <span>Edit</span>
@@ -580,7 +637,7 @@ export default function WebsiteCmsPage() {
 
                   <button
                     onClick={() => handleDeleteOffer(offer.id)}
-                    className="flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 transition cursor-pointer"
+                    className={`flex items-center gap-1 text-xs font-bold text-red-600 transition ${demoActionClass}`}
                   >
                     <Trash2 size={14} />
                     <span>Delete</span>
@@ -602,8 +659,12 @@ export default function WebsiteCmsPage() {
               Articles Published: <strong>{blogs.length}</strong>
             </p>
             <button
-              onClick={() => setShowAddBlogModal(true)}
-              className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-[#24312e] px-3.5 py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] transition shadow-xs cursor-pointer"
+              onClick={() => {
+                if (blockDemoAction("Publishing website blogs")) return;
+                setShowAddBlogModal(true);
+              }}
+              aria-disabled={isDemoAccount}
+              className={`flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-[#24312e] px-3.5 py-2.5 text-xs font-bold text-white transition shadow-xs ${demoActionClass}`}
             >
               <Plus size={15} />
               <span>Publish New Blog</span>
@@ -618,8 +679,12 @@ export default function WebsiteCmsPage() {
               >
                 <div>
                   <div className="flex items-center justify-between text-[10px] text-[#84908a]">
-                    <span className="font-bold text-[#315a3d]">{blog.category}</span>
-                    <span>{blog.readTime} · {blog.publishDate}</span>
+                    <span className="font-bold text-[#315a3d]">
+                      {blog.category}
+                    </span>
+                    <span>
+                      {blog.readTime} · {blog.publishDate}
+                    </span>
                   </div>
                   <h3 className="mt-1 font-bold text-[#24312e] text-base">
                     {blog.title}
@@ -639,7 +704,7 @@ export default function WebsiteCmsPage() {
                     </span>
                     <button
                       onClick={() => handleStartEditBlog(blog)}
-                      className="flex items-center gap-1.5 rounded-lg border border-[#dfe1dc] bg-[#fbfaf7] px-2.5 py-1 text-xs font-bold text-[#24312e] hover:bg-[#eef1ed] hover:border-[#315a3d] transition shadow-2xs"
+                      className={`flex items-center gap-1.5 rounded-lg border border-[#dfe1dc] bg-[#fbfaf7] px-2.5 py-1 text-xs font-bold text-[#24312e] transition shadow-2xs ${demoActionClass}`}
                     >
                       <Pencil size={13} className="text-[#315a3d]" />
                       <span>Edit</span>
@@ -648,7 +713,7 @@ export default function WebsiteCmsPage() {
 
                   <button
                     onClick={() => handleDeleteBlog(blog.id)}
-                    className="flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 transition"
+                    className={`flex items-center gap-1 text-xs font-bold text-red-600 transition ${demoActionClass}`}
                   >
                     <Trash2 size={14} />
                     <span>Delete</span>
@@ -664,7 +729,10 @@ export default function WebsiteCmsPage() {
       {/* 4. ABOUT & CONTACT TAB                               */}
       {/* ==================================================== */}
       {activeTab === "about_contact" && content && (
-        <form onSubmit={handleSaveContent} className="rounded-3xl border border-[#dfe1dc] bg-white p-4 sm:p-8 shadow-xs space-y-5 sm:space-y-6">
+        <form
+          onSubmit={handleSaveContent}
+          className="rounded-3xl border border-[#dfe1dc] bg-white p-4 sm:p-8 shadow-xs space-y-5 sm:space-y-6"
+        >
           <div className="border-b border-[#f0f1ed] pb-4">
             <h2 className="display-font text-xl font-bold text-[#24312e]">
               Brand Identity & Hero Headlines
@@ -676,31 +744,43 @@ export default function WebsiteCmsPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Restaurant Name</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Restaurant Name
+              </label>
               <input
                 type="text"
                 value={content.restaurantName}
-                onChange={(e) => setContent({ ...content, restaurantName: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, restaurantName: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Hero Main Tagline</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Hero Main Tagline
+              </label>
               <input
                 type="text"
                 value={content.tagline}
-                onChange={(e) => setContent({ ...content, tagline: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, tagline: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#68736e]">Hero Subtitle Description</label>
+            <label className="block text-xs font-bold text-[#68736e]">
+              Hero Subtitle Description
+            </label>
             <textarea
               rows={2}
               value={content.heroSubtitle}
-              onChange={(e) => setContent({ ...content, heroSubtitle: e.target.value })}
+              onChange={(e) =>
+                setContent({ ...content, heroSubtitle: e.target.value })
+              }
               className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
             />
           </div>
@@ -715,31 +795,43 @@ export default function WebsiteCmsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#68736e]">About Section Title</label>
+            <label className="block text-xs font-bold text-[#68736e]">
+              About Section Title
+            </label>
             <input
               type="text"
               value={content.aboutTitle}
-              onChange={(e) => setContent({ ...content, aboutTitle: e.target.value })}
+              onChange={(e) =>
+                setContent({ ...content, aboutTitle: e.target.value })
+              }
               className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Story Paragraph 1</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Story Paragraph 1
+              </label>
               <textarea
                 rows={4}
                 value={content.aboutStoryP1}
-                onChange={(e) => setContent({ ...content, aboutStoryP1: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, aboutStoryP1: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Story Paragraph 2</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Story Paragraph 2
+              </label>
               <textarea
                 rows={4}
                 value={content.aboutStoryP2}
-                onChange={(e) => setContent({ ...content, aboutStoryP2: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, aboutStoryP2: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
@@ -753,29 +845,41 @@ export default function WebsiteCmsPage() {
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Reservation Hotline</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Reservation Hotline
+              </label>
               <input
                 type="text"
                 value={content.reservationHotline}
-                onChange={(e) => setContent({ ...content, reservationHotline: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, reservationHotline: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Desk Phone</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Desk Phone
+              </label>
               <input
                 type="text"
                 value={content.phone}
-                onChange={(e) => setContent({ ...content, phone: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, phone: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Inquiry Email</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Inquiry Email
+              </label>
               <input
                 type="email"
                 value={content.email}
-                onChange={(e) => setContent({ ...content, email: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, email: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
@@ -783,20 +887,28 @@ export default function WebsiteCmsPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Full Address</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Full Address
+              </label>
               <input
                 type="text"
                 value={content.address}
-                onChange={(e) => setContent({ ...content, address: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, address: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Operating Hours</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Operating Hours
+              </label>
               <input
                 type="text"
                 value={content.operatingHours}
-                onChange={(e) => setContent({ ...content, operatingHours: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, operatingHours: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
@@ -804,29 +916,41 @@ export default function WebsiteCmsPage() {
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Google Maps URL</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Google Maps URL
+              </label>
               <input
                 type="text"
                 value={content.googleMapsUrl}
-                onChange={(e) => setContent({ ...content, googleMapsUrl: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, googleMapsUrl: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Instagram Page URL</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Instagram Page URL
+              </label>
               <input
                 type="text"
                 value={content.instagramUrl}
-                onChange={(e) => setContent({ ...content, instagramUrl: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, instagramUrl: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#68736e]">Facebook Page URL</label>
+              <label className="block text-xs font-bold text-[#68736e]">
+                Facebook Page URL
+              </label>
               <input
                 type="text"
                 value={content.facebookUrl}
-                onChange={(e) => setContent({ ...content, facebookUrl: e.target.value })}
+                onChange={(e) =>
+                  setContent({ ...content, facebookUrl: e.target.value })
+                }
                 className="mt-1.5 w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2.5 text-xs font-semibold text-[#24312e] outline-none focus:border-[#315a3d]"
               />
             </div>
@@ -849,7 +973,10 @@ export default function WebsiteCmsPage() {
       {/* ==================================================== */}
       {showAddPhotoModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-3 sm:p-6 flex items-center justify-center backdrop-blur-xs">
-          <form onSubmit={handleCreatePhoto} className="w-full max-w-md max-h-[88vh] flex flex-col rounded-3xl border border-[#dfe1dc] bg-white shadow-2xl overflow-hidden my-auto">
+          <form
+            onSubmit={handleCreatePhoto}
+            className="w-full max-w-md max-h-[88vh] flex flex-col rounded-3xl border border-[#dfe1dc] bg-white shadow-2xl overflow-hidden my-auto"
+          >
             <div className="flex items-center justify-between border-b border-[#f0f1ed] px-4 py-3 sm:px-6 sm:py-4 shrink-0 bg-white">
               <h3 className="display-font text-base sm:text-lg font-bold text-[#24312e]">
                 Add Photo to Club Gallery
@@ -865,7 +992,9 @@ export default function WebsiteCmsPage() {
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Photo Title</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Photo Title
+                </label>
                 <input
                   type="text"
                   required
@@ -877,7 +1006,9 @@ export default function WebsiteCmsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Category</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Category
+                </label>
                 <select
                   value={newPhotoCategory}
                   onChange={(e) => setNewPhotoCategory(e.target.value as any)}
@@ -909,7 +1040,10 @@ export default function WebsiteCmsPage() {
                   onChange={(e) => setNewPhotoFeatured(e.target.checked)}
                   className="h-4 w-4 rounded border-[#dfe1dc] text-[#315a3d] focus:ring-0"
                 />
-                <label htmlFor="featuredCheck" className="text-xs font-bold text-[#24312e] cursor-pointer">
+                <label
+                  htmlFor="featuredCheck"
+                  className="text-xs font-bold text-[#24312e] cursor-pointer"
+                >
                   Feature in homepage highlights
                 </label>
               </div>
@@ -939,7 +1073,10 @@ export default function WebsiteCmsPage() {
       {/* ==================================================== */}
       {showAddOfferModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-3 sm:p-6 flex items-center justify-center backdrop-blur-xs">
-          <form onSubmit={handleCreateOffer} className="w-full max-w-md max-h-[88vh] flex flex-col rounded-3xl border border-[#dfe1dc] bg-white shadow-2xl overflow-hidden my-auto">
+          <form
+            onSubmit={handleCreateOffer}
+            className="w-full max-w-md max-h-[88vh] flex flex-col rounded-3xl border border-[#dfe1dc] bg-white shadow-2xl overflow-hidden my-auto"
+          >
             <div className="flex items-center justify-between border-b border-[#f0f1ed] px-4 py-3 sm:px-6 sm:py-4 shrink-0 bg-white">
               <h3 className="display-font text-base sm:text-lg font-bold text-[#24312e]">
                 Create Website Promotion / Offer
@@ -955,7 +1092,9 @@ export default function WebsiteCmsPage() {
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Offer Headline</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Offer Headline
+                </label>
                 <input
                   type="text"
                   required
@@ -968,7 +1107,9 @@ export default function WebsiteCmsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Subtitle</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Subtitle
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Sundowner Hours"
@@ -978,7 +1119,9 @@ export default function WebsiteCmsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Badge Tag</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Badge Tag
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. 1+1 FREE"
@@ -990,7 +1133,9 @@ export default function WebsiteCmsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Description</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Description
+                </label>
                 <textarea
                   rows={2}
                   required
@@ -1014,7 +1159,9 @@ export default function WebsiteCmsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Validity Window</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Validity Window
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Daily · 4 PM to 8 PM"
@@ -1024,7 +1171,9 @@ export default function WebsiteCmsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Terms</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Terms
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Club rules apply"
@@ -1060,7 +1209,10 @@ export default function WebsiteCmsPage() {
       {/* ==================================================== */}
       {showAddBlogModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-3 sm:p-6 flex items-center justify-center backdrop-blur-xs">
-          <form onSubmit={handleCreateBlog} className="w-full max-w-lg max-h-[88vh] flex flex-col rounded-3xl border border-[#dfe1dc] bg-white shadow-2xl overflow-hidden my-auto">
+          <form
+            onSubmit={handleCreateBlog}
+            className="w-full max-w-lg max-h-[88vh] flex flex-col rounded-3xl border border-[#dfe1dc] bg-white shadow-2xl overflow-hidden my-auto"
+          >
             <div className="flex items-center justify-between border-b border-[#f0f1ed] px-4 py-3 sm:px-6 sm:py-4 shrink-0 bg-white">
               <h3 className="display-font text-base sm:text-lg font-bold text-[#24312e]">
                 Publish New Blog Post
@@ -1076,7 +1228,9 @@ export default function WebsiteCmsPage() {
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Article Title</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Article Title
+                </label>
                 <input
                   type="text"
                   required
@@ -1089,7 +1243,9 @@ export default function WebsiteCmsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Category</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Category
+                  </label>
                   <input
                     type="text"
                     value={newBlogCategory}
@@ -1098,7 +1254,9 @@ export default function WebsiteCmsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Author</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Author
+                  </label>
                   <input
                     type="text"
                     value={newBlogAuthor}
@@ -1107,7 +1265,9 @@ export default function WebsiteCmsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Read Time</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Read Time
+                  </label>
                   <input
                     type="text"
                     value={newBlogReadTime}
@@ -1118,7 +1278,9 @@ export default function WebsiteCmsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Short Excerpt</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Short Excerpt
+                </label>
                 <input
                   type="text"
                   placeholder="1-sentence preview shown on cards..."
@@ -1129,7 +1291,9 @@ export default function WebsiteCmsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Full Article Body</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Full Article Body
+                </label>
                 <textarea
                   rows={4}
                   required
@@ -1175,7 +1339,10 @@ export default function WebsiteCmsPage() {
       {/* ==================================================== */}
       {editingOffer && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-3 sm:p-6 flex items-center justify-center backdrop-blur-xs">
-          <form onSubmit={handleUpdateOffer} className="w-full max-w-md max-h-[88vh] flex flex-col rounded-3xl border border-[#dfe1dc] bg-white shadow-2xl overflow-hidden my-auto">
+          <form
+            onSubmit={handleUpdateOffer}
+            className="w-full max-w-md max-h-[88vh] flex flex-col rounded-3xl border border-[#dfe1dc] bg-white shadow-2xl overflow-hidden my-auto"
+          >
             <div className="flex items-center justify-between border-b border-[#f0f1ed] px-4 py-3 sm:px-6 sm:py-4 shrink-0 bg-white">
               <h3 className="display-font text-base sm:text-lg font-bold text-[#24312e]">
                 Edit Website Promotion / Offer
@@ -1191,7 +1358,9 @@ export default function WebsiteCmsPage() {
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Offer Headline</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Offer Headline
+                </label>
                 <input
                   type="text"
                   required
@@ -1204,7 +1373,9 @@ export default function WebsiteCmsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Subtitle</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Subtitle
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Happy Hours Special"
@@ -1214,7 +1385,9 @@ export default function WebsiteCmsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Badge Tag</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Badge Tag
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. SPECIAL, 1+1"
@@ -1226,7 +1399,9 @@ export default function WebsiteCmsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Description</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Description
+                </label>
                 <textarea
                   rows={2}
                   required
@@ -1250,7 +1425,9 @@ export default function WebsiteCmsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Validity Window</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Validity Window
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Daily · 4 PM to 8 PM"
@@ -1260,7 +1437,9 @@ export default function WebsiteCmsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Terms</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Terms
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Club rules apply"
@@ -1296,7 +1475,10 @@ export default function WebsiteCmsPage() {
       {/* ==================================================== */}
       {editingBlog && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-3 sm:p-6 flex items-center justify-center backdrop-blur-xs">
-          <form onSubmit={handleUpdateBlog} className="w-full max-w-lg max-h-[88vh] flex flex-col rounded-3xl border border-[#dfe1dc] bg-white shadow-2xl overflow-hidden my-auto">
+          <form
+            onSubmit={handleUpdateBlog}
+            className="w-full max-w-lg max-h-[88vh] flex flex-col rounded-3xl border border-[#dfe1dc] bg-white shadow-2xl overflow-hidden my-auto"
+          >
             <div className="flex items-center justify-between border-b border-[#f0f1ed] px-4 py-3 sm:px-6 sm:py-4 shrink-0 bg-white">
               <h3 className="display-font text-base sm:text-lg font-bold text-[#24312e]">
                 Edit Blog Post
@@ -1312,7 +1494,9 @@ export default function WebsiteCmsPage() {
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Article Title</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Article Title
+                </label>
                 <input
                   type="text"
                   required
@@ -1325,7 +1509,9 @@ export default function WebsiteCmsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Category</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Category
+                  </label>
                   <input
                     type="text"
                     value={editBlogCategory}
@@ -1334,7 +1520,9 @@ export default function WebsiteCmsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Author</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Author
+                  </label>
                   <input
                     type="text"
                     value={editBlogAuthor}
@@ -1343,7 +1531,9 @@ export default function WebsiteCmsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#68736e]">Read Time</label>
+                  <label className="block text-xs font-bold text-[#68736e]">
+                    Read Time
+                  </label>
                   <input
                     type="text"
                     value={editBlogReadTime}
@@ -1354,7 +1544,9 @@ export default function WebsiteCmsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Short Excerpt</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Short Excerpt
+                </label>
                 <input
                   type="text"
                   placeholder="1-sentence preview shown on cards..."
@@ -1365,7 +1557,9 @@ export default function WebsiteCmsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#68736e]">Full Article Body</label>
+                <label className="block text-xs font-bold text-[#68736e]">
+                  Full Article Body
+                </label>
                 <textarea
                   rows={5}
                   required
