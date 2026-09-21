@@ -70,7 +70,7 @@ export default function ManagerControlPanel({
   };
 
   return (
-    <section className="mt-8 rounded-2xl border border-[#dfe1dc] bg-[#24312e] p-5 text-white sm:p-6 shadow-xl">
+    <section className="mt-8 rounded-2xl border border-[#dfe1dc] bg-[#24312e] p-4 sm:p-6 text-white shadow-xl">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#f4bc83]">
@@ -119,9 +119,9 @@ export default function ManagerControlPanel({
 
       {/* Kitchen Closed Warning Banner in Manager Panel */}
       {kitchenClosed && (
-        <div className="mt-4 rounded-xl border border-red-500/40 bg-red-950/40 p-3 text-xs text-red-200 flex items-center justify-between gap-3">
+        <div className="mt-4 rounded-xl border border-red-500/40 bg-red-950/40 p-3 text-xs text-red-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />
             <span>
               <strong>Kitchen is closed.</strong> New table bookings and orders cannot be taken until kitchen reopens.
             </span>
@@ -129,7 +129,7 @@ export default function ManagerControlPanel({
           {onToggleKitchenClosed && (
             <button
               onClick={onToggleKitchenClosed}
-              className="rounded-lg bg-red-600 px-3 py-1 text-xs font-bold text-white hover:bg-red-500 transition shrink-0"
+              className="rounded-lg bg-red-600 px-3 py-1 text-xs font-bold text-white hover:bg-red-500 transition shrink-0 self-start sm:self-auto"
             >
               Reopen Kitchen
             </button>
@@ -139,31 +139,31 @@ export default function ManagerControlPanel({
 
       {/* Primary Action Buttons: Book Table API & New Order API */}
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col justify-between rounded-xl border border-[#485b53] bg-[#2c3c37] p-4 transition hover:border-[#f4bc83]">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#3d524b] text-[#f4bc83]">
-                <CalendarCheck size={20} />
-              </div>
-              <div>
+        <div className="flex flex-col justify-between rounded-xl border border-[#485b53] bg-[#2c3c37] p-3.5 sm:p-4 transition hover:border-[#f4bc83]">
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#3d524b] text-[#f4bc83] shrink-0">
+                  <CalendarCheck size={18} />
+                </div>
                 <h3 className="text-sm font-bold text-white">Book Table API</h3>
-                <p className="text-xs text-[#aab8b0]">
-                  {availableTables.length} tables available • {bookingsCount} reservations today
-                </p>
               </div>
+              <span className="rounded-md bg-[#3d524b] px-2 py-0.5 text-[10px] font-bold text-[#f4bc83] shrink-0 font-mono">
+                /api/bookings
+              </span>
             </div>
-            <span className="rounded-md bg-[#3d524b] px-2 py-0.5 text-[10px] font-bold text-[#f4bc83]">
-              /api/bookings
-            </span>
+            <p className="mt-2.5 text-xs text-[#aab8b0] leading-relaxed">
+              <strong className="text-white font-semibold">{availableTables.length}</strong> tables available • <strong className="text-[#f4bc83] font-semibold">{bookingsCount}</strong> reservations today
+            </p>
           </div>
-          <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#3d524b] pt-3">
+          <div className="mt-3.5 sm:mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-t border-[#3d524b] pt-3">
             <span className="text-[11px] text-[#8ea097]">
               {kitchenClosed ? "Disabled while kitchen is closed" : "Auto-syncs table to Booked"}
             </span>
             <button
               onClick={() => onBookTable()}
               disabled={kitchenClosed}
-              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold transition ${
+              className={`flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 sm:py-2 text-xs font-bold transition cursor-pointer ${
                 kitchenClosed
                   ? "bg-[#3d524b] text-[#8ea097] cursor-not-allowed opacity-50"
                   : "bg-[#f4bc83] text-[#24312e] hover:bg-[#eab074]"
@@ -171,36 +171,36 @@ export default function ManagerControlPanel({
               title={kitchenClosed ? "Kitchen is closed - reservations disabled" : "Reserve a Table"}
             >
               <CalendarCheck size={14} />
-              {kitchenClosed ? "Kitchen Closed" : "Reserve a Table"}
+              <span>{kitchenClosed ? "Kitchen Closed" : "Reserve a Table"}</span>
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col justify-between rounded-xl border border-[#485b53] bg-[#2c3c37] p-4 transition hover:border-[#f4bc83]">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#3d524b] text-[#9ac49f]">
-                <Utensils size={20} />
-              </div>
-              <div>
+        <div className="flex flex-col justify-between rounded-xl border border-[#485b53] bg-[#2c3c37] p-3.5 sm:p-4 transition hover:border-[#9ac49f]">
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#3d524b] text-[#9ac49f] shrink-0">
+                  <Utensils size={18} />
+                </div>
                 <h3 className="text-sm font-bold text-white">Order Booking API</h3>
-                <p className="text-xs text-[#aab8b0]">
-                  {ordersCount} active tickets • {occupiedTables.length} occupied tables
-                </p>
               </div>
+              <span className="rounded-md bg-[#3d524b] px-2 py-0.5 text-[10px] font-bold text-[#9ac49f] shrink-0 font-mono">
+                /api/orders
+              </span>
             </div>
-            <span className="rounded-md bg-[#3d524b] px-2 py-0.5 text-[10px] font-bold text-[#9ac49f]">
-              /api/orders
-            </span>
+            <p className="mt-2.5 text-xs text-[#aab8b0] leading-relaxed">
+              <strong className="text-white font-semibold">{ordersCount}</strong> active tickets • <strong className="text-[#9ac49f] font-semibold">{occupiedTables.length}</strong> occupied tables
+            </p>
           </div>
-          <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#3d524b] pt-3">
+          <div className="mt-3.5 sm:mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-t border-[#3d524b] pt-3">
             <span className="text-[11px] text-[#8ea097]">
               {kitchenClosed ? "Disabled while kitchen is closed" : "Dine-in or Takeaway dispatch"}
             </span>
             <button
               onClick={() => onNewOrder()}
               disabled={kitchenClosed}
-              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold transition ${
+              className={`flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 sm:py-2 text-xs font-bold transition cursor-pointer ${
                 kitchenClosed
                   ? "bg-[#3d524b] text-[#8ea097] cursor-not-allowed opacity-50"
                   : "bg-[#9ac49f] text-[#24312e] hover:bg-[#88b68d]"
@@ -208,7 +208,7 @@ export default function ManagerControlPanel({
               title={kitchenClosed ? "Kitchen is closed - new orders disabled" : "Book New Order"}
             >
               <Plus size={14} />
-              {kitchenClosed ? "Kitchen Closed" : "Book New Order"}
+              <span>{kitchenClosed ? "Kitchen Closed" : "Book New Order"}</span>
             </button>
           </div>
         </div>
@@ -216,33 +216,33 @@ export default function ManagerControlPanel({
 
       {/* Quick Table Actions Strip */}
       {availableTables.length > 0 && (
-        <div className="mt-4 rounded-xl border border-[#3b4b45] bg-[#1d2725] p-3.5">
-          <div className="flex items-center justify-between">
+        <div className="mt-4 rounded-xl border border-[#3b4b45] bg-[#1d2725] p-3 sm:p-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <span className="text-xs font-bold text-[#f4bc83]">
               Quick Table Allocations (Available: {availableTables.length})
             </span>
             <span className="text-[10px] text-[#8ea097]">Click table to book or order</span>
           </div>
-          <div className="mt-2.5 flex flex-wrap gap-2">
+          <div className="mt-2.5 flex flex-wrap gap-1.5 sm:gap-2">
             {availableTables.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center gap-1.5 rounded-lg border border-[#3b4b45] bg-[#24312e] px-2.5 py-1.5 text-xs text-white"
+                className="flex items-center gap-1 rounded-lg border border-[#3b4b45] bg-[#24312e] px-2 py-1 text-xs text-white"
               >
-                <span className="font-bold text-[#9ac49f]">{t.id}</span>
-                <span className="text-[10px] text-[#8ea097]">({t.seats}s)</span>
+                <span className="font-bold text-[#9ac49f] text-[11px] sm:text-xs">{t.id}</span>
+                <span className="text-[9px] sm:text-[10px] text-[#8ea097]">({t.seats}s)</span>
                 <button
                   onClick={() => onBookTable(t.id)}
                   title={`Book table ${t.id}`}
-                  className="ml-1 rounded px-1.5 py-0.5 text-[10px] font-bold text-[#f4bc83] hover:bg-white/10"
+                  className="ml-0.5 rounded px-1.5 py-0.5 text-[10px] font-bold text-[#f4bc83] hover:bg-white/10 cursor-pointer"
                 >
                   Book
                 </button>
-                <span className="text-white/20">|</span>
+                <span className="text-white/20 text-[10px]">|</span>
                 <button
                   onClick={() => onNewOrder(t.id)}
                   title={`Take order for table ${t.id}`}
-                  className="rounded px-1.5 py-0.5 text-[10px] font-bold text-[#9ac49f] hover:bg-white/10"
+                  className="rounded px-1.5 py-0.5 text-[10px] font-bold text-[#9ac49f] hover:bg-white/10 cursor-pointer"
                 >
                   Order
                 </button>
@@ -254,8 +254,8 @@ export default function ManagerControlPanel({
 
       {/* Active Reservations (Live from API) */}
       <div className="mt-4 rounded-xl border border-[#3b4b45] bg-[#1d2725] p-3.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <CalendarCheck size={16} className="text-[#f4bc83]" />
             <span className="text-xs font-bold text-white">
               Active Reservations
@@ -266,7 +266,7 @@ export default function ManagerControlPanel({
           </div>
           <button
             onClick={() => onBookTable()}
-            className="text-[11px] font-bold text-[#f4bc83] hover:underline"
+            className="text-[11px] font-bold text-[#f4bc83] hover:underline cursor-pointer"
           >
             + New reservation
           </button>
@@ -279,7 +279,7 @@ export default function ManagerControlPanel({
             {bookings.slice(0, 4).map((b) => (
               <div
                 key={b.id}
-                className="flex items-center justify-between rounded-lg border border-[#3b4b45] bg-[#24312e] px-3 py-2 text-xs text-white"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border border-[#3b4b45] bg-[#24312e] px-3 py-2 text-xs text-white"
               >
                 <div className="flex items-center gap-2.5">
                   <span className="font-bold text-[#cfe0d0]">{b.customer}</span>

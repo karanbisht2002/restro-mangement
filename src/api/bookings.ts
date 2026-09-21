@@ -14,6 +14,7 @@ export const bookingSources = [
   "Walk-in",
   "Web link",
   "Online",
+  "Website",
 ] as const;
 
 export type BookingSource = (typeof bookingSources)[number];
@@ -22,6 +23,7 @@ export type TableBooking = {
   id: string;
   customer: string;
   phone: string;
+  email?: string;
   bookingDate: string;
   bookingTime: string;
   guests: number;
@@ -30,6 +32,10 @@ export type TableBooking = {
   deposit: number;
   source: BookingSource;
   specialRequests: string;
+  paymentId?: string;
+  payuPaymentId?: string;
+  stripePaymentId?: string;
+  paymentStatus?: "Paid" | "Pending" | "Refunded" | "Waived";
   createdAt: string;
   updatedAt: string;
 };
@@ -37,6 +43,7 @@ export type TableBooking = {
 export type CreateBookingInput = {
   customer: string;
   phone: string;
+  email?: string;
   bookingDate: string;
   bookingTime: string;
   guests: number;
@@ -44,15 +51,21 @@ export type CreateBookingInput = {
   deposit?: number;
   source?: BookingSource;
   specialRequests?: string;
+  paymentId?: string;
+  payuPaymentId?: string;
+  stripePaymentId?: string;
+  paymentStatus?: "Paid" | "Pending" | "Refunded" | "Waived";
 };
 
 export async function fetchBookings(params?: {
   date?: string;
   status?: string;
+  sort?: string;
 }): Promise<TableBooking[]> {
   const query = new URLSearchParams();
   if (params?.date) query.set("date", params.date);
   if (params?.status) query.set("status", params.status);
+  if (params?.sort) query.set("sort", params.sort);
   const qs = query.toString() ? `?${query.toString()}` : "";
   const response = await fetch(`/api/bookings${qs}`);
   if (!response.ok) throw new Error("Unable to load table bookings.");

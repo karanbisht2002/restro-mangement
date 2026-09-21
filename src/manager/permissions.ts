@@ -13,5 +13,6 @@ export const managerPages: Page[] = [
   "Employees",
   "Dashboard access",
   "Team",
+  "Website CMS",
   "Settings",
 ];

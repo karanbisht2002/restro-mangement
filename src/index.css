@@ -44,3 +44,12 @@ button {
   background-color: rgba(36, 49, 46, 0.15);
   border-radius: 9999px;
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

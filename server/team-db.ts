@@ -144,6 +144,14 @@ export async function ensureTeamTablesInitialized() {
       ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS estimated_prep_time_minutes INTEGER DEFAULT 20;
       ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS table_turn_time_minutes INTEGER DEFAULT 60;
       ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS gst_number VARCHAR(64) DEFAULT '07AAAAA0000A1Z5';
+      ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS address TEXT DEFAULT 'Connaught Place, Central Boulevard, New Delhi 110001';
+      ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS reservation_deposit DOUBLE PRECISION DEFAULT 500.0;
+      ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS stripe_publishable_key TEXT DEFAULT '';
+      ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS stripe_secret_key TEXT DEFAULT '';
+      ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS favicon_url TEXT DEFAULT '';
+      ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS payu_merchant_key TEXT DEFAULT '';
+      ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS payu_merchant_salt TEXT DEFAULT '';
+      ALTER TABLE restaurant_settings ADD COLUMN IF NOT EXISTS payu_test_mode BOOLEAN DEFAULT true;
 
       CREATE TABLE IF NOT EXISTS departments (
         id SERIAL PRIMARY KEY,
@@ -193,6 +201,45 @@ export async function ensureTeamTablesInitialized() {
         ('staff_103', CURRENT_DATE, CURRENT_TIMESTAMP - INTERVAL '30 minutes', 'Clocked in', 28.5355, 77.3910, 8, true);
       `);
     }
+
+    // Ensure columns exist on attendance_logs
+    await pool.query(`
+      ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS total_break_minutes INTEGER DEFAULT 0;
+      ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS work_duration_minutes INTEGER DEFAULT 0;
+    `);
+
+    // Seed realistic attendance history for past 30 days if few records exist
+    const attendanceCountCheck = await pool.query("SELECT COUNT(*) FROM attendance_logs");
+    if (parseInt(attendanceCountCheck.rows[0].count, 10) < 15) {
+      const staffListRes = await pool.query("SELECT id FROM staff LIMIT 6");
+      for (const row of staffListRes.rows) {
+        const staffId = row.id;
+        for (let daysAgo = 1; daysAgo <= 28; daysAgo++) {
+          // Skip Sundays (every 7 days) as weekly off
+          if (daysAgo % 7 === 0) continue;
+          // Randomize break and duration
+          const breakMin = 30 + (daysAgo % 4) * 10;
+          const workMin = 480 + (daysAgo % 3) * 20;
+          await pool.query(`
+            INSERT INTO attendance_logs (
+              staff_id, date, clock_in, clock_out, break_start, break_end,
+              total_break_minutes, work_duration_minutes, status,
+              clock_in_latitude, clock_in_longitude, clock_in_distance_meters, is_geofence_verified
+            ) VALUES (
+              $1,
+              CURRENT_DATE - INTERVAL '${daysAgo} days',
+              (CURRENT_DATE - INTERVAL '${daysAgo} days' + TIME '09:05:00'),
+              (CURRENT_DATE - INTERVAL '${daysAgo} days' + TIME '18:10:00'),
+              (CURRENT_DATE - INTERVAL '${daysAgo} days' + TIME '13:00:00'),
+              (CURRENT_DATE - INTERVAL '${daysAgo} days' + TIME '13:${breakMin}:00'),
+              $2, $3, 'Clocked out',
+              28.5355, 77.3910, 14, true
+            ) ON CONFLICT DO NOTHING;
+          `, [staffId, breakMin, workMin]).catch(() => {});
+        }
+      }
+    }
+
     initDone = true;
   } catch (err) {
     console.error("Failed to initialize team tables:", err);
@@ -227,10 +274,15 @@ teamDbRouter.get("/staff", async (_req: Request, res: Response) => {
         COALESCE(a.status, 'Scheduled') AS "todayStatus",
         a.clock_in AS "clockInTime",
         a.clock_out AS "clockOutTime",
+        a.break_start AS "breakStartTime",
+        a.break_end AS "breakEndTime",
+        COALESCE(a.total_break_minutes, 0) AS "totalBreakMinutes",
+        COALESCE(a.work_duration_minutes, 0) AS "workDurationMinutes",
+        COALESCE(a.is_geofence_verified, false) AS "isGeofenceVerified",
         a.clock_in_distance_meters AS "lastDistanceMeters"
       FROM staff s
       LEFT JOIN LATERAL (
-        SELECT status, clock_in, clock_out, clock_in_distance_meters
+        SELECT status, clock_in, clock_out, break_start, break_end, total_break_minutes, work_duration_minutes, is_geofence_verified, clock_in_distance_meters
         FROM attendance_logs
         WHERE staff_id = s.id AND date = CURRENT_DATE
         ORDER BY id DESC
@@ -407,12 +459,18 @@ teamDbRouter.get("/settings", async (_req: Request, res: Response) => {
          COALESCE(currency_symbol, '₹') AS "currencySymbol",
          COALESCE(is_currency_locked, false) AS "isCurrencyLocked",
          COALESCE(logo_url, '') AS "logoUrl",
+         COALESCE(favicon_url, '') AS "faviconUrl",
          COALESCE(tax_rate, 5.0) AS "taxRate",
          COALESCE(service_charge, 5.0) AS "serviceCharge",
          COALESCE(receipt_footer, 'Thank you for dining with Table & Thyme!') AS "receiptFooter",
          COALESCE(estimated_prep_time_minutes, 20) AS "estimatedPrepTimeMinutes",
          COALESCE(table_turn_time_minutes, 60) AS "tableTurnTimeMinutes",
          COALESCE(gst_number, '07AAAAA0000A1Z5') AS "gstNumber",
+         COALESCE(address, 'Connaught Place, Central Boulevard, New Delhi 110001') AS "address",
+         COALESCE(reservation_deposit, 500.0)::float AS "reservationDeposit",
+         COALESCE(payu_merchant_key, '') AS "payuMerchantKey",
+         COALESCE(payu_merchant_salt, '') AS "payuMerchantSalt",
+         COALESCE(payu_test_mode, true) AS "payuTestMode",
          latitude,
          longitude,
          radius_meters AS "radiusMeters",
@@ -445,6 +503,12 @@ teamDbRouter.put("/settings", async (req: Request, res: Response) => {
       longitude,
       radiusMeters,
       gstNumber,
+      address,
+      reservationDeposit,
+      payuMerchantKey,
+      payuMerchantSalt,
+      payuTestMode,
+      faviconUrl,
     } = req.body;
 
     // Process currency symbol and lock settings
@@ -468,6 +532,12 @@ teamDbRouter.put("/settings", async (req: Request, res: Response) => {
          longitude = COALESCE($12, longitude),
          radius_meters = COALESCE($13, radius_meters),
          gst_number = COALESCE($14, gst_number),
+         address = COALESCE($15, address),
+         reservation_deposit = COALESCE($16, reservation_deposit),
+         payu_merchant_key = COALESCE($17, payu_merchant_key),
+         payu_merchant_salt = COALESCE($18, payu_merchant_salt),
+         payu_test_mode = COALESCE($19, payu_test_mode),
+         favicon_url = COALESCE($20, favicon_url),
          updated_at = CURRENT_TIMESTAMP
        WHERE id = 'default'
        RETURNING
@@ -477,12 +547,18 @@ teamDbRouter.put("/settings", async (req: Request, res: Response) => {
          currency_symbol AS "currencySymbol",
          is_currency_locked AS "isCurrencyLocked",
          logo_url AS "logoUrl",
+         COALESCE(favicon_url, '') AS "faviconUrl",
          tax_rate AS "taxRate",
          service_charge AS "serviceCharge",
          receipt_footer AS "receiptFooter",
          estimated_prep_time_minutes AS "estimatedPrepTimeMinutes",
          table_turn_time_minutes AS "tableTurnTimeMinutes",
          COALESCE(gst_number, '07AAAAA0000A1Z5') AS "gstNumber",
+         COALESCE(address, 'Connaught Place, Central Boulevard, New Delhi 110001') AS "address",
+         COALESCE(reservation_deposit, 500.0)::float AS "reservationDeposit",
+         COALESCE(payu_merchant_key, '') AS "payuMerchantKey",
+         COALESCE(payu_merchant_salt, '') AS "payuMerchantSalt",
+         COALESCE(payu_test_mode, true) AS "payuTestMode",
          latitude,
          longitude,
          radius_meters AS "radiusMeters",
@@ -502,8 +578,27 @@ teamDbRouter.put("/settings", async (req: Request, res: Response) => {
         longitude,
         radiusMeters,
         gstNumber !== undefined ? String(gstNumber) : null,
+        address !== undefined ? String(address) : null,
+        reservationDeposit !== undefined ? Number(reservationDeposit) : null,
+        payuMerchantKey !== undefined ? String(payuMerchantKey).trim() : null,
+        payuMerchantSalt !== undefined ? String(payuMerchantSalt).trim() : null,
+        payuTestMode !== undefined ? Boolean(payuTestMode) : null,
+        faviconUrl !== undefined ? String(faviconUrl) : null,
       ],
     );
+
+    // Also sync address to website_content if provided
+    if (address) {
+      try {
+        const wcRes = await pool.query(`SELECT data FROM website_content WHERE id = 'main' LIMIT 1`);
+        if (wcRes.rows.length > 0 && wcRes.rows[0].data) {
+          const wdata = wcRes.rows[0].data;
+          wdata.address = String(address);
+          await pool.query(`UPDATE website_content SET data = $1, updated_at = CURRENT_TIMESTAMP WHERE id = 'main'`, [wdata]);
+        }
+      } catch {}
+    }
+
     res.json({ data: result.rows[0] });
   } catch (error) {
     res.status(500).json({ error: "Failed to update settings", details: String(error) });
@@ -671,16 +766,30 @@ teamDbRouter.post("/attendance/break", async (req: Request, res: Response) => {
       return;
     }
 
+    let result;
     const newStatus = action === "start" ? "On break" : "Clocked in";
-    const updateField = action === "start" ? "break_start = CURRENT_TIMESTAMP" : "break_end = CURRENT_TIMESTAMP";
 
-    const result = await pool.query(
-      `UPDATE attendance_logs
-       SET status = $1, ${updateField}
-       WHERE staff_id = $2 AND date = CURRENT_DATE
-       RETURNING *`,
-      [newStatus, staffId],
-    );
+    if (action === "start") {
+      result = await pool.query(
+        `UPDATE attendance_logs
+         SET status = 'On break', break_start = CURRENT_TIMESTAMP
+         WHERE staff_id = $1 AND date = CURRENT_DATE
+         RETURNING *`,
+        [staffId],
+      );
+    } else {
+      // Ending break: calculate elapsed minutes and accumulate into total_break_minutes
+      result = await pool.query(
+        `UPDATE attendance_logs
+         SET
+           status = 'Clocked in',
+           break_end = CURRENT_TIMESTAMP,
+           total_break_minutes = COALESCE(total_break_minutes, 0) + GREATEST(0, ROUND(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - COALESCE(break_start, CURRENT_TIMESTAMP))) / 60))
+         WHERE staff_id = $1 AND date = CURRENT_DATE
+         RETURNING *`,
+        [staffId],
+      );
+    }
 
     if (result.rowCount === 0) {
       res.status(404).json({ error: "No active attendance log for today" });
@@ -717,7 +826,10 @@ teamDbRouter.post("/attendance/clock-out", async (req: Request, res: Response) =
 
     const result = await pool.query(
       `UPDATE attendance_logs
-       SET status = 'Clocked out', clock_out = CURRENT_TIMESTAMP
+       SET
+         status = 'Clocked out',
+         clock_out = CURRENT_TIMESTAMP,
+         work_duration_minutes = GREATEST(0, ROUND(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - COALESCE(clock_in, CURRENT_TIMESTAMP))) / 60) - COALESCE(total_break_minutes, 0))
        WHERE staff_id = $1 AND date = CURRENT_DATE
        RETURNING *`,
       [staffId],
@@ -744,6 +856,166 @@ teamDbRouter.post("/attendance/clock-out", async (req: Request, res: Response) =
     res.json({ success: true, data: result.rows[0], status: "Clocked out" });
   } catch (error) {
     res.status(500).json({ error: "Failed to clock out", details: String(error) });
+  }
+});
+
+// GET /api/team/staff/:id/attendance/today - Get today's active attendance log for an employee
+teamDbRouter.get("/staff/:id/attendance/today", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `SELECT
+         id,
+         staff_id AS "staffId",
+         date::text AS "date",
+         clock_in AS "clockIn",
+         clock_out AS "clockOut",
+         break_start AS "breakStart",
+         break_end AS "breakEnd",
+         COALESCE(total_break_minutes, 0) AS "totalBreakMinutes",
+         COALESCE(work_duration_minutes, 0) AS "workDurationMinutes",
+         status,
+         clock_in_latitude AS "latitude",
+         clock_in_longitude AS "longitude",
+         clock_in_distance_meters AS "distanceMeters",
+         is_geofence_verified AS "isGeofenceVerified",
+         manager_override AS "managerOverride"
+       FROM attendance_logs
+       WHERE staff_id = $1 AND date = CURRENT_DATE
+       ORDER BY id DESC
+       LIMIT 1`,
+      [id],
+    );
+
+    if (result.rowCount === 0) {
+      res.json({ success: true, attendance: null, status: "Scheduled" });
+      return;
+    }
+
+    const log = result.rows[0];
+    res.json({ success: true, attendance: log, status: log.status });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch today's attendance", details: String(error) });
+  }
+});
+
+// GET /api/team/staff/:id/attendance - Month-wise attendance records and metrics for an employee
+teamDbRouter.get("/staff/:id/attendance", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { month } = req.query; // 'YYYY-MM' or 'all'
+
+    // Verify staff exists
+    const staffCheck = await pool.query("SELECT id, name, department, shift, system_role FROM staff WHERE id = $1", [id]);
+    if (staffCheck.rowCount === 0) {
+      res.status(404).json({ error: "Staff member not found" });
+      return;
+    }
+    const staff = staffCheck.rows[0];
+
+    let whereClause = "WHERE staff_id = $1";
+    const params: unknown[] = [id];
+
+    if (month && month !== "all" && typeof month === "string" && /^\d{4}-\d{2}$/.test(month)) {
+      whereClause += " AND TO_CHAR(date, 'YYYY-MM') = $2";
+      params.push(month);
+    }
+
+    const logsResult = await pool.query(
+      `SELECT
+         id,
+         staff_id AS "staffId",
+         date::text AS "date",
+         TO_CHAR(date, 'Dy') AS "dayOfWeek",
+         clock_in AS "clockIn",
+         clock_out AS "clockOut",
+         break_start AS "breakStart",
+         break_end AS "breakEnd",
+         COALESCE(total_break_minutes, 0) AS "totalBreakMinutes",
+         COALESCE(work_duration_minutes,
+           CASE
+             WHEN clock_out IS NOT NULL AND clock_in IS NOT NULL
+             THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (clock_out - clock_in)) / 60) - COALESCE(total_break_minutes, 0))
+             WHEN clock_in IS NOT NULL
+             THEN GREATEST(0, ROUND(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - clock_in)) / 60) - COALESCE(total_break_minutes, 0))
+             ELSE 0
+           END
+         ) AS "workDurationMinutes",
+         status,
+         clock_in_distance_meters AS "distanceMeters",
+         is_geofence_verified AS "isGeofenceVerified",
+         manager_override AS "managerOverride",
+         created_at AS "createdAt"
+       FROM attendance_logs
+       ${whereClause}
+       ORDER BY date DESC, clock_in DESC`,
+      params,
+    );
+
+    const logs = logsResult.rows;
+
+    // Calculate monthly summary statistics
+    let totalWorkMinutes = 0;
+    let totalBreakMinutes = 0;
+    const presentDates = new Set<string>();
+    let onTimeCount = 0;
+
+    for (const log of logs) {
+      if (log.status === "Clocked in" || log.status === "Clocked out" || log.status === "On break" || log.status === "Present") {
+        presentDates.add(log.date);
+      }
+      totalWorkMinutes += Number(log.workDurationMinutes) || 0;
+      totalBreakMinutes += Number(log.totalBreakMinutes) || 0;
+
+      if (log.clockIn) {
+        const punchTime = new Date(log.clockIn);
+        const hours = punchTime.getHours();
+        const mins = punchTime.getMinutes();
+        if (hours < 10 || (hours === 10 && mins <= 15)) {
+          onTimeCount++;
+        }
+      }
+    }
+
+    const daysPresent = presentDates.size;
+    const totalHoursWorked = (totalWorkMinutes / 60).toFixed(1);
+    const totalBreakHours = (totalBreakMinutes / 60).toFixed(1);
+    const avgDailyHours = daysPresent > 0 ? (totalWorkMinutes / (daysPresent * 60)).toFixed(1) : "0.0";
+    const onTimeRate = logs.length > 0 ? Math.round((onTimeCount / logs.length) * 100) : 100;
+
+    // Fetch approved leaves in this period
+    let leavesQuery = "SELECT COUNT(*) FROM leave_requests WHERE staff_id = $1 AND status = 'Approved'";
+    const leavesParams: unknown[] = [id];
+    if (month && month !== "all" && typeof month === "string" && /^\d{4}-\d{2}$/.test(month)) {
+      leavesQuery += " AND TO_CHAR(start_date, 'YYYY-MM') = $2";
+      leavesParams.push(month);
+    }
+    const leavesRes = await pool.query(leavesQuery, leavesParams);
+    const approvedLeaves = parseInt(leavesRes.rows[0]?.count || "0", 10);
+
+    res.json({
+      success: true,
+      staff: {
+        id: staff.id,
+        name: staff.name,
+        department: staff.department,
+        shift: staff.shift,
+        systemRole: staff.system_role,
+      },
+      summary: {
+        daysPresent,
+        totalWorkMinutes,
+        totalHoursWorked: parseFloat(totalHoursWorked),
+        totalBreakMinutes,
+        totalBreakHours: parseFloat(totalBreakHours),
+        avgDailyHours: parseFloat(avgDailyHours),
+        onTimeRate,
+        approvedLeaves,
+      },
+      logs,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch attendance history", details: String(error) });
   }
 });
 
@@ -923,12 +1195,28 @@ teamDbRouter.post("/auth/login", async (req: Request, res: Response) => {
 
     const result = await pool.query(
       `SELECT
-         id, name, phone, department,
-         system_role AS "systemRole",
-         shift,
-         is_active_operator AS "isActiveOperator"
-       FROM staff
-       WHERE RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 10) = RIGHT($1, 10) AND pin = $2`,
+         s.id, s.name, s.phone, s.department,
+         s.system_role AS "systemRole",
+         s.shift,
+         s.is_active_operator AS "isActiveOperator",
+         COALESCE(a.status, 'Scheduled') AS "todayStatus",
+         a.clock_in AS "clockInTime",
+         a.clock_out AS "clockOutTime",
+         a.break_start AS "breakStartTime",
+         a.break_end AS "breakEndTime",
+         COALESCE(a.total_break_minutes, 0) AS "totalBreakMinutes",
+         COALESCE(a.work_duration_minutes, 0) AS "workDurationMinutes",
+         COALESCE(a.is_geofence_verified, false) AS "isGeofenceVerified",
+         a.clock_in_distance_meters AS "lastDistanceMeters"
+       FROM staff s
+       LEFT JOIN LATERAL (
+         SELECT status, clock_in, clock_out, break_start, break_end, total_break_minutes, work_duration_minutes, is_geofence_verified, clock_in_distance_meters
+         FROM attendance_logs
+         WHERE staff_id = s.id AND date = CURRENT_DATE
+         ORDER BY id DESC
+         LIMIT 1
+       ) a ON true
+       WHERE RIGHT(regexp_replace(s.phone, '[^0-9]', '', 'g'), 10) = RIGHT($1, 10) AND s.pin = $2`,
       [cleanPhone, cleanPin],
     );
 
@@ -957,12 +1245,28 @@ teamDbRouter.post("/auth/login-web", async (req: Request, res: Response) => {
 
     const result = await pool.query(
       `SELECT
-         id, name, phone, pin, email, department,
-         system_role AS "systemRole",
-         shift,
-         is_active_operator AS "isActiveOperator"
-       FROM staff
-       WHERE LOWER(COALESCE(email, '')) = $1 AND password = $2`,
+         s.id, s.name, s.phone, s.pin, s.email, s.department,
+         s.system_role AS "systemRole",
+         s.shift,
+         s.is_active_operator AS "isActiveOperator",
+         COALESCE(a.status, 'Scheduled') AS "todayStatus",
+         a.clock_in AS "clockInTime",
+         a.clock_out AS "clockOutTime",
+         a.break_start AS "breakStartTime",
+         a.break_end AS "breakEndTime",
+         COALESCE(a.total_break_minutes, 0) AS "totalBreakMinutes",
+         COALESCE(a.work_duration_minutes, 0) AS "workDurationMinutes",
+         COALESCE(a.is_geofence_verified, false) AS "isGeofenceVerified",
+         a.clock_in_distance_meters AS "lastDistanceMeters"
+       FROM staff s
+       LEFT JOIN LATERAL (
+         SELECT status, clock_in, clock_out, break_start, break_end, total_break_minutes, work_duration_minutes, is_geofence_verified, clock_in_distance_meters
+         FROM attendance_logs
+         WHERE staff_id = s.id AND date = CURRENT_DATE
+         ORDER BY id DESC
+         LIMIT 1
+       ) a ON true
+       WHERE LOWER(COALESCE(s.email, '')) = $1 AND s.password = $2`,
       [cleanEmail, cleanPassword],
     );
 
@@ -983,6 +1287,7 @@ teamDbRouter.post("/auth/login-web", async (req: Request, res: Response) => {
               department: role === "Manager" ? "Management" : role === "Kitchen" ? "Kitchen" : "Floor",
               shift: "09:00 - 18:00",
               isActiveOperator: true,
+              todayStatus: "Scheduled",
             },
           });
           return;

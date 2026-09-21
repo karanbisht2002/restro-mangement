@@ -46,7 +46,7 @@ export default function ServantControlPanel({
   ).length;
 
   return (
-    <section className="mt-8 rounded-2xl border border-[#dfe1dc] bg-[#24312e] p-5 text-white sm:p-6 shadow-xl">
+    <section className="mt-8 rounded-2xl border border-[#dfe1dc] bg-[#24312e] p-4 sm:p-6 text-white shadow-xl">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#f4bc83]">
@@ -88,90 +88,90 @@ export default function ServantControlPanel({
 
       {/* Primary Action Dispatchers: New Order & Book Table */}
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col justify-between rounded-xl border border-[#485b53] bg-[#2c3c37] p-4 transition hover:border-[#9ac49f]">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#3d524b] text-[#9ac49f]">
-                <Utensils size={20} />
-              </div>
-              <div>
+        <div className="flex flex-col justify-between rounded-xl border border-[#485b53] bg-[#2c3c37] p-3.5 sm:p-4 transition hover:border-[#9ac49f]">
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#3d524b] text-[#9ac49f] shrink-0">
+                  <Utensils size={18} />
+                </div>
                 <h3 className="text-sm font-bold text-white">Take New Order</h3>
-                <p className="text-xs text-[#aab8b0]">
-                  Dispatch food ticket to kitchen via <span className="text-[#9ac49f] font-mono text-[11px]">POST /api/orders</span>
-                </p>
               </div>
+              <span className="rounded-md bg-[#3d524b] px-2 py-0.5 text-[10px] font-bold text-[#9ac49f] shrink-0 font-mono">
+                {activeOrdersCount} in kitchen
+              </span>
             </div>
-            <span className="rounded-md bg-[#3d524b] px-2 py-0.5 text-[10px] font-bold text-[#9ac49f]">
-              {activeOrdersCount} in kitchen
-            </span>
+            <p className="mt-2.5 text-xs text-[#aab8b0] leading-relaxed">
+              Dispatch ticket to kitchen via <span className="text-[#9ac49f] font-mono text-[11px]">POST /api/orders</span>
+            </p>
           </div>
-          <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#3d524b] pt-3">
+          <div className="mt-3.5 sm:mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-t border-[#3d524b] pt-3">
             <span className="text-[11px] text-[#8ea097]">
               {kitchenClosed ? "Disabled while kitchen is closed" : "Auto-marks table Occupied"}
             </span>
             <button
               onClick={() => onNewOrder()}
               disabled={kitchenClosed}
-              className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold transition ${
+              className={`flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 sm:py-2 text-xs font-bold transition cursor-pointer ${
                 kitchenClosed
                   ? "bg-[#3d524b] text-[#8ea097] cursor-not-allowed opacity-50"
                   : "bg-[#9ac49f] text-[#24312e] hover:bg-[#88b68d]"
               }`}
               title={kitchenClosed ? "Kitchen is closed - new orders disabled" : "Take Order"}
             >
-              <Plus size={15} />
-              {kitchenClosed ? "Kitchen Closed" : "Take Order"}
+              <Plus size={14} />
+              <span>{kitchenClosed ? "Kitchen Closed" : "Take Order"}</span>
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col justify-between rounded-xl border border-[#485b53] bg-[#2c3c37] p-4 transition hover:border-[#f4bc83]">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#3d524b] text-[#f4bc83]">
-                <CalendarCheck size={20} />
-              </div>
-              <div>
+        <div className="flex flex-col justify-between rounded-xl border border-[#485b53] bg-[#2c3c37] p-3.5 sm:p-4 transition hover:border-[#f4bc83]">
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#3d524b] text-[#f4bc83] shrink-0">
+                  <CalendarCheck size={18} />
+                </div>
                 <h3 className="text-sm font-bold text-white">Book Guest Table</h3>
-                <p className="text-xs text-[#aab8b0]">
-                  Reserve for walk-in or phone guest via <span className="text-[#f4bc83] font-mono text-[11px]">POST /api/bookings</span>
-                </p>
               </div>
+              <span className="rounded-md bg-[#3d524b] px-2 py-0.5 text-[10px] font-bold text-[#f4bc83] shrink-0 font-mono">
+                {availableCount} tables free
+              </span>
             </div>
-            <span className="rounded-md bg-[#3d524b] px-2 py-0.5 text-[10px] font-bold text-[#f4bc83]">
-              {availableCount} tables free
-            </span>
+            <p className="mt-2.5 text-xs text-[#aab8b0] leading-relaxed">
+              Reserve for walk-in or phone guest via <span className="text-[#f4bc83] font-mono text-[11px]">POST /api/bookings</span>
+            </p>
           </div>
-          <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#3d524b] pt-3">
+          <div className="mt-3.5 sm:mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-t border-[#3d524b] pt-3">
             <span className="text-[11px] text-[#8ea097]">
               {kitchenClosed ? "Disabled while kitchen is closed" : "Auto-marks table Booked"}
             </span>
             <button
               onClick={() => onBookTable()}
               disabled={kitchenClosed}
-              className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold transition ${
+              className={`flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 sm:py-2 text-xs font-bold transition cursor-pointer ${
                 kitchenClosed
                   ? "bg-[#3d524b] text-[#8ea097] cursor-not-allowed opacity-50"
                   : "bg-[#f4bc83] text-[#24312e] hover:bg-[#eab074]"
               }`}
-              title={kitchenClosed ? "Kitchen is closed - table booking disabled" : "Book Table"}
+              title={kitchenClosed ? "Kitchen is closed - reservations disabled" : "Book Table"}
             >
-              <CalendarCheck size={15} />
-              {kitchenClosed ? "Kitchen Closed" : "Book Table"}
+              <CalendarCheck size={14} />
+              <span>{kitchenClosed ? "Kitchen Closed" : "Book Table"}</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Live Floor Snapshot & Fast Table Actions */}
-      <div className="mt-5 rounded-xl border border-[#3b4b45] bg-[#1d2725] p-4">
+      <div className="mt-5 rounded-xl border border-[#3b4b45] bg-[#1d2725] p-3.5 sm:p-4">
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <Table2 size={18} className="text-[#f4bc83]" />
             <span className="text-xs font-bold text-white">
               Floor Tables & Fast Actions
             </span>
-            <div className="flex items-center gap-2 text-[11px] text-[#aab8b0]">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] text-[#aab8b0]">
               <span className="text-[#9ac49f] font-semibold">{availableCount} Available</span>
               <span>•</span>
               <span className="text-[#d98865] font-semibold">{occupiedCount} Occupied</span>
@@ -189,7 +189,7 @@ export default function ServantControlPanel({
             <select
               value={activeZone}
               onChange={(e) => setActiveZone(e.target.value)}
-              className="rounded-lg border border-[#3b4b45] bg-[#24312e] px-2 py-1 text-xs font-bold text-white outline-none"
+              className="rounded-lg border border-[#3b4b45] bg-[#24312e] px-2 py-1 text-xs font-bold text-white outline-none cursor-pointer"
             >
               <option>All zones</option>
               <option>Window</option>
@@ -201,7 +201,7 @@ export default function ServantControlPanel({
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {filteredTables.map((table) => {
             const isAvailable = table.status === "Available";
             const isOccupied = table.status === "Occupied";

@@ -11,6 +11,7 @@ export type Page =
   | "Employees"
   | "Dashboard access"
   | "Team"
+  | "Website CMS"
   | "Settings";
 
 export type StaffRole = "Manager" | "Server" | "Kitchen";

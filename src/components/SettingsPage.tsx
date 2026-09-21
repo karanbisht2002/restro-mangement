@@ -28,6 +28,12 @@ import {
   Scale,
   Truck,
   ArrowRight,
+  Sun,
+  Moon,
+  Laptop,
+  MapPin,
+  CreditCard,
+  Globe,
 } from "lucide-react";
 import { updateStaff, changeStaffPassword } from "../api/team";
 import {
@@ -61,6 +67,13 @@ export interface StoreSettings {
   isCurrencyLocked?: boolean;
   unlockCurrency?: boolean;
   gstNumber?: string;
+  address?: string;
+  websiteTheme?: "system" | "light" | "dark";
+  reservationDeposit?: number;
+  payuMerchantKey?: string;
+  payuMerchantSalt?: string;
+  payuTestMode?: boolean;
+  faviconUrl?: string;
 }
 
 interface SettingsPageProps {
@@ -148,9 +161,18 @@ export default function SettingsPage({
   const [turnTime, setTurnTime] = useState(restaurantSettings.tableTurnTimeMinutes);
   const [logoUrl, setLogoUrl] = useState(restaurantSettings.logoUrl || "");
   const [gstNumber, setGstNumber] = useState(restaurantSettings.gstNumber || "07AAAAA0000A1Z5");
+  const [address, setAddress] = useState(restaurantSettings.address || "Connaught Place, Central Boulevard, New Delhi 110001");
+  const [websiteTheme, setWebsiteTheme] = useState<"system" | "light" | "dark">(restaurantSettings.websiteTheme || "system");
+  const [reservationDeposit, setReservationDeposit] = useState(restaurantSettings.reservationDeposit ?? 500);
+  const [payuMerchantKey, setPayuMerchantKey] = useState(restaurantSettings.payuMerchantKey || "");
+  const [payuMerchantSalt, setPayuMerchantSalt] = useState(restaurantSettings.payuMerchantSalt || "");
+  const [payuTestMode, setPayuTestMode] = useState(restaurantSettings.payuTestMode ?? true);
+  const [showPayuSalt, setShowPayuSalt] = useState(false);
   const [isCurrencyLocked, setIsCurrencyLocked] = useState(Boolean(restaurantSettings.isCurrencyLocked));
   const [unlockCurrencyConfirmed, setUnlockCurrencyConfirmed] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+  const [faviconUrl, setFaviconUrl] = useState(restaurantSettings.faviconUrl || "");
+  const [faviconUploadError, setFaviconUploadError] = useState<string | null>(null);
   const [savingStore, setSavingStore] = useState(false);
 
   // Inventory & Raw Materials Settings State
@@ -211,7 +233,14 @@ export default function SettingsPage({
     setPrepTime(restaurantSettings.estimatedPrepTimeMinutes);
     setTurnTime(restaurantSettings.tableTurnTimeMinutes);
     setLogoUrl(restaurantSettings.logoUrl || "");
+    setFaviconUrl(restaurantSettings.faviconUrl || "");
     setGstNumber(restaurantSettings.gstNumber || "07AAAAA0000A1Z5");
+    setAddress(restaurantSettings.address || "Connaught Place, Central Boulevard, New Delhi 110001");
+    setWebsiteTheme(restaurantSettings.websiteTheme || "system");
+    setReservationDeposit(restaurantSettings.reservationDeposit ?? 500);
+    setPayuMerchantKey(restaurantSettings.payuMerchantKey || "");
+    setPayuMerchantSalt(restaurantSettings.payuMerchantSalt || "");
+    setPayuTestMode(restaurantSettings.payuTestMode ?? true);
     setIsCurrencyLocked(Boolean(restaurantSettings.isCurrencyLocked));
     setUnlockCurrencyConfirmed(false);
   }, [restaurantSettings]);
@@ -345,6 +374,53 @@ export default function SettingsPage({
     reader.readAsDataURL(file);
   };
 
+  const handleFaviconFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFaviconUploadError(null);
+
+    // Limit to 2.5MB
+    if (file.size > 2.5 * 1024 * 1024) {
+      setFaviconUploadError("Favicon file size must be under 2.5MB.");
+      showToast("error", "File too large", "Favicon file size must be under 2.5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const size = 64; // Standard clean browser favicon resolution
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, size, size);
+            const compressed = canvas.toDataURL("image/png");
+            setFaviconUrl(compressed);
+            showToast("info", "Favicon Prepared", "Favicon ready. Click 'Save Restaurant Settings' to apply across the whole site.");
+          } else {
+            setFaviconUrl(ev.target?.result as string);
+          }
+        } catch {
+          setFaviconUrl(ev.target?.result as string);
+        }
+      };
+      img.onerror = () => {
+        setFaviconUploadError("Could not render the chosen favicon image file.");
+        showToast("error", "Image Error", "Could not render the chosen favicon image file.");
+      };
+      img.src = ev.target?.result as string;
+    };
+    reader.onerror = () => {
+      setFaviconUploadError("Failed to read favicon file.");
+      showToast("error", "File Error", "Failed to read favicon file.");
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveStore = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storeName.trim()) {
@@ -363,9 +439,16 @@ export default function SettingsPage({
         estimatedPrepTimeMinutes: Number(prepTime) || 20,
         tableTurnTimeMinutes: Number(turnTime) || 60,
         logoUrl: logoUrl.trim(),
+        faviconUrl: faviconUrl.trim(),
         gstNumber: gstNumber.trim() || "07AAAAA0000A1Z5",
         isCurrencyLocked: isCurrencyLocked,
         unlockCurrency: unlockCurrencyConfirmed,
+        address: address.trim(),
+        websiteTheme: websiteTheme,
+        reservationDeposit: Number(reservationDeposit) >= 0 ? Number(reservationDeposit) : 500,
+        payuMerchantKey: payuMerchantKey.trim(),
+        payuMerchantSalt: payuMerchantSalt.trim(),
+        payuTestMode: payuTestMode,
       });
       setUnlockCurrencyConfirmed(false);
       showToast(
@@ -558,55 +641,55 @@ export default function SettingsPage({
       </div>
 
       {/* Main Settings Layout (Desktop 2-Column: Navigation Tabs on Left, Content on Right) */}
-      <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[240px_1fr]">
         {/* Navigation Section Cards */}
-        <div className="flex flex-row gap-1.5 overflow-x-auto lg:flex-col lg:overflow-visible">
+        <div className="flex flex-row items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
           <button
             onClick={() => setActiveSection("profile")}
-            className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-xs font-bold transition cursor-pointer shrink-0 ${
+            className={`flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-left text-xs font-bold transition cursor-pointer shrink-0 whitespace-nowrap ${
               activeSection === "profile"
                 ? "bg-[#24312e] text-white shadow-xs"
                 : "border border-[#dfe1dc] bg-[#fbfaf7] text-[#68736e] hover:bg-[#f0f1ed] hover:text-[#24312e]"
             }`}
           >
-            <UserRound size={16} />
+            <UserRound size={15} className="shrink-0 sm:w-4 sm:h-4" />
             <span>My Profile</span>
           </button>
 
           <button
             onClick={() => setActiveSection("security")}
-            className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-xs font-bold transition cursor-pointer shrink-0 ${
+            className={`flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-left text-xs font-bold transition cursor-pointer shrink-0 whitespace-nowrap ${
               activeSection === "security"
                 ? "bg-[#24312e] text-white shadow-xs"
                 : "border border-[#dfe1dc] bg-[#fbfaf7] text-[#68736e] hover:bg-[#f0f1ed] hover:text-[#24312e]"
             }`}
           >
-            <KeyRound size={16} />
+            <KeyRound size={15} className="shrink-0 sm:w-4 sm:h-4" />
             <span>Security & Password</span>
           </button>
 
           <button
             onClick={() => setActiveSection("display")}
-            className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-xs font-bold transition cursor-pointer shrink-0 ${
+            className={`flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-left text-xs font-bold transition cursor-pointer shrink-0 whitespace-nowrap ${
               activeSection === "display"
                 ? "bg-[#24312e] text-white shadow-xs"
                 : "border border-[#dfe1dc] bg-[#fbfaf7] text-[#68736e] hover:bg-[#f0f1ed] hover:text-[#24312e]"
             }`}
           >
-            <Sliders size={16} />
+            <Sliders size={15} className="shrink-0 sm:w-4 sm:h-4" />
             <span>Display & Table Alerts</span>
           </button>
 
           {isManager && (
             <button
               onClick={() => setActiveSection("restaurant")}
-              className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-xs font-bold transition cursor-pointer shrink-0 ${
+              className={`flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-left text-xs font-bold transition cursor-pointer shrink-0 whitespace-nowrap ${
                 activeSection === "restaurant"
                   ? "bg-[#24312e] text-white shadow-xs"
                   : "border border-[#dfe1dc] bg-[#fbfaf7] text-[#68736e] hover:bg-[#f0f1ed] hover:text-[#24312e]"
               }`}
             >
-              <Building2 size={16} />
+              <Building2 size={15} className="shrink-0 sm:w-4 sm:h-4" />
               <span>Restaurant & Billing</span>
             </button>
           )}
@@ -614,13 +697,13 @@ export default function SettingsPage({
           {canManageInventory && (
             <button
               onClick={() => setActiveSection("inventory")}
-              className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-xs font-bold transition cursor-pointer shrink-0 ${
+              className={`flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-left text-xs font-bold transition cursor-pointer shrink-0 whitespace-nowrap ${
                 activeSection === "inventory"
                   ? "bg-[#24312e] text-white shadow-xs"
                   : "border border-[#dfe1dc] bg-[#fbfaf7] text-[#68736e] hover:bg-[#f0f1ed] hover:text-[#24312e]"
               }`}
             >
-              <Package size={16} />
+              <Package size={15} className="shrink-0 sm:w-4 sm:h-4" />
               <span>Inventory & Stock</span>
             </button>
           )}
@@ -990,6 +1073,93 @@ export default function SettingsPage({
                   </div>
                 </div>
 
+                {/* Website Favicon (Browser Tab Icon) */}
+                <div className="space-y-3 pt-3 border-t border-[#e9eae6]">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xs font-bold text-[#24312e] flex items-center gap-1.5">
+                        <Globe size={14} />
+                        Website & App Favicon (Browser Tab Icon)
+                      </h3>
+                      <p className="mt-0.5 text-[11px] text-[#84908a]">
+                        Upload your restaurant favicon to display in browser tabs across both the public website and management dashboard.
+                      </p>
+                    </div>
+                    {faviconUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setFaviconUrl("")}
+                        className="flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 transition cursor-pointer"
+                      >
+                        <Trash2 size={13} />
+                        Remove Favicon
+                      </button>
+                    )}
+                  </div>
+
+                  {faviconUploadError && (
+                    <div className="rounded-xl border border-rose-300 bg-rose-50 p-2.5 text-xs text-rose-800 flex items-center gap-2">
+                      <AlertCircle size={14} className="shrink-0" />
+                      <span>{faviconUploadError}</span>
+                    </div>
+                  )}
+
+                  <div className="grid gap-4 sm:grid-cols-[140px_1fr] items-center rounded-2xl border border-[#dfe1dc] bg-white p-4">
+                    {/* Live Browser Tab Mock Preview */}
+                    <div className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed border-[#dfe1dc] bg-[#fbfaf7] text-center">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#d2d6ce] bg-white shadow-2xs">
+                        {faviconUrl ? (
+                          <img
+                            src={faviconUrl}
+                            alt="Favicon"
+                            className="h-4 w-4 object-contain rounded-xs shrink-0"
+                          />
+                        ) : (
+                          <Globe size={14} className="text-[#84908a] shrink-0" />
+                        )}
+                        <span className="text-[10px] font-bold text-[#24312e] truncate max-w-[65px]">
+                          {storeName || "Website"}
+                        </span>
+                      </div>
+                      <span className="mt-2 text-[10px] font-semibold text-[#84908a]">
+                        {faviconUrl ? "Active Favicon" : "Default Icon"}
+                      </span>
+                    </div>
+
+                    {/* Upload Controls */}
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <label className="flex items-center gap-2 rounded-xl bg-[#24312e] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-xs">
+                          <Upload size={14} />
+                          <span>Choose Favicon Image</span>
+                          <input
+                            type="file"
+                            accept="image/png, image/x-icon, image/vnd.microsoft.icon, image/svg+xml, image/jpeg, image/webp"
+                            onChange={handleFaviconFileChange}
+                            className="hidden"
+                          />
+                        </label>
+                        <span className="text-[11px] text-[#84908a]">
+                          PNG, ICO, SVG, WebP (Square 32x32 to 128x128 recommended)
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#68736e] mb-1">
+                          Or enter favicon image URL:
+                        </label>
+                        <input
+                          type="url"
+                          value={faviconUrl}
+                          onChange={(e) => setFaviconUrl(e.target.value)}
+                          placeholder="https://example.com/favicon.png"
+                          className="w-full rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3.5 py-2 text-xs text-[#24312e] outline-hidden focus:border-[#24312e] focus:bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Identity & Legal Information */}
                 <div className="space-y-3 pt-3 border-t border-[#e9eae6]">
                   <h3 className="text-xs font-bold text-[#24312e] flex items-center gap-1.5">
@@ -1041,6 +1211,66 @@ export default function SettingsPage({
                       />
                       <p className="mt-1 text-[10.5px] text-[#84908a]">
                         Displayed on tax receipts, billing slips & customer invoices
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#24312e] mb-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <MapPin size={13} className="text-[#315a3d]" />
+                          <span>Restaurant Location / Full Address</span>
+                        </span>
+                        <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+                          Public Site & Receipts
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3.5 py-2.5 text-xs text-[#24312e] outline-hidden focus:border-[#24312e]"
+                        placeholder="Connaught Place, Central Boulevard, New Delhi 110001"
+                      />
+                      <p className="mt-1 text-[10.5px] text-[#84908a]">
+                        Appears dynamically on the website top bar, footer, and contact section
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#24312e] mb-1.5 flex items-center justify-between">
+                        <span>Website Theme Mode</span>
+                        <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-200">
+                          Public Site
+                        </span>
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setWebsiteTheme("system")}
+                          className={`flex items-center justify-center gap-1.5 rounded-xl border p-2 text-xs font-bold transition ${websiteTheme === "system" ? "border-[#24312e] bg-[#24312e] text-white" : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f6f5f1]"}`}
+                        >
+                          <Laptop size={14} />
+                          <span>System</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setWebsiteTheme("light")}
+                          className={`flex items-center justify-center gap-1.5 rounded-xl border p-2 text-xs font-bold transition ${websiteTheme === "light" ? "border-[#24312e] bg-[#24312e] text-white" : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f6f5f1]"}`}
+                        >
+                          <Sun size={14} />
+                          <span>Light</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setWebsiteTheme("dark")}
+                          className={`flex items-center justify-center gap-1.5 rounded-xl border p-2 text-xs font-bold transition ${websiteTheme === "dark" ? "border-[#24312e] bg-[#24312e] text-white" : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f6f5f1]"}`}
+                        >
+                          <Moon size={14} />
+                          <span>Dark</span>
+                        </button>
+                      </div>
+                      <p className="mt-1 text-[10.5px] text-[#84908a]">
+                        System mode adapts dynamically to the visitor's device light/dark appearance
                       </p>
                     </div>
                   </div>
@@ -1397,6 +1627,130 @@ export default function SettingsPage({
                   />
                 </div>
 
+                {/* Table Reservation Advance Deposit & PayU India Payment Gateway */}
+                <div className="space-y-4 pt-3 border-t border-[#e9eae6]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-xs font-bold text-[#24312e] flex items-center gap-1.5">
+                        <CreditCard size={14} className="text-[#315a3d]" />
+                        Table Reservation Advance Deposit & PayU Gateway
+                      </h3>
+                      <p className="mt-0.5 text-[11px] text-[#84908a]">
+                        Configure the advance table reservation deposit and integrate PayU India (UPI, Cards, NetBanking) for real-time payment collection.
+                      </p>
+                    </div>
+
+                    {/* PayU Status Badge */}
+                    <div>
+                      {payuMerchantKey && !payuTestMode ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-800">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                          PayU Live Mode Active
+                        </span>
+                      ) : payuMerchantKey && payuTestMode ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          PayU Test Mode (Sandbox Keys)
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-[10px] font-bold text-teal-800">
+                          <span className="h-1.5 w-1.5 rounded-full bg-teal-600" />
+                          PayU Demo Simulator Active
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-4">
+                    <div>
+                      <label className="block text-xs font-bold text-[#24312e] mb-1.5 flex items-center justify-between">
+                        <span>Advance Deposit ({currency})</span>
+                        <span className="text-[10px] font-semibold text-[#315a3d] bg-[#eef3ee] px-1.5 py-0.5 rounded-md border border-[#dfe1dc]">
+                          Per Booking
+                        </span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="50"
+                        value={reservationDeposit}
+                        onChange={(e) => setReservationDeposit(Math.max(0, Number(e.target.value)))}
+                        className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3.5 py-2.5 text-xs font-bold text-[#24312e] outline-hidden focus:border-[#24312e]"
+                        placeholder="500"
+                      />
+                      <p className="mt-1 text-[10px] text-[#84908a]">
+                        Deducted from final restaurant bill. Set 0 for free table reservations.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#24312e] mb-1.5">
+                        PayU Merchant Key
+                      </label>
+                      <input
+                        type="text"
+                        value={payuMerchantKey}
+                        onChange={(e) => setPayuMerchantKey(e.target.value.trim())}
+                        className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3.5 py-2.5 text-xs font-mono text-[#24312e] outline-hidden focus:border-[#24312e]"
+                        placeholder="e.g. gtKFFx or Merchant Key"
+                      />
+                      <p className="mt-1 text-[10px] text-[#84908a]">
+                        PayU Key provided in your PayU Dashboard.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#24312e] mb-1.5 flex items-center justify-between">
+                        <span>PayU Merchant Salt</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowPayuSalt(!showPayuSalt)}
+                          className="text-[10px] font-semibold text-[#68736e] hover:text-[#24312e] flex items-center gap-1 cursor-pointer"
+                        >
+                          {showPayuSalt ? <EyeOff size={11} /> : <Eye size={11} />}
+                          {showPayuSalt ? "Hide" : "Show"}
+                        </button>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPayuSalt ? "text" : "password"}
+                          value={payuMerchantSalt}
+                          onChange={(e) => setPayuMerchantSalt(e.target.value.trim())}
+                          className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3.5 py-2.5 text-xs font-mono text-[#24312e] outline-hidden focus:border-[#24312e]"
+                          placeholder="e.g. eCwWELxi or Merchant Salt"
+                        />
+                      </div>
+                      <p className="mt-1 text-[10px] text-[#84908a]">
+                        Used on server for SHA-512 cryptographic hash generation.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#24312e] mb-1.5">
+                        PayU Environment Mode
+                      </label>
+                      <select
+                        value={payuTestMode ? "test" : "live"}
+                        onChange={(e) => setPayuTestMode(e.target.value === "test")}
+                        className="w-full rounded-xl border border-[#dfe1dc] bg-white px-3.5 py-2.5 text-xs font-bold text-[#24312e] outline-hidden focus:border-[#24312e]"
+                      >
+                        <option value="test">Test / Sandbox (test.payu.in)</option>
+                        <option value="live">Live Production (secure.payu.in)</option>
+                      </select>
+                      <p className="mt-1 text-[10px] text-[#84908a]">
+                        Switch between PayU Sandbox and Live endpoints.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-3.5 text-xs text-[#68736e] flex items-start gap-2.5">
+                    <ShieldCheck size={16} className="text-[#315a3d] shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-[#24312e]">PayU India Dynamic Integration:</span> Changing the advance deposit here immediately updates the public website reservation card, confirmation pricing, and dashboard table allocation. When PayU keys are unconfigured, customers can reserve instantly using the built-in PayU sandbox simulator.
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex justify-end pt-3 border-t border-[#e9eae6]">
                   <button
                     type="submit"
@@ -1415,14 +1769,14 @@ export default function SettingsPage({
           {activeSection === "inventory" && (
             <div className="space-y-6">
               {/* Top Banner Card with Quick Action */}
-              <div className="rounded-3xl border border-[#dfe1dc] bg-gradient-to-br from-[#fbfaf7] via-white to-[#f4f7f4] p-6 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3.5">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#24312e] text-[#f4bc83] shadow-xs shrink-0">
-                      <Package size={24} />
+              <div className="rounded-3xl border border-[#dfe1dc] bg-gradient-to-br from-[#fbfaf7] via-white to-[#f4f7f4] p-4 sm:p-6 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
+                  <div className="flex items-start gap-3 sm:gap-3.5">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-[#24312e] text-[#f4bc83] shadow-xs shrink-0">
+                      <Package size={22} className="sm:w-6 sm:h-6" />
                     </div>
                     <div>
-                      <h2 className="display-font text-lg font-bold text-[#24312e]">
+                      <h2 className="display-font text-base sm:text-lg font-bold text-[#24312e]">
                         Inventory & Stock Management
                       </h2>
                       <p className="mt-0.5 text-xs text-[#68736e]">
@@ -1446,7 +1800,7 @@ export default function SettingsPage({
                       });
                       setIsAddProductOpen(true);
                     }}
-                    className="flex items-center gap-2 rounded-xl bg-[#24312e] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-xs shrink-0"
+                    className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-[#24312e] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-xs shrink-0"
                   >
                     <Plus size={15} />
                     <span>Add New Product</span>
@@ -1454,30 +1808,30 @@ export default function SettingsPage({
                 </div>
 
                 {/* Quick KPI stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5 pt-4 border-t border-[#e9eae6]">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-4 sm:mt-5 pt-3.5 sm:pt-4 border-t border-[#e9eae6]">
                   <div className="rounded-xl border border-[#dfe1dc] bg-white p-3">
                     <span className="text-[10px] font-bold text-[#84908a] uppercase tracking-wider block">
                       Total Stock Products
                     </span>
-                    <span className="text-lg font-black text-[#24312e]">{invItems.length}</span>
+                    <span className="text-base sm:text-lg font-black text-[#24312e]">{invItems.length}</span>
                   </div>
                   <div className="rounded-xl border border-[#dfe1dc] bg-white p-3">
                     <span className="text-[10px] font-bold text-[#84908a] uppercase tracking-wider block">
                       Configured Categories
                     </span>
-                    <span className="text-lg font-black text-[#24312e]">{invCategories.length}</span>
+                    <span className="text-base sm:text-lg font-black text-[#24312e]">{invCategories.length}</span>
                   </div>
                   <div className="rounded-xl border border-[#dfe1dc] bg-white p-3 col-span-2 sm:col-span-1">
                     <span className="text-[10px] font-bold text-[#84908a] uppercase tracking-wider block">
                       Measurement Units
                     </span>
-                    <span className="text-lg font-black text-[#24312e]">{invUnits.length}</span>
+                    <span className="text-base sm:text-lg font-black text-[#24312e]">{invUnits.length}</span>
                   </div>
                 </div>
               </div>
 
               {/* CARD 1: INVENTORY CATEGORIES MANAGEMENT */}
-              <div className="rounded-3xl border border-[#dfe1dc] bg-[#fbfaf7] p-6 shadow-xs space-y-4">
+              <div className="rounded-3xl border border-[#dfe1dc] bg-[#fbfaf7] p-4 sm:p-6 shadow-xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e9eae6] pb-4">
                   <div>
                     <h3 className="text-sm font-bold text-[#24312e] flex items-center gap-2">
@@ -1490,18 +1844,18 @@ export default function SettingsPage({
                   </div>
 
                   {/* Inline Add Category Form */}
-                  <form onSubmit={handleAddCategory} className="flex items-center gap-2">
+                  <form onSubmit={handleAddCategory} className="flex items-center gap-2 w-full sm:w-auto">
                     <input
                       type="text"
                       placeholder="Category name (e.g. Frozen Foods)"
                       value={newCatInput}
                       onChange={(e) => setNewCatInput(e.target.value)}
-                      className="rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs text-[#24312e] outline-none focus:border-[#24312e] w-52 sm:w-60"
+                      className="flex-1 sm:w-60 min-w-0 rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs text-[#24312e] outline-none focus:border-[#24312e]"
                     />
                     <button
                       type="submit"
                       disabled={addingCat || !newCatInput.trim()}
-                      className="flex items-center gap-1.5 rounded-xl bg-[#24312e] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer disabled:opacity-50"
+                      className="shrink-0 flex items-center justify-center gap-1.5 rounded-xl bg-[#24312e] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer disabled:opacity-50"
                     >
                       <Plus size={13} />
                       <span>{addingCat ? "Adding..." : "Add"}</span>
@@ -1543,7 +1897,7 @@ export default function SettingsPage({
               </div>
 
               {/* CARD 2: UNITS OF MEASUREMENT MANAGEMENT */}
-              <div className="rounded-3xl border border-[#dfe1dc] bg-[#fbfaf7] p-6 shadow-xs space-y-4">
+              <div className="rounded-3xl border border-[#dfe1dc] bg-[#fbfaf7] p-4 sm:p-6 shadow-xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e9eae6] pb-4">
                   <div>
                     <h3 className="text-sm font-bold text-[#24312e] flex items-center gap-2">
@@ -1556,25 +1910,27 @@ export default function SettingsPage({
                   </div>
 
                   {/* Inline Add Unit Form */}
-                  <form onSubmit={handleAddUnit} className="flex items-center gap-2 flex-wrap">
-                    <input
-                      type="text"
-                      placeholder="Symbol (e.g. tray)"
-                      value={newUnitSym}
-                      onChange={(e) => setNewUnitSym(e.target.value)}
-                      className="rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs text-[#24312e] outline-none focus:border-[#24312e] w-28"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Display label (e.g. Tray)"
-                      value={newUnitLbl}
-                      onChange={(e) => setNewUnitLbl(e.target.value)}
-                      className="rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs text-[#24312e] outline-none focus:border-[#24312e] w-36 sm:w-44"
-                    />
+                  <form onSubmit={handleAddUnit} className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <input
+                        type="text"
+                        placeholder="Symbol (e.g. tray)"
+                        value={newUnitSym}
+                        onChange={(e) => setNewUnitSym(e.target.value)}
+                        className="flex-1 sm:w-28 min-w-0 rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs text-[#24312e] outline-none focus:border-[#24312e]"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Display label (e.g. Tray)"
+                        value={newUnitLbl}
+                        onChange={(e) => setNewUnitLbl(e.target.value)}
+                        className="flex-1 sm:w-44 min-w-0 rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs text-[#24312e] outline-none focus:border-[#24312e]"
+                      />
+                    </div>
                     <button
                       type="submit"
                       disabled={addingUnit || !newUnitSym.trim()}
-                      className="flex items-center gap-1.5 rounded-xl bg-[#24312e] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer disabled:opacity-50"
+                      className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 rounded-xl bg-[#24312e] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer disabled:opacity-50"
                     >
                       <Plus size={13} />
                       <span>{addingUnit ? "Adding..." : "Add Unit"}</span>
@@ -1583,7 +1939,7 @@ export default function SettingsPage({
                 </div>
 
                 {/* Units Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 pt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5 pt-1">
                   {loadingInvData ? (
                     <span className="text-xs text-[#84908a]">Loading units...</span>
                   ) : invUnits.length === 0 ? (
@@ -1592,20 +1948,18 @@ export default function SettingsPage({
                     invUnits.map((u) => (
                       <div
                         key={u.name}
-                        className="flex items-center justify-between rounded-xl border border-[#dfe1dc] bg-white p-2.5 shadow-2xs hover:border-[#24312e]/40 transition"
+                        className="flex items-center justify-between gap-1.5 rounded-xl border border-[#dfe1dc] bg-white p-2 sm:p-2.5 shadow-2xs hover:border-[#24312e]/40 transition min-w-0"
                       >
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-black text-[#24312e]">{u.name}</span>
-                          </div>
-                          <p className="text-[11px] text-[#84908a] truncate max-w-[120px]">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-black text-[#24312e] block truncate">{u.name}</span>
+                          <p className="text-[10px] text-[#84908a] truncate">
                             {u.label || u.name}
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleDeleteUnit(u.name)}
-                          className="text-[#b0b8b3] hover:text-red-600 transition cursor-pointer p-1 rounded-md hover:bg-red-50"
+                          className="text-[#b0b8b3] hover:text-red-600 transition cursor-pointer p-1 rounded-md hover:bg-red-50 shrink-0"
                           title={`Delete unit ${u.name}`}
                         >
                           <Trash2 size={13} />
@@ -1616,9 +1970,9 @@ export default function SettingsPage({
                 </div>
               </div>
 
-              {/* CARD 3: STOCK CATALOG OVERVIEW TABLE */}
+              {/* CARD 3: STOCK CATALOG OVERVIEW */}
               <div className="rounded-3xl border border-[#dfe1dc] bg-white shadow-xs overflow-hidden">
-                <div className="p-4 sm:p-5 border-b border-[#e9eae6] bg-[#fbfaf7] flex items-center justify-between">
+                <div className="p-3.5 sm:p-5 border-b border-[#e9eae6] bg-[#fbfaf7] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                   <div>
                     <h3 className="text-sm font-bold text-[#24312e]">Registered Stock Items</h3>
                     <p className="text-xs text-[#84908a] mt-0.5">
@@ -1640,15 +1994,74 @@ export default function SettingsPage({
                       });
                       setIsAddProductOpen(true);
                     }}
-                    className="flex items-center gap-1.5 rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs font-bold text-[#24312e] hover:bg-[#f0f2ed] transition cursor-pointer shadow-2xs"
+                    className="flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 sm:py-1.5 text-xs font-bold text-[#24312e] hover:bg-[#f0f2ed] transition cursor-pointer shadow-2xs"
                   >
                     <Plus size={13} />
                     <span>Add Item</span>
                   </button>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                {/* Mobile View: Clean Card List (< sm) */}
+                <div className="sm:hidden divide-y divide-[#f0f1ed]">
+                  {invItems.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-[#84908a]">
+                      No inventory items found. Click "Add Item" to create one.
+                    </div>
+                  ) : (
+                    invItems.slice(0, 10).map((item) => (
+                      <div key={item.id} className="p-3.5 space-y-2.5">
+                        <div className="flex items-start gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-[#f0f2ed] overflow-hidden shrink-0 border border-[#dfe1dc] flex items-center justify-center">
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLElement).style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <Package size={18} className="text-[#84908a]" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-bold text-[#24312e] text-xs truncate">{item.name}</span>
+                              <span className="rounded bg-[#f0f2ed] px-1.5 py-0.5 text-[9px] font-bold text-[#55605b] shrink-0">
+                                {item.category}
+                              </span>
+                            </div>
+                            {item.supplier && (
+                              <span className="block text-[10px] text-[#84908a] truncate mt-0.5">
+                                Vendor: {item.supplier}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-[#fbfaf7] rounded-xl p-2 text-xs">
+                          <div>
+                            <span className="text-[10px] text-[#84908a] block font-medium">Current Stock</span>
+                            <span className="font-bold text-[#24312e]">{item.currentStock} {item.unit}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-[#84908a] block font-medium">Safety Limit</span>
+                            <span className="text-[#68736e] font-semibold">{item.minStockLimit} {item.unit}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-[#84908a] block font-medium">Cost / Unit</span>
+                            <span className="font-bold text-[#315a3d]">{restaurantSettings.currencySymbol}{item.costPerUnit}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Desktop & Tablet View: Table (>= sm) */}
+                <div className="hidden sm:block overflow-x-auto no-scrollbar">
+                  <table className="w-full text-left text-xs min-w-[540px]">
                     <thead className="border-b border-[#e9eae6] bg-[#fbfaf7]/60 text-[10px] font-bold uppercase tracking-wider text-[#84908a]">
                       <tr>
                         <th className="px-4 py-3">Item & Image</th>
@@ -1722,9 +2135,9 @@ export default function SettingsPage({
 
       {/* ADD PRODUCT MODAL IN SETTINGS */}
       {isAddProductOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#24312e]/50 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-lg rounded-3xl bg-white border border-[#dfe1dc] shadow-2xl p-6 my-auto max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-[#e9eae6] pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#24312e]/50 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+          <div className="w-full max-w-lg rounded-3xl bg-white border border-[#dfe1dc] shadow-2xl p-4 sm:p-6 my-auto max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#e9eae6] pb-3 sm:pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#24312e] text-[#f4bc83]">
                   <Package size={18} />

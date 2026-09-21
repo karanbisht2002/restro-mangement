@@ -10,8 +10,26 @@ import {
 import { isKitchenClosed } from "./kitchen-db";
 import { createNotification } from "./notifications-db";
 
+let migrationDone = false;
+async function ensureBookingsSchema() {
+  if (migrationDone) return;
+  try {
+    await pool.query(`
+      ALTER TABLE table_bookings ADD COLUMN IF NOT EXISTS email TEXT DEFAULT '';
+      ALTER TABLE table_bookings ADD COLUMN IF NOT EXISTS stripe_payment_id TEXT DEFAULT '';
+      ALTER TABLE table_bookings ADD COLUMN IF NOT EXISTS payu_payment_id TEXT DEFAULT '';
+      ALTER TABLE table_bookings ADD COLUMN IF NOT EXISTS payment_status VARCHAR(32) DEFAULT 'Paid';
+      ALTER TABLE table_bookings DROP CONSTRAINT IF EXISTS table_bookings_source_check;
+      ALTER TABLE table_bookings ADD CONSTRAINT table_bookings_source_check CHECK (source IN ('Phone', 'Walk-in', 'Web link', 'Online', 'Website'));
+    `);
+    migrationDone = true;
+  } catch {}
+}
+ensureBookingsSchema().catch(() => {});
+
 const bookingColumns = `
   id, customer, phone,
+  COALESCE(email, '') AS email,
   booking_date::text AS "bookingDate",
   booking_time AS "bookingTime",
   guests,
@@ -20,6 +38,9 @@ const bookingColumns = `
   deposit::float AS deposit,
   source,
   special_requests AS "specialRequests",
+  COALESCE(payu_payment_id, stripe_payment_id, '') AS "payuPaymentId",
+  COALESCE(payu_payment_id, stripe_payment_id, '') AS "paymentId",
+  COALESCE(payment_status, 'Paid') AS "paymentStatus",
   created_at AS "createdAt",
   updated_at AS "updatedAt"
 `;
@@ -28,10 +49,11 @@ export const bookingsDbRouter: Router = createRouter();
 
 bookingsDbRouter.get("/", async (request: Request, response: Response) => {
   try {
-    const { date, status, tableId } = request.query as {
+    const { date, status, tableId, sort } = request.query as {
       date?: string;
       status?: string;
       tableId?: string;
+      sort?: string;
     };
 
     const conditions: string[] = [];
@@ -55,11 +77,20 @@ bookingsDbRouter.get("/", async (request: Request, response: Response) => {
 
     response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
 
+    let orderByClause = "ORDER BY created_at DESC";
+    if (sort === "date_asc") {
+      orderByClause = "ORDER BY booking_date ASC, booking_time ASC, created_at DESC";
+    } else if (sort === "date_desc") {
+      orderByClause = "ORDER BY booking_date DESC, booking_time DESC, created_at DESC";
+    } else {
+      orderByClause = "ORDER BY created_at DESC";
+    }
+
     const query = `
       SELECT ${bookingColumns}
       FROM table_bookings
       ${whereClause}
-      ORDER BY booking_date DESC, created_at DESC
+      ${orderByClause}
     `;
 
     const result = await pool.query<TableBooking>(query, values);
@@ -154,24 +185,44 @@ bookingsDbRouter.post("/", async (request: Request, response: Response) => {
       }
     }
 
+    let depositAmount = typeof booking.deposit === "number" ? booking.deposit : undefined;
+    if (depositAmount === undefined || depositAmount === null) {
+      try {
+        const setRes = await pool.query(
+          "SELECT reservation_deposit FROM restaurant_settings WHERE id = 'default' LIMIT 1"
+        );
+        if (setRes.rows.length > 0 && typeof setRes.rows[0].reservation_deposit === "number") {
+          depositAmount = setRes.rows[0].reservation_deposit;
+        }
+      } catch {}
+    }
+    if (depositAmount === undefined || depositAmount === null) depositAmount = 500;
+
+    const paymentId = (booking as any).payuPaymentId || (booking as any).paymentId || (booking as any).stripePaymentId || "";
+
     const result = await pool.query<TableBooking>(
       `INSERT INTO table_bookings (
-        id, customer, phone, booking_date, booking_time,
-        guests, table_id, status, deposit, source, special_requests
+        id, customer, phone, email, booking_date, booking_time,
+        guests, table_id, status, deposit, source, special_requests,
+        payu_payment_id, stripe_payment_id, payment_status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 'Booked', $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Booked', $9, $10, $11, $12, $13, $14)
       RETURNING ${bookingColumns}`,
       [
         bookingId,
         booking.customer,
         booking.phone,
+        booking.email || "",
         booking.bookingDate,
         booking.bookingTime,
         booking.guests,
         booking.tableId,
-        booking.deposit,
+        depositAmount,
         booking.source,
         booking.specialRequests,
+        paymentId,
+        paymentId,
+        booking.paymentStatus || "Paid",
       ],
     );
 

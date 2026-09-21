@@ -14,7 +14,54 @@ export interface StaffMember {
   todayStatus: "Clocked in" | "On break" | "Clocked out" | "Scheduled";
   clockInTime?: string | null;
   clockOutTime?: string | null;
+  breakStartTime?: string | null;
+  breakEndTime?: string | null;
+  totalBreakMinutes?: number;
+  workDurationMinutes?: number;
+  isGeofenceVerified?: boolean;
   lastDistanceMeters?: number | null;
+}
+
+export interface AttendanceRecord {
+  id: number;
+  staffId: string;
+  date: string;
+  dayOfWeek?: string;
+  clockIn: string | null;
+  clockOut: string | null;
+  breakStart: string | null;
+  breakEnd: string | null;
+  totalBreakMinutes: number;
+  workDurationMinutes: number;
+  status: "Clocked in" | "On break" | "Clocked out" | "Scheduled" | "Present";
+  distanceMeters?: number | null;
+  isGeofenceVerified?: boolean;
+  managerOverride?: boolean;
+  createdAt?: string;
+}
+
+export interface StaffAttendanceSummary {
+  daysPresent: number;
+  totalWorkMinutes: number;
+  totalHoursWorked: number;
+  totalBreakMinutes: number;
+  totalBreakHours: number;
+  avgDailyHours: number;
+  onTimeRate: number;
+  approvedLeaves: number;
+}
+
+export interface StaffAttendanceResponse {
+  success: boolean;
+  staff: {
+    id: string;
+    name: string;
+    department: string;
+    shift: string;
+    systemRole: string;
+  };
+  summary: StaffAttendanceSummary;
+  logs: AttendanceRecord[];
 }
 
 export interface RestaurantSettings {
@@ -34,6 +81,13 @@ export interface RestaurantSettings {
   latitude: number;
   longitude: number;
   radiusMeters: number;
+  address?: string;
+  websiteTheme?: "system" | "light" | "dark";
+  reservationDeposit?: number;
+  payuMerchantKey?: string;
+  payuMerchantSalt?: string;
+  payuTestMode?: boolean;
+  faviconUrl?: string;
   updatedAt: string;
 }
 
@@ -313,5 +367,27 @@ export async function deleteDepartment(name: string): Promise<string[]> {
   if (!res.ok) throw new Error(json.error || "Failed to delete department");
   return json.data || [];
 }
+
+export async function fetchTodayAttendance(
+  staffId: string,
+): Promise<{ attendance: AttendanceRecord | null; status: string }> {
+  const res = await fetch(`/api/team/staff/${encodeURIComponent(staffId)}/attendance/today`);
+  if (!res.ok) throw new Error("Failed to fetch today's attendance status");
+  const json = await res.json();
+  return { attendance: json.attendance || null, status: json.status || "Scheduled" };
+}
+
+export async function fetchStaffAttendanceHistory(
+  staffId: string,
+  month?: string,
+): Promise<StaffAttendanceResponse> {
+  const url = month
+    ? `/api/team/staff/${encodeURIComponent(staffId)}/attendance?month=${encodeURIComponent(month)}`
+    : `/api/team/staff/${encodeURIComponent(staffId)}/attendance`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch staff attendance history");
+  return res.json();
+}
+
 
 

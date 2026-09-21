@@ -26,11 +26,13 @@ import {
   fetchAnnouncements,
   fetchLeaves,
   fetchRestaurantSettings,
+  fetchTodayAttendance,
   updateRestaurantSettings,
   loginStaff,
   submitLeave,
   toggleStaffBreak,
   type Announcement,
+  type AttendanceRecord,
   type LeaveRequest,
   type RestaurantSettings,
   type StaffMember,
@@ -38,6 +40,7 @@ import {
 
 interface EmployeePortalProps {
   onBackToApp: () => void;
+  onBackToWebsite?: () => void;
 }
 
 const upcomingHolidays = [
@@ -48,7 +51,7 @@ const upcomingHolidays = [
   { name: "New Year’s Day", date: "01 Jan", day: "Friday", type: "Observance" },
 ];
 
-export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
+export default function EmployeePortal({ onBackToApp, onBackToWebsite }: EmployeePortalProps) {
   const [currentUser, setCurrentUser] = useState<StaffMember | null>(() => {
     const saved = localStorage.getItem("table_thyme_staff_session");
     if (!saved) return null;
@@ -75,7 +78,12 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
   const [activeTab, setActiveTab] = useState<"attendance" | "notices" | "leaves" | "holidays">("attendance");
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [myLeaves, setMyLeaves] = useState<LeaveRequest[]>([]);
-  const [attendanceStatus, setAttendanceStatus] = useState<string>("Scheduled");
+  const [attendanceStatus, setAttendanceStatus] = useState<string>(currentUser?.todayStatus || "Scheduled");
+  const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
+  const [clockInTime, setClockInTime] = useState<string | null>(currentUser?.clockInTime || null);
+  const [clockOutTime, setClockOutTime] = useState<string | null>(currentUser?.clockOutTime || null);
+  const [totalBreakMinutes, setTotalBreakMinutes] = useState<number>(currentUser?.totalBreakMinutes || 0);
+  const [elapsedDuration, setElapsedDuration] = useState<string>("");
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
@@ -85,6 +93,96 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
   const [leaveType, setLeaveType] = useState("Casual");
   const [leaveReason, setLeaveReason] = useState("");
   const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
+
+  // Format punch date and time nicely
+  function formatPunchDateTime(isoString?: string | null): { dateStr: string; timeStr: string; relative: string } {
+    if (!isoString) return { dateStr: "--", timeStr: "--", relative: "" };
+    try {
+      const d = new Date(isoString);
+      const isToday = new Date().toDateString() === d.toDateString();
+      const dateStr = d.toLocaleDateString("en-US", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+      const timeStr = d.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+      return {
+        dateStr: isToday ? `Today (${dateStr})` : dateStr,
+        timeStr,
+        relative: isToday ? "Today" : "",
+      };
+    } catch {
+      return { dateStr: String(isoString), timeStr: "", relative: "" };
+    }
+  }
+
+  // Synchronize live attendance state from backend
+  const refreshTodayAttendance = async (staffId: string) => {
+    try {
+      const { attendance, status } = await fetchTodayAttendance(staffId);
+      setTodayAttendance(attendance);
+      const effectiveStatus = status || attendance?.status || "Scheduled";
+      setAttendanceStatus(effectiveStatus);
+      if (attendance?.clockIn) {
+        setClockInTime(attendance.clockIn);
+      }
+      if (attendance?.clockOut) {
+        setClockOutTime(attendance.clockOut);
+      }
+      if (attendance?.totalBreakMinutes !== undefined) {
+        setTotalBreakMinutes(attendance.totalBreakMinutes);
+      }
+      if (attendance?.distanceMeters !== undefined && attendance?.distanceMeters !== null) {
+        setDistanceMeters(attendance.distanceMeters);
+      }
+
+      setCurrentUser((prev) => {
+        if (!prev) return null;
+        const updated: StaffMember = {
+          ...prev,
+          todayStatus: effectiveStatus as any,
+          clockInTime: attendance?.clockIn || prev.clockInTime,
+          clockOutTime: attendance?.clockOut || prev.clockOutTime,
+          totalBreakMinutes: attendance?.totalBreakMinutes ?? prev.totalBreakMinutes,
+          isGeofenceVerified: attendance?.isGeofenceVerified ?? prev.isGeofenceVerified,
+          lastDistanceMeters: attendance?.distanceMeters ?? prev.lastDistanceMeters,
+        };
+        localStorage.setItem("table_thyme_staff_session", JSON.stringify(updated));
+        return updated;
+      });
+    } catch (err) {
+      console.error("Could not fetch today's attendance:", err);
+    }
+  };
+
+  // Live ticking shift timer
+  useEffect(() => {
+    if (!clockInTime || (attendanceStatus !== "Clocked in" && attendanceStatus !== "On break")) {
+      setElapsedDuration("");
+      return;
+    }
+
+    const updateTimer = () => {
+      const start = new Date(clockInTime).getTime();
+      const now = Date.now();
+      const diffMs = Math.max(0, now - start);
+      const totalMinutes = Math.floor(diffMs / 60000);
+      const netMinutes = Math.max(0, totalMinutes - (totalBreakMinutes || 0));
+      const hours = Math.floor(netMinutes / 60);
+      const mins = netMinutes % 60;
+      const secs = Math.floor((diffMs % 60000) / 1000);
+      setElapsedDuration(`${hours}h ${mins}m ${secs}s`);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [clockInTime, attendanceStatus, totalBreakMinutes]);
 
   // Load restaurant coordinates
   useEffect(() => {
@@ -130,11 +228,25 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
     }
   }, [settings]);
 
-  // Load Announcements & Leaves when user is logged in
+  // Load Announcements, Leaves & Live Attendance when user is logged in
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem("table_thyme_staff_session", JSON.stringify(currentUser));
-      setAttendanceStatus(currentUser.todayStatus || "Scheduled");
+      if (currentUser.todayStatus) {
+        setAttendanceStatus(currentUser.todayStatus);
+      }
+      if (currentUser.clockInTime) {
+        setClockInTime(currentUser.clockInTime);
+      }
+      if (currentUser.clockOutTime) {
+        setClockOutTime(currentUser.clockOutTime);
+      }
+      if (currentUser.totalBreakMinutes) {
+        setTotalBreakMinutes(currentUser.totalBreakMinutes);
+      }
+
+      // Live sync from server so page refresh retains exact punch status
+      refreshTodayAttendance(currentUser.id);
 
       fetchAnnouncements(currentUser.id)
         .then(setAnnouncements)
@@ -147,7 +259,7 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
         })
         .catch(() => {});
     }
-  }, [currentUser]);
+  }, [currentUser?.id]);
 
   function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371e3;
@@ -209,7 +321,9 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
             longitude: lng,
           });
           setAttendanceStatus("Clocked in");
+          setClockInTime(new Date().toISOString());
           setDistanceMeters(res.distanceMeters);
+          await refreshTodayAttendance(currentUser.id);
           setActionMessage({
             text: `Clocked in successfully! Verified at ${res.distanceMeters}m from restaurant.`,
             type: "success",
@@ -230,6 +344,8 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
             longitude: userLocation?.lng,
           });
           setAttendanceStatus("Clocked in");
+          setClockInTime(new Date().toISOString());
+          await refreshTodayAttendance(currentUser.id);
           setActionMessage({
             text: `Clocked in successfully! Verified at ${res.distanceMeters}m.`,
             type: "success",
@@ -309,7 +425,9 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
         managerOverride: true,
       });
       setAttendanceStatus("Clocked in");
+      setClockInTime(new Date().toISOString());
       setDistanceMeters(res.distanceMeters || 0);
+      await refreshTodayAttendance(currentUser.id);
       setActionMessage({
         text: "Clocked in successfully with Manager Override! (Verified on premises)",
         type: "success",
@@ -329,6 +447,7 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
     try {
       await toggleStaffBreak(currentUser.id, action);
       setAttendanceStatus(action === "start" ? "On break" : "Clocked in");
+      await refreshTodayAttendance(currentUser.id);
       setActionMessage({
         text: action === "start" ? "Break started. Enjoy your meal!" : "Break ended. Welcome back!",
         type: "success",
@@ -348,6 +467,8 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
     try {
       await clockOutStaff(currentUser.id);
       setAttendanceStatus("Clocked out");
+      setClockOutTime(new Date().toISOString());
+      await refreshTodayAttendance(currentUser.id);
       setActionMessage({ text: "Clocked out successfully. Have a great evening!", type: "success" });
     } catch {
       setActionMessage({ text: "Failed to clock out.", type: "error" });
@@ -412,12 +533,6 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
               <span className="hidden sm:inline">Logout</span>
             </button>
           )}
-          <button
-            onClick={onBackToApp}
-            className="flex items-center gap-1.5 rounded-lg bg-[#f4bc83] px-3 py-1.5 text-xs font-bold text-[#684f37] hover:bg-[#eab074] transition"
-          >
-            Restaurant OS
-          </button>
         </div>
       </header>
 
@@ -542,6 +657,7 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
                 </button>
               </div>
             </div>
+
           </div>
         ) : (
           /* ==================================================== */
@@ -591,6 +707,38 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
                   </span>
                 </div>
               )}
+
+              {/* Real-time Clock-in / Shift Summary Strip */}
+              <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#1a2321] px-4 py-3 text-xs border border-[#3d524b]/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#3d524b] text-[#f4bc83]">
+                    <Clock3 size={15} />
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-[#aab8b0] block">
+                      {attendanceStatus === "Clocked in" || attendanceStatus === "On break"
+                        ? "Active Punch Time & Date:"
+                        : attendanceStatus === "Clocked out"
+                        ? "Last Punch Out:"
+                        : "Today's Schedule:"}
+                    </span>
+                    <strong className="text-white text-xs font-semibold">
+                      {clockInTime
+                        ? `${formatPunchDateTime(clockInTime).dateStr} • ${formatPunchDateTime(clockInTime).timeStr}`
+                        : `Shift: ${currentUser.shift}`}
+                    </strong>
+                  </div>
+                </div>
+
+                {(attendanceStatus === "Clocked in" || attendanceStatus === "On break") && elapsedDuration && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[#aab8b0]">Time Worked:</span>
+                    <span className="font-mono font-black text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-700/60 shadow-xs">
+                      ⏱️ {elapsedDuration}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* GPS Geofence Status Radar */}
@@ -794,37 +942,164 @@ export default function EmployeePortal({ onBackToApp }: EmployeePortalProps) {
                       )}
                     </div>
                   ) : attendanceStatus === "Clocked in" ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => handleToggleBreak("start")}
-                        disabled={actionLoading}
-                        className="rounded-2xl border border-amber-300 bg-amber-50 py-3.5 text-sm font-bold text-amber-900 hover:bg-amber-100 transition flex items-center justify-center gap-1.5"
-                      >
-                        <Coffee size={18} />
-                        Take Break
-                      </button>
-                      <button
-                        onClick={handleClockOut}
-                        disabled={actionLoading}
-                        className="rounded-2xl bg-[#b73d3d] py-3.5 text-sm font-bold text-white hover:bg-[#992f2f] transition flex items-center justify-center gap-1.5"
-                      >
-                        <LogOut size={18} />
-                        Clock Out
-                      </button>
-                    </div>
-                  ) : (
-                    /* On break */
-                    <div className="space-y-3">
-                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-center text-xs text-amber-900 font-semibold">
-                        ☕ You are currently on meal break.
+                    <div className="space-y-4">
+                      {/* Active Shift Details Card */}
+                      <div className="rounded-2xl border border-emerald-300 bg-emerald-50/80 p-4 sm:p-5 text-[#24312e] space-y-3 shadow-2xs">
+                        <div className="flex items-center justify-between border-b border-emerald-200 pb-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold shadow-xs">
+                              <Clock3 size={18} />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
+                                🟢 Active Duty Clocked In
+                              </span>
+                              <h4 className="text-sm font-bold text-[#24312e]">
+                                {clockInTime ? formatPunchDateTime(clockInTime).dateStr : "Today"}
+                              </h4>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-[#68736e] block">Clock-In Time</span>
+                            <p className="text-sm sm:text-base font-black text-emerald-900">
+                              {clockInTime ? formatPunchDateTime(clockInTime).timeStr : "--"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
+                          <div className="rounded-xl bg-white/90 p-2.5 border border-emerald-100 shadow-2xs">
+                            <span className="text-[10px] text-[#68736e] block">Time Worked</span>
+                            <span className="font-mono font-bold text-emerald-800 text-xs sm:text-sm">
+                              {elapsedDuration || "Calculating..."}
+                            </span>
+                          </div>
+                          <div className="rounded-xl bg-white/90 p-2.5 border border-emerald-100 shadow-2xs">
+                            <span className="text-[10px] text-[#68736e] block">Break Recorded</span>
+                            <span className="font-semibold text-amber-900 text-xs sm:text-sm">
+                              {totalBreakMinutes > 0 ? `${totalBreakMinutes} mins` : "0 mins"}
+                            </span>
+                          </div>
+                          <div className="rounded-xl bg-white/90 p-2.5 border border-emerald-100 col-span-2 sm:col-span-1 shadow-2xs">
+                            <span className="text-[10px] text-[#68736e] block">Verification</span>
+                            <span className="font-semibold text-[#24312e] text-[11px] flex items-center gap-1 mt-0.5">
+                              <ShieldCheck size={13} className="text-emerald-600 shrink-0" />
+                              {todayAttendance?.managerOverride
+                                ? "Manager Override"
+                                : distanceMeters !== null
+                                ? `GPS ${distanceMeters}m (Verified)`
+                                : "GPS On-Premises"}
+                            </span>
+                          </div>
+                        </div>
                       </div>
+
+                      <div className="grid grid-cols-2 gap-3 pt-1">
+                        <button
+                          onClick={() => handleToggleBreak("start")}
+                          disabled={actionLoading}
+                          className="rounded-2xl border border-amber-300 bg-amber-50 py-3.5 text-sm font-bold text-amber-900 hover:bg-amber-100 transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                        >
+                          <Coffee size={18} />
+                          Take Break
+                        </button>
+                        <button
+                          onClick={handleClockOut}
+                          disabled={actionLoading}
+                          className="rounded-2xl bg-[#b73d3d] py-3.5 text-sm font-bold text-white hover:bg-[#992f2f] transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-red-950/20"
+                        >
+                          <LogOut size={18} />
+                          Clock Out
+                        </button>
+                      </div>
+                    </div>
+                  ) : attendanceStatus === "On break" ? (
+                    <div className="space-y-4">
+                      {/* On Break Status Card */}
+                      <div className="rounded-2xl border border-amber-300 bg-amber-50/90 p-4 sm:p-5 text-[#24312e] space-y-3 shadow-2xs">
+                        <div className="flex items-center justify-between border-b border-amber-200 pb-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-600 text-white font-bold shadow-xs">
+                              <Coffee size={18} />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">
+                                ☕ Currently On Meal Break
+                              </span>
+                              <h4 className="text-sm font-bold text-[#24312e]">
+                                {clockInTime ? formatPunchDateTime(clockInTime).dateStr : "Today"}
+                              </h4>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-[#68736e] block">Shift Clocked In</span>
+                            <p className="text-xs sm:text-sm font-bold text-[#24312e]">
+                              {clockInTime ? formatPunchDateTime(clockInTime).timeStr : "--"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-amber-900 leading-relaxed">
+                          Your break is currently active. Tap below as soon as you return to duty to resume work logging.
+                        </p>
+                      </div>
+
                       <button
                         onClick={() => handleToggleBreak("end")}
                         disabled={actionLoading}
-                        className="w-full rounded-2xl bg-[#315a3d] py-3.5 text-sm font-bold text-white hover:bg-[#254630] transition flex items-center justify-center gap-2"
+                        className="w-full rounded-2xl bg-[#315a3d] py-4 text-sm font-bold text-white hover:bg-[#254630] transition flex items-center justify-center gap-2 shadow-lg cursor-pointer"
                       >
                         <Clock3 size={18} />
                         End Break & Resume Work
+                      </button>
+                    </div>
+                  ) : (
+                    /* Clocked out */
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-xs space-y-3">
+                        <div className="flex items-center justify-between border-b border-stone-200 pb-2">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
+                              Shift Complete
+                            </span>
+                            <span className="font-bold text-stone-800 text-sm">
+                              {clockInTime ? formatPunchDateTime(clockInTime).dateStr : "Today"}
+                            </span>
+                          </div>
+                          <span className="rounded-full bg-stone-200 px-2.5 py-0.5 text-[11px] font-bold text-stone-700">
+                            ● Clocked Out
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                          <div className="bg-white p-2 rounded-xl border border-stone-200">
+                            <span className="text-[10px] text-stone-500 block">Clocked In</span>
+                            <span className="font-bold text-stone-800">
+                              {clockInTime ? formatPunchDateTime(clockInTime).timeStr : "--"}
+                            </span>
+                          </div>
+                          <div className="bg-white p-2 rounded-xl border border-stone-200">
+                            <span className="text-[10px] text-stone-500 block">Clocked Out</span>
+                            <span className="font-bold text-stone-800">
+                              {clockOutTime ? formatPunchDateTime(clockOutTime).timeStr : "--"}
+                            </span>
+                          </div>
+                          <div className="bg-white p-2 rounded-xl border border-stone-200">
+                            <span className="text-[10px] text-stone-500 block">Break Taken</span>
+                            <span className="font-bold text-amber-800">
+                              {totalBreakMinutes}m
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleClockIn}
+                        disabled={actionLoading}
+                        className="w-full rounded-2xl border border-[#315a3d] bg-white py-3 text-xs font-bold text-[#315a3d] hover:bg-[#e8f1e8] transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Clock3 size={15} />
+                        Punch In Again / Start Extra Shift
                       </button>
                     </div>
                   )}

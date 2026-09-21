@@ -275,6 +275,12 @@ export default function InventoryPage({
   // Handle Add Product Submit
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (currentUser?.isDemoAccount) {
+      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      return;
+    }
+
     if (!addForm.name.trim()) {
       setFormError("Product name is required.");
       return;
@@ -315,6 +321,12 @@ export default function InventoryPage({
   const handleEditProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeItem) return;
+
+    if (currentUser?.isDemoAccount) {
+      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      return;
+    }
+
     if (!addForm.name.trim()) {
       setFormError("Product name is required.");
       return;
@@ -423,6 +435,11 @@ export default function InventoryPage({
 
   // Handle Delete
   const handleDeleteItem = async (item: InventoryItem) => {
+    if (currentUser?.isDemoAccount) {
+      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      return;
+    }
+
     if (!window.confirm(`Are you sure you want to remove "${item.name}" from inventory?`)) {
       return;
     }
@@ -479,13 +496,13 @@ export default function InventoryPage({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
           <button
             onClick={loadData}
-            className="flex items-center gap-1.5 rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-xs font-bold text-[#68736e] hover:bg-[#fbfaf7] hover:text-[#24312e] transition cursor-pointer shadow-2xs"
+            className="flex items-center gap-1.5 rounded-xl border border-[#dfe1dc] bg-white px-2.5 py-2 sm:px-3 sm:py-2.5 text-xs font-bold text-[#68736e] hover:bg-[#fbfaf7] hover:text-[#24312e] transition cursor-pointer shadow-2xs"
             title="Refresh Inventory"
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
             <span>Refresh</span>
           </button>
 
@@ -495,9 +512,9 @@ export default function InventoryPage({
                 openDailyLog(items[0]);
               }
             }}
-            className="flex items-center gap-2 rounded-xl border border-[#dfe1dc] bg-[#fff5ed] px-3.5 py-2.5 text-xs font-bold text-[#b7623d] hover:bg-[#ffeade] transition cursor-pointer shadow-2xs"
+            className="flex items-center gap-1.5 sm:gap-2 rounded-xl border border-[#dfe1dc] bg-[#fff5ed] px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs font-bold text-[#b7623d] hover:bg-[#ffeade] transition cursor-pointer shadow-2xs"
           >
-            <ClipboardList size={15} />
+            <ClipboardList size={14} />
             <span>End-of-Day Log</span>
           </button>
 
@@ -516,28 +533,28 @@ export default function InventoryPage({
               setFormError("");
               setIsAddModalOpen(true);
             }}
-            className="flex items-center gap-2 rounded-xl bg-[#24312e] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#24312e] px-3 py-2 sm:px-4 sm:py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-xs"
           >
-            <Plus size={15} />
+            <Plus size={14} />
             <span>Add Product</span>
           </button>
         </div>
       </div>
 
       {/* KPI Stat Cards */}
-      <div className="grid gap-3.5 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2.5 sm:gap-3.5 grid-cols-2 lg:grid-cols-4">
         {/* Total Stock Value */}
-        <div className="rounded-2xl border border-[#e0e2dc] bg-white p-4.5 shadow-2xs">
+        <div className="rounded-2xl border border-[#e0e2dc] bg-white p-3.5 sm:p-4.5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#84908a]">Total Stock Value</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#e8f1e8] text-[#315a3d]">
-              <Package size={17} />
+            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">Total Stock Value</span>
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-xl bg-[#e8f1e8] text-[#315a3d] shrink-0">
+              <Package size={15} />
             </div>
           </div>
-          <div className="mt-2 text-xl font-black text-[#24312e]">
+          <div className="mt-1.5 sm:mt-2 text-lg sm:text-xl font-black text-[#24312e] truncate">
             {currencySymbol}{metrics.totalStockValue.toLocaleString("en-IN")}
           </div>
-          <div className="mt-1 flex items-center gap-1 text-[11px] text-[#84908a]">
+          <div className="mt-0.5 sm:mt-1 flex items-center gap-1 text-[10px] sm:text-[11px] text-[#84908a] truncate">
             <span>Active raw materials value</span>
           </div>
         </div>
@@ -545,24 +562,24 @@ export default function InventoryPage({
         {/* Low Stock Items Alert */}
         <div
           onClick={() => setStatusFilter(statusFilter === "Low" ? "All" : "Low")}
-          className={`rounded-2xl border p-4.5 transition cursor-pointer shadow-2xs ${
+          className={`rounded-2xl border p-3.5 sm:p-4.5 transition cursor-pointer shadow-2xs ${
             metrics.lowStockCount > 0
               ? "border-[#fbd3bf] bg-[#fffaf5] ring-1 ring-[#b7623d]/20"
               : "border-[#e0e2dc] bg-white"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#84908a]">Low Stock Items</span>
-            <div className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">Low Stock Items</span>
+            <div className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-xl shrink-0 ${
               metrics.lowStockCount > 0 ? "bg-[#ffe7d6] text-[#b7623d]" : "bg-[#f0f2ed] text-[#84908a]"
             }`}>
-              <AlertTriangle size={17} />
+              <AlertTriangle size={15} />
             </div>
           </div>
-          <div className={`mt-2 text-xl font-black ${metrics.lowStockCount > 0 ? "text-[#b7623d]" : "text-[#24312e]"}`}>
+          <div className={`mt-1.5 sm:mt-2 text-lg sm:text-xl font-black truncate ${metrics.lowStockCount > 0 ? "text-[#b7623d]" : "text-[#24312e]"}`}>
             {metrics.lowStockCount} {metrics.lowStockCount === 1 ? "item" : "items"}
           </div>
-          <div className="mt-1 text-[11px] font-semibold text-[#84908a]">
+          <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] font-semibold text-[#84908a] truncate">
             {metrics.lowStockCount > 0 ? "Below safety limit · Click to filter" : "All products within safe limit"}
           </div>
         </div>
@@ -570,52 +587,52 @@ export default function InventoryPage({
         {/* Out of Stock */}
         <div
           onClick={() => setStatusFilter(statusFilter === "Out" ? "All" : "Out")}
-          className={`rounded-2xl border p-4.5 transition cursor-pointer shadow-2xs ${
+          className={`rounded-2xl border p-3.5 sm:p-4.5 transition cursor-pointer shadow-2xs ${
             metrics.outOfStockCount > 0
               ? "border-red-200 bg-red-50/60 ring-1 ring-red-500/20"
               : "border-[#e0e2dc] bg-white"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#84908a]">Out of Stock</span>
-            <div className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">Out of Stock</span>
+            <div className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-xl shrink-0 ${
               metrics.outOfStockCount > 0 ? "bg-red-100 text-red-700" : "bg-[#f0f2ed] text-[#84908a]"
             }`}>
-              <Flame size={17} />
+              <Flame size={15} />
             </div>
           </div>
-          <div className={`mt-2 text-xl font-black ${metrics.outOfStockCount > 0 ? "text-red-700" : "text-[#24312e]"}`}>
+          <div className={`mt-1.5 sm:mt-2 text-lg sm:text-xl font-black truncate ${metrics.outOfStockCount > 0 ? "text-red-700" : "text-[#24312e]"}`}>
             {metrics.outOfStockCount} {metrics.outOfStockCount === 1 ? "item" : "items"}
           </div>
-          <div className="mt-1 text-[11px] font-semibold text-[#84908a]">
+          <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] font-semibold text-[#84908a] truncate">
             {metrics.outOfStockCount > 0 ? "Depleted stock · Needs refill" : "Zero depleted stock"}
           </div>
         </div>
 
         {/* Today's Usage */}
-        <div className="rounded-2xl border border-[#e0e2dc] bg-white p-4.5 shadow-2xs">
+        <div className="rounded-2xl border border-[#e0e2dc] bg-white p-3.5 sm:p-4.5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#84908a]">Today's Usage</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#e6eee5] text-[#315a3d]">
-              <TrendingDown size={17} />
+            <span className="text-[11px] sm:text-xs font-bold text-[#84908a]">Today's Usage</span>
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-xl bg-[#e6eee5] text-[#315a3d] shrink-0">
+              <TrendingDown size={15} />
             </div>
           </div>
-          <div className="mt-2 text-xl font-black text-[#24312e]">
-            {metrics.todayUsageCount} <span className="text-xs font-medium text-[#84908a]">units consumed</span>
+          <div className="mt-1.5 sm:mt-2 text-lg sm:text-xl font-black text-[#24312e] truncate">
+            {metrics.todayUsageCount} {metrics.todayUsageCount === 1 ? "entry" : "entries"}
           </div>
-          <div className="mt-1 flex items-center justify-between text-[11px] text-[#84908a]">
-            <span>Weekly waste: {currencySymbol}{metrics.weeklyWastageValue.toLocaleString("en-IN")}</span>
+          <div className="mt-0.5 sm:mt-1 flex items-center gap-1 text-[10px] sm:text-[11px] text-[#84908a] truncate">
+            <span>Logged inventory deductions</span>
           </div>
         </div>
       </div>
 
-      {/* Main Catalog Card */}
-      <div className="rounded-3xl border border-[#dfe1dc] bg-white shadow-sm overflow-hidden">
-        {/* Search & Category Filter Bar */}
-        <div className="p-4 sm:p-5 border-b border-[#e9eae6] bg-[#fbfaf7] space-y-3.5">
+      {/* Main Stock Table & Grid Container */}
+      <div className="rounded-2xl border border-[#dfe1dc] bg-white shadow-2xs overflow-hidden">
+        {/* Search, Status and Category Filter Bar */}
+        <div className="border-b border-[#dfe1dc] bg-[#fbfaf7] p-3.5 sm:p-4 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-md">
-              <Search size={15} className="absolute left-3 top-3 text-[#84908a]" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#84908a]" />
               <input
                 type="text"
                 placeholder="Search by ingredient, category, or vendor..."
@@ -627,8 +644,8 @@ export default function InventoryPage({
 
             <div className="flex items-center gap-2.5 flex-wrap">
               {/* Status Filter Chips */}
-              <div className="flex items-center gap-1.5 overflow-x-auto text-[11px]">
-                <span className="text-[#84908a] font-bold mr-1 flex items-center gap-1">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar text-[11px] max-w-full">
+                <span className="text-[#84908a] font-bold mr-1 flex items-center gap-1 shrink-0">
                   <Filter size={12} /> Status:
                 </span>
                 {(["All", "In", "Low", "Out"] as const).map((st) => (
@@ -636,7 +653,7 @@ export default function InventoryPage({
                     key={st}
                     type="button"
                     onClick={() => setStatusFilter(st)}
-                    className={`rounded-lg px-2.5 py-1 font-bold whitespace-nowrap transition cursor-pointer ${
+                    className={`rounded-lg px-2.5 py-1 font-bold whitespace-nowrap shrink-0 transition cursor-pointer ${
                       statusFilter === st
                         ? "bg-[#24312e] text-white shadow-xs"
                         : "bg-[#eef0eb] text-[#68736e] hover:bg-[#dfe1dc]"
@@ -686,13 +703,13 @@ export default function InventoryPage({
           </div>
 
           {/* Category Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 text-[11px] max-w-full">
             {categories.map((cat) => (
               <button
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`rounded-lg px-3 py-1 font-bold whitespace-nowrap transition cursor-pointer ${
+                className={`rounded-lg px-3 py-1 font-bold whitespace-nowrap shrink-0 transition cursor-pointer ${
                   selectedCategory === cat
                     ? "bg-[#315a3d] text-white shadow-2xs"
                     : "bg-white border border-[#dfe1dc] text-[#68736e] hover:bg-[#f0f2ed]"

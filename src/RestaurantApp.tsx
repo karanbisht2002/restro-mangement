@@ -10,10 +10,14 @@ import {
   CheckCircle2,
   ChefHat,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleDollarSign,
   Clock3,
   CreditCard,
+  Eye,
   FileText,
+  Calendar,
   Globe2,
   LayoutDashboard,
   Menu as MenuIcon,
@@ -57,9 +61,51 @@ import {
   Tag,
   Split,
   ArrowLeft,
+  ArrowRight,
   XCircle,
   ShieldAlert,
 } from "lucide-react";
+
+import PublicWebsite from "./components/PublicWebsite";
+import TableOrderPage from "./components/TableOrderPage";
+import WebsiteCmsPage from "./manager/WebsiteCmsPage";
+import { BlogPostPage } from "./components/BlogPostPage";
+
+export type AppRoute = "landing" | "dashboard" | "employee" | "orderfromtable" | "blog";
+
+export function getRouteFromPath(pathname: string): AppRoute {
+  const clean = (pathname || "").toLowerCase().replace(/\/+$/, "") || "/";
+  if (clean === "/dashboard" || clean.startsWith("/dashboard/")) {
+    return "dashboard";
+  }
+  if (
+    clean === "/employe" ||
+    clean === "/employee" ||
+    clean.startsWith("/employe/") ||
+    clean.startsWith("/employee/")
+  ) {
+    return "employee";
+  }
+  if (
+    clean === "/orderfromtable" ||
+    clean.startsWith("/orderfromtable/")
+  ) {
+    return "orderfromtable";
+  }
+  if (
+    clean === "/blog" ||
+    clean.startsWith("/blog/") ||
+    clean === "/blogs" ||
+    clean.startsWith("/blogs/") ||
+    clean === "/story" ||
+    clean.startsWith("/story/") ||
+    clean === "/stories" ||
+    clean.startsWith("/stories/")
+  ) {
+    return "blog";
+  }
+  return "landing";
+}
 import { ToastContainer, type ToastItem } from "./components/Toast";
 import { fetchTransactions, recordTransaction } from "./api/transactions";
 import type { TransactionRecord } from "./types";
@@ -134,11 +180,15 @@ import {
   fetchDepartments,
   createDepartment,
   deleteDepartment,
+  fetchStaffAttendanceHistory,
   type StaffMember,
   type RestaurantSettings,
   type LeaveRequest,
   type Announcement,
+  type AttendanceRecord,
+  type StaffAttendanceResponse,
 } from "./api/team";
+import { setDocumentFavicon } from "./utils/favicon";
 import SettingsPage, {
   type StationDisplayPreferences,
   type StoreSettings,
@@ -172,6 +222,7 @@ const navGroups: { title: string; items: { label: Page; icon: Icon }[] }[] = [
       { label: "Transactions", icon: Receipt },
       { label: "Employees", icon: Users },
       { label: "Dashboard access", icon: ShieldCheck },
+      { label: "Website CMS", icon: Globe2 },
       { label: "Settings", icon: Settings2 },
     ],
   },
@@ -698,21 +749,25 @@ function SectionHeading({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-      <div>
+    <div className="mb-5 sm:mb-7 flex flex-col justify-between gap-3 sm:gap-4 sm:flex-row sm:items-end">
+      <div className="min-w-0">
         {eyebrow && (
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#b7623d]">
+          <p className="mb-1.5 sm:mb-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#b7623d]">
             {eyebrow}
           </p>
         )}
-        <h1 className="display-font text-3xl font-bold tracking-tight text-[#24312e] sm:text-4xl">
+        <h1 className="display-font text-2xl font-bold tracking-tight text-[#24312e] sm:text-4xl">
           {title}
         </h1>
         {description && (
-          <p className="mt-2 text-sm text-[#84908a]">{description}</p>
+          <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-[#84908a]">{description}</p>
         )}
       </div>
-      {action}
+      {action && (
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+          {action}
+        </div>
+      )}
     </div>
   );
 }
@@ -731,19 +786,19 @@ function StatCard({
   color: string;
 }) {
   return (
-    <article className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 shadow-[0_3px_12px_rgba(36,49,46,.025)]">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-[#84908a]">{label}</p>
-          <p className="mt-3 text-3xl font-bold tracking-tight text-[#24312e]">
+    <article className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-3.5 sm:p-5 shadow-[0_3px_12px_rgba(36,49,46,.025)]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-[#84908a] truncate">{label}</p>
+          <p className="mt-1 sm:mt-3 text-xl sm:text-3xl font-bold tracking-tight text-[#24312e] truncate">
             {value}
           </p>
         </div>
-        <div className={`rounded-xl p-3 ${color}`}>
-          <StatIcon size={21} />
+        <div className={`shrink-0 rounded-xl p-2.5 sm:p-3 ${color}`}>
+          <StatIcon size={19} className="sm:w-[21px] sm:h-[21px]" />
         </div>
       </div>
-      <p className="mt-4 text-xs font-bold text-[#3b724c]">
+      <p className="mt-2.5 sm:mt-4 text-[11px] sm:text-xs font-bold text-[#3b724c] truncate">
         {change}{" "}
         <span className="font-medium text-[#84908a]">vs yesterday</span>
       </p>
@@ -833,44 +888,44 @@ function OverviewPage({
         title={`${greeting}, ${userName ? userName.split(" ")[0] : "Priya"}.`}
         description="Here’s what’s happening at your restaurant today."
         action={
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
-              onClick={onWebsite}
-              className="hidden items-center gap-2 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-4 py-3 text-sm font-bold text-[#68736e] hover:bg-white sm:flex"
+              onClick={() => window.open("/", "_blank")}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-[#24312e] hover:bg-white transition cursor-pointer"
             >
-              <Globe2 size={18} />
-              Open website
+              <Globe2 size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span>Website</span>
             </button>
             <button
               onClick={() => onBook()}
               disabled={kitchenClosed}
-              className={`flex items-center gap-2 rounded-xl border border-[#dfe1dc] px-4 py-3 text-sm font-bold transition ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl border border-[#dfe1dc] px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
                 kitchenClosed
                   ? "bg-[#f0f1ed] text-[#84908a] opacity-50 cursor-not-allowed"
                   : "bg-[#fbfaf7] text-[#315a3d] hover:bg-white"
               }`}
               title={kitchenClosed ? "Kitchen is closed. Cannot book tables." : undefined}
             >
-              <CalendarCheck size={18} />
-              Book table
+              <CalendarCheck size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span>Book table</span>
             </button>
             <button
               onClick={() => onOrder()}
               disabled={kitchenClosed}
-              className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white transition ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white transition cursor-pointer ${
                 kitchenClosed
                   ? "bg-[#74807a] opacity-50 cursor-not-allowed"
                   : "bg-[#24312e] hover:bg-[#315a3d]"
               }`}
               title={kitchenClosed ? "Kitchen is closed. Cannot place new orders." : undefined}
             >
-              <Plus size={18} />
-              New order
+              <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span>New order</span>
             </button>
           </div>
         }
       />
-      <section className={`grid gap-4 ${role === "Server" ? "sm:grid-cols-2 md:grid-cols-2" : "md:grid-cols-3"}`}>
+      <section className={`grid gap-3 sm:gap-4 ${role === "Server" ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3"}`}>
         {/* Hide Today's earning in Server panel */}
         {role !== "Server" && (
           <StatCard
@@ -1055,6 +1110,7 @@ function ReservationsPage({
   onBook,
   kitchenClosed = false,
   currencySymbol = "₹",
+  defaultDeposit = 500,
 }: {
   bookings: TableBooking[];
   onStatusChange: (id: string, status: BookingStatus) => void;
@@ -1062,27 +1118,49 @@ function ReservationsPage({
   onBook: () => void;
   kitchenClosed?: boolean;
   currencySymbol?: string;
+  defaultDeposit?: number;
 }) {
   const totalGuests = bookings.reduce((sum, b) => sum + (b.guests || 0), 0);
   const totalDeposit = bookings.reduce(
-    (sum, b) => sum + (typeof b.deposit === "number" ? b.deposit : 500),
+    (sum, b) => sum + (typeof b.deposit === "number" ? b.deposit : defaultDeposit),
     0,
   );
 
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
   const [filterTab, setFilterTab] = useState<"Active" | "All" | "Completed" | "Cancelled">("Active");
+  const [sortOrder, setSortOrder] = useState<"newest" | "date_asc" | "date_desc">("newest");
   const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
 
   const activeBookingsCount = bookings.filter((b) => b.status === "Booked" || b.status === "Arrived" || b.status === "Seated").length;
   const completedBookingsCount = bookings.filter((b) => b.status === "Completed").length;
   const cancelledBookingsCount = bookings.filter((b) => b.status === "Cancelled" || b.status === "No show").length;
 
-  const displayedBookings = bookings.filter((b) => {
-    if (filterTab === "Active") return b.status === "Booked" || b.status === "Arrived" || b.status === "Seated";
-    if (filterTab === "Completed") return b.status === "Completed";
-    if (filterTab === "Cancelled") return b.status === "Cancelled" || b.status === "No show";
-    return true;
-  });
+  const displayedBookings = [...bookings]
+    .filter((b) => {
+      if (filterTab === "Active") return b.status === "Booked" || b.status === "Arrived" || b.status === "Seated";
+      if (filterTab === "Completed") return b.status === "Completed";
+      if (filterTab === "Cancelled") return b.status === "Cancelled" || b.status === "No show";
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortOrder === "newest") {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (bTime !== aTime) return bTime - aTime;
+        return (b.id || "").localeCompare(a.id || "");
+      }
+      if (sortOrder === "date_asc") {
+        return ((a.bookingDate || "") + " " + (a.bookingTime || "")).localeCompare(
+          (b.bookingDate || "") + " " + (b.bookingTime || "")
+        );
+      }
+      if (sortOrder === "date_desc") {
+        return ((b.bookingDate || "") + " " + (b.bookingTime || "")).localeCompare(
+          (a.bookingDate || "") + " " + (a.bookingTime || "")
+        );
+      }
+      return 0;
+    });
 
   return (
     <>
@@ -1121,7 +1199,7 @@ function ReservationsPage({
           </span>
         </div>
       )}
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
         <StatCard
           label="Today's bookings"
           value={String(bookings.length)}
@@ -1144,51 +1222,66 @@ function ReservationsPage({
           color="bg-[#eee8f6] text-[#72558e]"
         />
       </div>
-      <div className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 sm:p-6">
-        <div className="mb-5 flex items-center justify-between">
+      <div className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-3.5 sm:p-6">
+        <div className="mb-4 sm:mb-5 flex items-center justify-between">
           <div>
-            <h2 className="display-font text-xl font-bold">
+            <h2 className="display-font text-lg sm:text-xl font-bold">
               Reservations Management
             </h2>
-            <p className="mt-1 text-xs text-[#84908a]">
+            <p className="mt-0.5 text-xs text-[#84908a]">
               Live table booking & arrival management
             </p>
           </div>
           <button
             onClick={onBook}
-            className="rounded-lg border border-[#dfe1dc] px-3 py-1.5 text-xs font-bold text-[#315a3d] hover:bg-white"
+            className="rounded-lg border border-[#dfe1dc] px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs font-bold text-[#315a3d] hover:bg-white cursor-pointer shrink-0"
           >
             + Quick book
           </button>
         </div>
 
-        {/* Status Filter Tabs */}
-        <div className="mb-4 flex flex-wrap items-center gap-1.5 border-b border-[#e9eae6] pb-3">
-          {[
-            { id: "Active", label: "Active Bookings", count: activeBookingsCount },
-            { id: "All", label: "All Reservations", count: bookings.length },
-            { id: "Completed", label: "Completed", count: completedBookingsCount },
-            { id: "Cancelled", label: "Cancelled", count: cancelledBookingsCount },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setFilterTab(tab.id as any)}
-              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 ${
-                filterTab === tab.id
-                  ? "bg-[#24312e] text-white shadow-xs"
-                  : "bg-white text-[#68736e] border border-[#e0e2dc] hover:bg-[#f3f4f0]"
-              }`}
-            >
-              <span>{tab.label}</span>
-              <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                  filterTab === tab.id ? "bg-white/20 text-white" : "bg-[#f0f1ec] text-[#68736e]"
+        {/* Status Filter Tabs & Sort Controls */}
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[#e9eae6] pb-3">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 max-w-full">
+            {[
+              { id: "Active", label: "Active Bookings", count: activeBookingsCount },
+              { id: "All", label: "All Reservations", count: bookings.length },
+              { id: "Completed", label: "Completed", count: completedBookingsCount },
+              { id: "Cancelled", label: "Cancelled", count: cancelledBookingsCount },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setFilterTab(tab.id as any)}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
+                  filterTab === tab.id
+                    ? "bg-[#24312e] text-white shadow-xs"
+                    : "bg-white text-[#68736e] border border-[#e0e2dc] hover:bg-[#f3f4f0]"
                 }`}
               >
-                {tab.count}
-              </span>
-            </button>
-          ))}
+                <span>{tab.label}</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                    filterTab === tab.id ? "bg-white/20 text-white" : "bg-[#f0f1ec] text-[#68736e]"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-[#84908a]">Sort:</span>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as any)}
+              className="rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs font-bold text-[#24312e] outline-hidden focus:border-[#24312e] cursor-pointer shadow-2xs"
+            >
+              <option value="newest">🕒 Newest Booked First (Default)</option>
+              <option value="date_asc">📅 Booking Date (Soonest First)</option>
+              <option value="date_desc">📅 Booking Date (Furthest First)</option>
+            </select>
+          </div>
         </div>
 
         {displayedBookings.length === 0 ? (
@@ -1205,13 +1298,27 @@ function ReservationsPage({
                 className="grid gap-3 rounded-xl border border-[#eef0eb] bg-white p-4 sm:grid-cols-[1.4fr_1fr_.7fr_.8fr_1fr] sm:items-center"
               >
                 <div>
-                  <p className="font-bold text-[#24312e]">{booking.customer}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-bold text-[#24312e]">{booking.customer}</p>
+                    {(booking.payuPaymentId || booking.paymentId || booking.stripePaymentId) && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800"
+                        title={`PayU Reference: ${booking.payuPaymentId || booking.paymentId || booking.stripePaymentId}`}
+                      >
+                        <CreditCard size={11} className="text-emerald-600" />
+                        PayU Paid
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-0.5 text-xs text-[#84908a]">
-                    Deposit {currencySymbol || "₹"}{booking.deposit} • {booking.source}
+                    Deposit {currencySymbol || "₹"}{booking.deposit ?? defaultDeposit} • {booking.source}
                     {booking.specialRequests ? ` • "${booking.specialRequests}"` : ""}
                   </p>
-                  {booking.phone && (
-                    <p className="mt-0.5 text-[11px] text-[#aab1ac]">{booking.phone}</p>
+                  {(booking.phone || booking.email) && (
+                    <p className="mt-0.5 text-[11px] text-[#84908a] flex flex-wrap items-center gap-2">
+                      {booking.phone && <span>📞 {booking.phone}</span>}
+                      {booking.email && <span>✉️ {booking.email}</span>}
+                    </p>
                   )}
                 </div>
                 <div className="text-sm text-[#68736e] flex flex-col sm:flex-row sm:items-center gap-1.5">
@@ -1844,40 +1951,40 @@ function FloorPlanPage({
         title="Floor plan"
         description="Real-time table seating, automated reservation alerts, and floor layout management."
         action={
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             {role === "Manager" && onAddTable && (
               <button
                 onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-2 rounded-xl bg-[#315a3d] px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#254630] transition"
+                className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#315a3d] px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-[#254630] transition cursor-pointer"
               >
-                <Plus size={18} />
+                <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
                 Add table
               </button>
             )}
             <button
               onClick={() => onBook(selected?.id)}
               disabled={kitchenClosed}
-              className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition ${
+              className={`flex items-center gap-1.5 sm:gap-2 rounded-xl border px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
                 kitchenClosed
                   ? "border-[#dfe1dc] bg-[#e2e4dd] text-[#84908a] cursor-not-allowed opacity-60"
                   : "border-[#dfe1dc] bg-[#fbfaf7] text-[#315a3d] hover:bg-white"
               }`}
               title={kitchenClosed ? "Kitchen is closed - table booking disabled" : "Book table"}
             >
-              <CalendarCheck size={18} />
+              <CalendarCheck size={16} className="sm:w-[18px] sm:h-[18px]" />
               {kitchenClosed ? "Kitchen Closed" : "Book table"}
             </button>
             <button
               onClick={() => onOrder(selected?.id)}
               disabled={kitchenClosed}
-              className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
+              className={`flex items-center gap-1.5 sm:gap-2 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
                 kitchenClosed
                   ? "bg-[#e2e4dd] text-[#84908a] cursor-not-allowed opacity-60"
                   : "bg-[#24312e] text-white hover:bg-[#315a3d]"
               }`}
               title={kitchenClosed ? "Kitchen is closed - new orders disabled" : "New order"}
             >
-              <Utensils size={18} />
+              <Utensils size={16} className="sm:w-[18px] sm:h-[18px]" />
               {kitchenClosed ? "Kitchen Closed" : "New order"}
             </button>
           </div>
@@ -1894,8 +2001,8 @@ function FloorPlanPage({
       )}
 
       {/* Filter Toolbar */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-3.5 sm:p-4">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 sm:p-4">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 max-w-full">
           {(
             [
               { id: "All", label: "All", count: tables.length },
@@ -1924,7 +2031,7 @@ function FloorPlanPage({
             <button
               key={tab.id}
               onClick={() => setStatusFilter(tab.id)}
-              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
                 statusFilter === tab.id
                   ? "bg-[#24312e] text-white shadow-sm"
                   : "bg-white text-[#68736e] border border-[#e0e2dc] hover:bg-[#f3f4f0]"
@@ -1948,7 +2055,7 @@ function FloorPlanPage({
             <select
               value={selectedZone}
               onChange={(e) => setSelectedZone(e.target.value)}
-              className="rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs font-bold text-[#24312e] focus:outline-none focus:ring-2 focus:ring-[#315a3d]"
+              className="rounded-xl border border-[#dfe1dc] bg-white px-3 py-1.5 text-xs font-bold text-[#24312e] focus:outline-none focus:ring-2 focus:ring-[#315a3d] cursor-pointer"
             >
               <option value="All zones">All zones</option>
               {zones.map((z) => (
@@ -1963,7 +2070,7 @@ function FloorPlanPage({
 
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         {/* Floor layout grid */}
-        <div className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 sm:p-7">
+        <div className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-3.5 sm:p-7">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-[#e9eae6] pb-4 text-xs font-semibold text-[#68736e]">
             <div className="flex flex-wrap gap-4">
               <span className="flex items-center gap-1.5 whitespace-nowrap">
@@ -2332,14 +2439,14 @@ function OrdersPage({
           <button
             onClick={onOrder}
             disabled={kitchenClosed}
-            className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
+            className={`flex items-center gap-1.5 sm:gap-2 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
               kitchenClosed
                 ? "bg-[#e2e4dd] text-[#84908a] cursor-not-allowed opacity-60"
                 : "bg-[#24312e] text-white hover:bg-[#315a3d]"
             }`}
             title={kitchenClosed ? "Kitchen is closed - new orders disabled" : "New order"}
           >
-            <Plus size={18} />
+            <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
             {kitchenClosed ? "Kitchen Closed" : "New order"}
           </button>
         }
@@ -2352,7 +2459,7 @@ function OrdersPage({
           </span>
         </div>
       )}
-      <div className="mb-5 flex gap-2 overflow-x-auto">
+      <div className="mb-5 flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 max-w-full">
         {[
           ["all", "All orders"],
           ["pending", "Pending"],
@@ -2364,7 +2471,7 @@ function OrdersPage({
             onClick={() =>
               setTab(value as "all" | "pending" | "new" | "served")
             }
-            className={`rounded-full px-4 py-2 text-xs font-bold ${tab === value ? "bg-[#24312e] text-white" : "border border-[#dfe1dc] text-[#68736e]"}`}
+            className={`rounded-full px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs font-bold shrink-0 whitespace-nowrap transition cursor-pointer ${tab === value ? "bg-[#24312e] text-white shadow-xs" : "border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f2f4ef]"}`}
           >
             {label}{" "}
             {value === "new" &&
@@ -2375,7 +2482,7 @@ function OrdersPage({
         ))}
       </div>
       {orders.some((order) => order.status === "Notified") && (
-        <div className="mb-5 flex items-center gap-3 rounded-xl border border-[#ead7c8] bg-[#fff5ed] p-4 text-sm text-[#946243]">
+        <div className="mb-5 flex items-center gap-3 rounded-xl border border-[#ead7c8] bg-[#fff5ed] p-3.5 sm:p-4 text-xs sm:text-sm text-[#946243]">
           <Bell className="shrink-0 text-[#b7623d]" size={18} />
           <span>
             <strong>Service bell:</strong>{" "}
@@ -2384,7 +2491,7 @@ function OrdersPage({
           </span>
         </div>
       )}
-      <div className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-5 sm:p-6">
+      <div className="rounded-2xl border border-[#e0e2dc] bg-[#fbfaf7] p-3.5 sm:p-6">
         <div className="grid gap-5 lg:grid-cols-4">
           {["Queued", "Preparing", "Ready", "Served"].map((stage) => {
             const stageOrders = orders.filter((order) => {
@@ -2612,18 +2719,18 @@ function KitchenPage({
         title="Kitchen"
         description="Digital KOTs organized by station. Move every ticket from queued to ready for pickup."
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setSoundOn(!soundOn)}
-              className={`flex items-center gap-2 rounded-xl border px-3 py-3 text-xs font-bold ${soundOn ? "border-[#cfe0d0] bg-[#e8f1e8] text-[#3b724c]" : "border-[#dfe1dc] text-[#84908a]"}`}
+              className={`flex items-center gap-1.5 sm:gap-2 rounded-xl border px-3 py-2 sm:px-3 sm:py-2.5 text-xs font-bold cursor-pointer transition ${soundOn ? "border-[#cfe0d0] bg-[#e8f1e8] text-[#3b724c]" : "border-[#dfe1dc] bg-white text-[#84908a]"}`}
             >
-              <Volume2 size={16} />
+              <Volume2 size={15} />
               {soundOn ? "Alerts on" : "Alerts off"}
             </button>
             {onToggleKitchenClosed && (
               <button
                 onClick={onToggleKitchenClosed}
-                className={`flex items-center gap-2 rounded-xl border px-3.5 py-3 text-xs font-bold transition shadow-xs ${
+                className={`flex items-center gap-2 rounded-xl border px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs font-bold transition shadow-xs cursor-pointer ${
                   kitchenClosed
                     ? "border-red-500/50 bg-red-950/80 text-red-200 hover:bg-red-900"
                     : "border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f2f3ef]"
@@ -2641,47 +2748,47 @@ function KitchenPage({
           </div>
         }
       />
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-[#e0e2dc] bg-[#fbfaf7] p-4">
-          <p className="text-xs text-[#84908a]">Open tickets</p>
-          <p className="mt-2 text-2xl font-bold text-[#24312e]">
+      <div className="mb-6 grid gap-2.5 sm:gap-3 grid-cols-3">
+        <div className="rounded-xl border border-[#e0e2dc] bg-[#fbfaf7] p-3 sm:p-4">
+          <p className="text-[11px] sm:text-xs text-[#84908a] truncate">Open tickets</p>
+          <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-[#24312e] truncate">
             {active.length}
           </p>
-          <p className="mt-1 text-[11px] font-bold text-[#3b724c]">
+          <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] font-bold text-[#3b724c] truncate">
             Live queue
           </p>
         </div>
-        <div className="rounded-xl border border-[#e0e2dc] bg-[#fbfaf7] p-4">
-          <p className="text-xs text-[#84908a]">Average prep</p>
-          <p className="mt-2 text-2xl font-bold text-[#24312e]">14 min</p>
-          <p className="mt-1 text-[11px] font-bold text-[#b7623d]">
-            2 min slower today
+        <div className="rounded-xl border border-[#e0e2dc] bg-[#fbfaf7] p-3 sm:p-4">
+          <p className="text-[11px] sm:text-xs text-[#84908a] truncate">Average prep</p>
+          <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-[#24312e] truncate">14 min</p>
+          <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] font-bold text-[#b7623d] truncate">
+            2 min slower
           </p>
         </div>
-        <div className="rounded-xl border border-[#e0e2dc] bg-[#fbfaf7] p-4">
-          <p className="text-xs text-[#84908a]">Sold-out items</p>
-          <p className="mt-2 text-2xl font-bold text-[#24312e]">
+        <div className="rounded-xl border border-[#e0e2dc] bg-[#fbfaf7] p-3 sm:p-4">
+          <p className="text-[11px] sm:text-xs text-[#84908a] truncate">Sold-out items</p>
+          <p className="mt-1 sm:mt-2 text-xl sm:text-2xl font-bold text-[#24312e] truncate">
             {soldOutItems.length}
           </p>
-          <p className="mt-1 text-[11px] font-bold text-[#b7623d]">
-            Hidden from QR menu
+          <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] font-bold text-[#b7623d] truncate">
+            Hidden from QR
           </p>
         </div>
       </div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2 overflow-x-auto">
+      <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 max-w-full">
           {kitchenStations.map((item) => (
             <button
               key={item}
               onClick={() => setStation(item)}
-              className={`rounded-full px-4 py-2 text-xs font-bold ${station === item ? "bg-[#24312e] text-white" : "border border-[#dfe1dc] bg-[#fbfaf7] text-[#68736e]"}`}
+              className={`rounded-full px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs font-bold shrink-0 whitespace-nowrap transition cursor-pointer ${station === item ? "bg-[#24312e] text-white shadow-xs" : "border border-[#dfe1dc] bg-[#fbfaf7] text-[#68736e] hover:bg-white"}`}
             >
               {item}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 text-xs text-[#84908a]">
-          <RefreshCw size={14} />
+        <div className="flex items-center gap-2 text-xs text-[#84908a] shrink-0">
+          <RefreshCw size={13} />
           Last sync just now
         </div>
       </div>
@@ -2955,11 +3062,15 @@ function EditMenuItemModal({
   onClose,
   onUpdated,
   currencySymbol = "₹",
+  currentUser,
+  showToast,
 }: {
   item: ApiMenuItem;
   onClose: () => void;
   onUpdated: (updated: ApiMenuItem) => void;
   currencySymbol?: string;
+  currentUser?: any;
+  showToast?: any;
 }) {
   const [name, setName] = useState(item.name);
   const [price, setPrice] = useState(item.price.toString());
@@ -3020,6 +3131,13 @@ function EditMenuItemModal({
       return;
     }
 
+    if (currentUser?.isDemoAccount) {
+      setError("This feature is disabled for the demo account.");
+      showToast?.("error", "Access Denied", "This feature is disabled for the demo account.");
+      setSaving(false);
+      return;
+    }
+
     try {
       const updated = await updateMenuItem(item.id, {
         name: name.trim(),
@@ -3052,7 +3170,7 @@ function EditMenuItemModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#24312e]/40 p-4 backdrop-blur-xs">
       <form
         onSubmit={handleSubmit}
-        className="my-auto max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-[#fbfaf7] p-6 shadow-2xl sm:p-7 border border-[#dfe1dc]"
+        className="my-auto max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-[#fbfaf7] p-4 sm:p-7 shadow-2xl border border-[#dfe1dc]"
       >
         <div className="flex items-start justify-between">
           <div>
@@ -3343,15 +3461,25 @@ function DeleteMenuItemModal({
   item,
   onClose,
   onDeleted,
+  currentUser,
+  showToast,
 }: {
   item: ApiMenuItem;
   onClose: () => void;
   onDeleted: (itemId: string) => void;
+  currentUser?: any;
+  showToast?: any;
 }) {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
   const handleDelete = async () => {
+    if (currentUser?.isDemoAccount) {
+      setError("This feature is disabled for the demo account.");
+      showToast?.("error", "Access Denied", "This feature is disabled for the demo account.");
+      return;
+    }
+
     setDeleting(true);
     setError("");
     try {
@@ -3414,6 +3542,8 @@ function MenuPage({
   canManage = false,
   canCreate,
   currencySymbol = "₹",
+  currentUser,
+  showToast,
 }: {
   menuItems: ApiMenuItem[];
   onMenuItemsChange?: (items: ApiMenuItem[]) => void;
@@ -3422,6 +3552,8 @@ function MenuPage({
   canManage?: boolean;
   canCreate?: boolean;
   currencySymbol?: string;
+  currentUser?: any;
+  showToast?: any;
 }) {
   const isManager = canManage || canCreate || false;
   const [category, setCategory] = useState("All items");
@@ -3492,6 +3624,13 @@ function MenuPage({
           ? "Please upload a dish photo from your system."
           : "Please enter a valid image URL.",
       );
+      setSaving(false);
+      return;
+    }
+
+    if (currentUser?.isDemoAccount) {
+      setError("This feature is disabled for the demo account.");
+      showToast?.("error", "Access Denied", "This feature is disabled for the demo account.");
       setSaving(false);
       return;
     }
@@ -3597,19 +3736,20 @@ function MenuPage({
           isManager ? (
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 rounded-xl bg-[#24312e] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#315a3d]"
+              className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#24312e] px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white transition hover:bg-[#315a3d] cursor-pointer"
             >
-              <Plus size={18} /> Add menu item
+              <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span>Add menu item</span>
             </button>
           ) : undefined
         }
       />
-      <div className="mb-6 flex gap-2 overflow-x-auto">
+      <div className="mb-6 flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 max-w-full">
         {categories.map((item) => (
           <button
             key={item}
             onClick={() => setCategory(item)}
-            className={`rounded-full px-4 py-2 text-xs font-bold transition ${category === item ? "bg-[#24312e] text-white" : "border border-[#dfe1dc] text-[#68736e] hover:bg-white"}`}
+            className={`rounded-full px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs font-bold shrink-0 whitespace-nowrap transition cursor-pointer ${category === item ? "bg-[#24312e] text-white shadow-xs" : "border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f2f4ef]"}`}
           >
             {item}
           </button>
@@ -4033,6 +4173,8 @@ function MenuPage({
           onClose={() => setEditingItem(null)}
           onUpdated={handleItemUpdated}
           currencySymbol={currencySymbol}
+          currentUser={currentUser}
+          showToast={showToast}
         />
       )}
 
@@ -4041,6 +4183,8 @@ function MenuPage({
           item={deletingItem}
           onClose={() => setDeletingItem(null)}
           onDeleted={handleItemDeleted}
+          currentUser={currentUser}
+          showToast={showToast}
         />
       )}
     </>
@@ -5552,7 +5696,7 @@ function BillingPage({
       </div>
 
       {/* Top Stat Cards */}
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4">
         <StatCard
           label="Open sessions"
           value={String(sessions.length + takeawaySessions.length)}
@@ -5568,7 +5712,7 @@ function BillingPage({
           color="bg-[#e8f1e8] text-[#3b724c]"
         />
         <StatCard
-          label="Active deposits"
+          label="Deposits held"
           value={`${currencySymbol}${sessions.reduce((acc, t) => acc + (t.deposit || 0), 0).toLocaleString()}`}
           change="Auto-deducted on checkout"
           icon={CreditCard}
@@ -5584,18 +5728,18 @@ function BillingPage({
       </div>
 
       {/* Section View Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e9eae6] pb-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e9eae6] pb-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 max-w-full">
           <button
             onClick={() => setActiveTab("active-tables")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-bold transition cursor-pointer shrink-0 whitespace-nowrap ${
               activeTab === "active-tables"
                 ? "bg-[#24312e] text-white shadow-xs"
                 : "border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
             }`}
           >
-            <Table2 size={15} />
-            <span>Active Dine-In Tables</span>
+            <Table2 size={14} />
+            <span>Active Dine-In</span>
             <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[10px]">
               {sessions.length}
             </span>
@@ -5603,14 +5747,14 @@ function BillingPage({
 
           <button
             onClick={() => setActiveTab("takeaway")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-bold transition cursor-pointer shrink-0 whitespace-nowrap ${
               activeTab === "takeaway"
                 ? "bg-[#24312e] text-white shadow-xs"
                 : "border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
             }`}
           >
-            <ShoppingBag size={15} />
-            <span>Takeaway Tickets</span>
+            <ShoppingBag size={14} />
+            <span>Takeaway</span>
             <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[10px]">
               {takeawaySessions.length}
             </span>
@@ -5618,25 +5762,25 @@ function BillingPage({
 
           <button
             onClick={() => setActiveTab("settled-history")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-bold transition cursor-pointer shrink-0 whitespace-nowrap ${
               activeTab === "settled-history"
                 ? "bg-[#24312e] text-white shadow-xs"
                 : "border border-[#dfe1dc] bg-white text-[#68736e] hover:bg-[#f0f1ed]"
             }`}
           >
-            <History size={15} />
-            <span>Settled Invoices ({settledInvoices.length})</span>
+            <History size={14} />
+            <span>Settled ({settledInvoices.length})</span>
           </button>
 
           {/* Direct Link to Manager Transactions Module */}
           {role === "Manager" && onNavigateTransactions && (
             <button
               onClick={onNavigateTransactions}
-              className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3.5 py-2 text-xs font-bold text-amber-900 hover:bg-amber-100 transition cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100 transition cursor-pointer shadow-2xs shrink-0 whitespace-nowrap"
               title="Open the separate Transactions module"
             >
               <Receipt size={14} />
-              <span>Transactions Ledger →</span>
+              <span>Ledger →</span>
             </button>
           )}
         </div>
@@ -7809,16 +7953,471 @@ function AnnouncementModal({
   );
 }
 
+function StaffAttendanceDetailModal({
+  staff,
+  onClose,
+}: {
+  staff: StaffMember;
+  onClose: () => void;
+}) {
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
+  const [data, setData] = useState<StaffAttendanceResponse | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("All");
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    setError(null);
+
+    fetchStaffAttendanceHistory(staff.id, selectedMonth === "all" ? undefined : selectedMonth)
+      .then((res) => {
+        if (isMounted) {
+          setData(res);
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : "Failed to load attendance records");
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [staff.id, selectedMonth]);
+
+  const handlePrevMonth = () => {
+    if (selectedMonth === "all") {
+      setSelectedMonth(currentMonthStr);
+      return;
+    }
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const prevDate = new Date(year, month - 2, 1);
+    setSelectedMonth(`${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`);
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === "all") {
+      setSelectedMonth(currentMonthStr);
+      return;
+    }
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const nextDate = new Date(year, month, 1);
+    setSelectedMonth(`${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`);
+  };
+
+  const formatMonthTitle = (monthStr: string) => {
+    if (monthStr === "all") return "Complete Attendance History (All Time)";
+    try {
+      const [year, month] = monthStr.split("-").map(Number);
+      return new Date(year, month - 1, 1).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      });
+    } catch {
+      return monthStr;
+    }
+  };
+
+  const monthOptions = (() => {
+    const opts: { value: string; label: string }[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      opts.push({
+        value: val,
+        label: d.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+      });
+    }
+    opts.push({ value: "all", label: "All Recorded History" });
+    return opts;
+  })();
+
+  const formatTime = (isoString?: string | null) => {
+    if (!isoString) return "--";
+    try {
+      return new Date(isoString).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return "--";
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("en-US", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatMinutesToHours = (mins: number) => {
+    if (!mins) return "0h 0m";
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h ${m}m`;
+  };
+
+  const filteredLogs = (data?.logs || []).filter((log) => {
+    if (statusFilter === "All") return true;
+    return log.status === statusFilter;
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto animate-fadeIn">
+      <div className="relative flex flex-col w-full max-w-5xl max-h-[92vh] rounded-3xl bg-white shadow-2xl border border-[#dfe1dc] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-start justify-between border-b border-[#e9eae6] bg-[#24312e] p-5 sm:p-6 text-white shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3d524b] text-lg font-bold text-[#f4bc83] shadow-md shrink-0">
+              {staff.name
+                .split(" ")
+                .map((w) => w[0])
+                .join("")}
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="display-font text-xl font-bold text-white sm:text-2xl">
+                  {staff.name}
+                </h3>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                    staff.todayStatus === "Clocked in"
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                      : staff.todayStatus === "On break"
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                      : staff.todayStatus === "Clocked out"
+                      ? "bg-stone-500/20 text-stone-300 border border-stone-500/40"
+                      : "bg-[#3d524b] text-[#cfe0d0]"
+                  }`}
+                >
+                  ● Today: {staff.todayStatus}
+                </span>
+                {staff.systemRole !== "None" && (
+                  <span className="rounded-full bg-[#f4bc83]/20 text-[#f4bc83] border border-[#f4bc83]/30 px-2 py-0.5 text-[10px] font-bold">
+                    {staff.systemRole}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-[#aab8b0]">
+                <span>Dept: <strong className="text-white">{staff.department}</strong></span>
+                <span>•</span>
+                <span>Shift: <strong className="text-white">{staff.shift}</strong></span>
+                <span>•</span>
+                <span>Phone: <strong className="text-white">{staff.phone}</strong></span>
+                <span>•</span>
+                <span>Mobile PIN: <strong className="text-white font-mono">{staff.pin}</strong></span>
+                {staff.email && (
+                  <>
+                    <span>•</span>
+                    <span>Email: <strong className="text-white">{staff.email}</strong></span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="rounded-full p-2 text-[#aab8b0] hover:bg-white/10 hover:text-white transition cursor-pointer"
+            title="Close modal"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Scrollable Modal Content */}
+        <div className="overflow-y-auto p-5 sm:p-6 space-y-6 flex-1 bg-[#fbfaf7]">
+          {/* Month Navigation & Filter Strip */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-[#dfe1dc] bg-white p-3.5 shadow-xs">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                className="rounded-xl border border-[#dfe1dc] bg-white p-2 text-[#24312e] hover:bg-[#f0f1ed] transition cursor-pointer shadow-2xs"
+                title="Previous Month"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="px-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-[#84908a] block">
+                  Attendance Month
+                </span>
+                <h4 className="text-base font-bold text-[#24312e]">
+                  {formatMonthTitle(selectedMonth)}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                className="rounded-xl border border-[#dfe1dc] bg-white p-2 text-[#24312e] hover:bg-[#f0f1ed] transition cursor-pointer shadow-2xs"
+                title="Next Month"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs font-bold text-[#24312e] outline-hidden cursor-pointer shadow-2xs focus:border-[#24312e]"
+              >
+                {monthOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-xl border border-[#dfe1dc] bg-white px-3 py-2 text-xs font-bold text-[#68736e] outline-hidden cursor-pointer shadow-2xs focus:border-[#24312e]"
+              >
+                <option value="All">All Statuses</option>
+                <option value="Clocked in">Clocked In</option>
+                <option value="Clocked out">Clocked Out</option>
+                <option value="On break">On Break</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Month Summary KPI Stats */}
+          {data?.summary && (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className="rounded-2xl border border-[#dfe1dc] bg-white p-3.5 shadow-2xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#84908a] block">
+                  Days Present
+                </span>
+                <p className="mt-1 text-xl font-black text-[#24312e]">
+                  {data.summary.daysPresent} Days
+                </p>
+                <span className="text-[11px] text-emerald-700 font-semibold">
+                  Shift Attendance
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-[#dfe1dc] bg-white p-3.5 shadow-2xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#84908a] block">
+                  Total Work Time
+                </span>
+                <p className="mt-1 text-xl font-black text-[#315a3d]">
+                  {data.summary.totalHoursWorked} hrs
+                </p>
+                <span className="text-[11px] text-[#68736e]">
+                  Net of breaks
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-[#dfe1dc] bg-white p-3.5 shadow-2xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#84908a] block">
+                  Total Break Time
+                </span>
+                <p className="mt-1 text-xl font-black text-amber-800">
+                  {data.summary.totalBreakHours} hrs
+                </p>
+                <span className="text-[11px] text-[#84908a]">
+                  ({data.summary.totalBreakMinutes} total mins)
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-[#dfe1dc] bg-white p-3.5 shadow-2xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#84908a] block">
+                  Daily Avg Hours
+                </span>
+                <p className="mt-1 text-xl font-black text-[#24312e]">
+                  {data.summary.avgDailyHours} hrs
+                </p>
+                <span className="text-[11px] text-[#68736e]">
+                  Per active shift
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-[#dfe1dc] bg-white p-3.5 shadow-2xs col-span-2 sm:col-span-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#84908a] block">
+                  Punctuality Rate
+                </span>
+                <p className="mt-1 text-xl font-black text-emerald-700">
+                  {data.summary.onTimeRate}%
+                </p>
+                <span className="text-[11px] text-[#68736e]">
+                  On-time arrivals
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Daily Records Table */}
+          <div className="rounded-2xl border border-[#dfe1dc] bg-white p-4 sm:p-5 shadow-xs">
+            <div className="flex items-center justify-between border-b border-[#e9eae6] pb-3 mb-3">
+              <h4 className="font-bold text-sm text-[#24312e] flex items-center gap-2">
+                <Clock3 size={16} className="text-[#315a3d]" />
+                Detailed Daily Attendance Logs ({filteredLogs.length})
+              </h4>
+              <span className="text-xs text-[#84908a]">
+                Showing records for {formatMonthTitle(selectedMonth)}
+              </span>
+            </div>
+
+            {isLoading ? (
+              <div className="py-12 text-center text-xs text-[#84908a]">
+                <Clock3 size={24} className="mx-auto mb-2 animate-spin text-[#315a3d]" />
+                Loading attendance history...
+              </div>
+            ) : error ? (
+              <div className="py-8 text-center text-xs text-red-600 font-semibold">
+                {error}
+              </div>
+            ) : filteredLogs.length === 0 ? (
+              <div className="py-12 text-center text-xs text-[#84908a] space-y-1">
+                <p className="font-semibold text-[#24312e]">No attendance punches found</p>
+                <p>No clock-in logs recorded for this employee during the selected period.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs min-w-160">
+                  <thead className="border-b border-[#e9eae6] text-[10px] font-bold uppercase tracking-wider text-[#84908a]">
+                    <tr>
+                      <th className="pb-2.5">Date & Day</th>
+                      <th className="pb-2.5">Status</th>
+                      <th className="pb-2.5">Clock In</th>
+                      <th className="pb-2.5">Clock Out</th>
+                      <th className="pb-2.5">Break Time</th>
+                      <th className="pb-2.5">Net Work Time</th>
+                      <th className="pb-2.5 text-right">Verification</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f0f1ed]">
+                    {filteredLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-[#fbfaf7] transition">
+                        <td className="py-3">
+                          <div className="font-bold text-[#24312e]">
+                            {formatDate(log.date)}
+                          </div>
+                          <span className="text-[10px] text-[#84908a]">
+                            Scheduled: {staff.shift}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              log.status === "Clocked in"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : log.status === "On break"
+                                ? "bg-amber-100 text-amber-800"
+                                : log.status === "Clocked out"
+                                ? "bg-stone-100 text-stone-800"
+                                : "bg-[#e8f1e8] text-[#315a3d]"
+                            }`}
+                          >
+                            ● {log.status}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <div className="font-bold text-[#24312e]">
+                            {formatTime(log.clockIn)}
+                          </div>
+                          <span className="text-[10px] text-emerald-700 font-medium">
+                            {log.clockIn ? "Punch verified" : "--"}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          {log.clockOut ? (
+                            <div className="font-bold text-[#24312e]">
+                              {formatTime(log.clockOut)}
+                            </div>
+                          ) : log.status === "Clocked in" || log.status === "On break" ? (
+                            <span className="font-mono text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                              Active Shift
+                            </span>
+                          ) : (
+                            <span className="text-[#a1aaa4]">--</span>
+                          )}
+                        </td>
+                        <td className="py-3">
+                          <span className="font-semibold text-amber-900">
+                            {log.totalBreakMinutes > 0 ? `${log.totalBreakMinutes} mins` : "0 mins"}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <span className="font-mono font-bold text-[#315a3d]">
+                            {formatMinutesToHours(Number(log.workDurationMinutes))}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right">
+                          {log.managerOverride ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[10px] font-bold text-purple-700 border border-purple-200">
+                              <ShieldCheck size={11} />
+                              Manager Override
+                            </span>
+                          ) : log.distanceMeters !== null && log.distanceMeters !== undefined ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                              <MapPin size={11} />
+                              GPS {log.distanceMeters}m (Verified)
+                            </span>
+                          ) : (
+                            <span className="text-[#a1aaa4] text-[11px]">--</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-[#e9eae6] bg-white p-4 flex items-center justify-between text-xs shrink-0">
+          <span className="text-[#84908a]">
+            Employee ID: <strong className="text-[#24312e]">{staff.id}</strong> • Table & Thyme Attendance Register
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl bg-[#24312e] px-4 py-2 font-bold text-white hover:bg-[#315a3d] transition cursor-pointer shadow-xs"
+          >
+            Close Details
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EmployeesPage({
   onOpenPortal,
   departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
   onAddDepartment,
   onDeleteDepartment,
+  currentUser,
+  showToast,
 }: {
   onOpenPortal?: () => void;
   departments?: string[];
   onAddDepartment?: (name: string) => Promise<any>;
   onDeleteDepartment?: (name: string) => Promise<any>;
+  currentUser?: any;
+  showToast?: any;
 }) {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
@@ -7835,6 +8434,7 @@ function EmployeesPage({
   // Modals
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [viewingStaffAttendance, setViewingStaffAttendance] = useState<StaffMember | null>(null);
   const [showGeofenceModal, setShowGeofenceModal] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [detectingGps, setDetectingGps] = useState(false);
@@ -7875,6 +8475,11 @@ function EmployeesPage({
     department: string;
     shift: string;
   }) => {
+    if (currentUser?.isDemoAccount) {
+      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      return;
+    }
+
     await createStaff({
       ...data,
       systemRole: "None",
@@ -7885,11 +8490,19 @@ function EmployeesPage({
   };
 
   const handleUpdateStaff = async (id: string, data: Partial<StaffMember>) => {
+    if (currentUser?.isDemoAccount) {
+      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      return;
+    }
     await updateStaff(id, data);
     loadData();
   };
 
   const handleDeleteStaff = async (id: string, name: string) => {
+    if (currentUser?.isDemoAccount) {
+      if (showToast) showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      return;
+    }
     if (!confirm(`Are you sure you want to remove ${name} from employees? This action cannot be undone.`)) return;
     try {
       await deleteStaff(id);
@@ -8241,17 +8854,22 @@ function EmployeesPage({
                 </thead>
                 <tbody>
                   {filteredStaff.map((person) => (
-                    <tr key={person.id} className="border-b border-[#f0f1ed] last:border-0 text-xs">
+                    <tr
+                      key={person.id}
+                      onClick={() => setViewingStaffAttendance(person)}
+                      className="border-b border-[#f0f1ed] last:border-0 text-xs hover:bg-[#f3f6f3] transition cursor-pointer group"
+                      title={`Click to view month-wise attendance & clock-in/out records for ${person.name}`}
+                    >
                       <td className="py-3.5">
                         <div className="flex items-center gap-2.5">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e5c7a6] text-[11px] font-bold text-[#684f37]">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e5c7a6] text-[11px] font-bold text-[#684f37] group-hover:scale-105 transition">
                             {person.name
                               .split(" ")
                               .map((w) => w[0])
                               .join("")}
                           </div>
                           <div>
-                            <p className="font-bold text-[#24312e]">{person.name}</p>
+                            <p className="font-bold text-[#24312e] group-hover:text-[#315a3d] transition">{person.name}</p>
                             <span className="text-[10px] text-[#84908a]">{person.phone}</span>
                           </div>
                         </div>
@@ -8280,7 +8898,23 @@ function EmployeesPage({
                       <td className="py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => handleToggleAttendance(person.id, person.todayStatus)}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingStaffAttendance(person);
+                            }}
+                            className="rounded-lg border border-[#315a3d]/30 bg-[#e8f1e8] px-2.5 py-1 text-[11px] font-bold text-[#315a3d] hover:bg-[#315a3d] hover:text-white transition cursor-pointer shadow-2xs flex items-center gap-1"
+                            title="View full month-wise attendance & clock-in/out logs"
+                          >
+                            <Eye size={13} />
+                            Attendance
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleAttendance(person.id, person.todayStatus);
+                            }}
                             className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${
                               person.todayStatus === "Clocked in"
                                 ? "bg-stone-200 text-stone-800 hover:bg-stone-300"
@@ -8291,14 +8925,22 @@ function EmployeesPage({
                             {person.todayStatus === "Clocked in" ? "Clock Out" : "Clock In"}
                           </button>
                           <button
-                            onClick={() => setEditingStaff(person)}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingStaff(person);
+                            }}
                             className="rounded-lg border border-[#dfe1dc] bg-white p-1.5 text-stone-600 hover:text-[#315a3d] hover:border-[#315a3d] transition cursor-pointer shadow-2xs"
                             title="Edit employee details"
                           >
                             <Pencil size={14} />
                           </button>
                           <button
-                            onClick={() => handleDeleteStaff(person.id, person.name)}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteStaff(person.id, person.name);
+                            }}
                             className="rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 transition cursor-pointer shadow-2xs"
                             title="Delete employee"
                           >
@@ -8459,6 +9101,13 @@ function EmployeesPage({
           onSaved={loadData}
         />
       )}
+
+      {viewingStaffAttendance && (
+        <StaffAttendanceDetailModal
+          staff={viewingStaffAttendance}
+          onClose={() => setViewingStaffAttendance(null)}
+        />
+      )}
     </>
   );
 }
@@ -8467,10 +9116,13 @@ function DashboardAccessPage({
   onOpenPortal,
   departments = ["Floor", "Kitchen", "Bar", "Cleaning", "Utility", "Management"],
   onAddDepartment,
+  currentUser,
 }: {
   onOpenPortal?: () => void;
   departments?: string[];
   onAddDepartment?: (name: string) => Promise<any>;
+  currentUser?: any;
+  showToast?: any; // Ignored as DashboardAccessPage has its own
 }) {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -8502,6 +9154,10 @@ function DashboardAccessPage({
   };
 
   const handleRoleChange = async (staffId: string, newRole: StaffMember["systemRole"]) => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
     try {
       const updated = await updateStaff(staffId, { systemRole: newRole });
       showToast(`✓ Updated ${updated.name}'s station role to "${newRole}"!`);
@@ -8512,6 +9168,10 @@ function DashboardAccessPage({
   };
 
   const handleRevokeRole = async (staffId: string, name: string) => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
     if (!confirm(`Revoke dashboard station access for ${name}? They will no longer be able to log into the web dashboard.`)) return;
     try {
       await updateStaff(staffId, { systemRole: "None" });
@@ -8530,6 +9190,10 @@ function DashboardAccessPage({
     department: string;
     phone?: string;
   }) => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
     await createStaff({
       name: data.name,
       email: data.email,
@@ -8545,6 +9209,10 @@ function DashboardAccessPage({
   };
 
   const handleUpdateDashboardMember = async (id: string, data: Partial<StaffMember>) => {
+    if (currentUser?.isDemoAccount) {
+      alert("This feature is disabled for the demo account.");
+      return;
+    }
     await updateStaff(id, data);
     showToast("✓ Dashboard credentials updated successfully!");
     loadData();
@@ -8694,14 +9362,13 @@ function DashboardAccessPage({
                 <th className="pb-3">Dashboard User</th>
                 <th className="pb-3">Department</th>
                 <th className="pb-3">Dashboard Access Role</th>
-                <th className="pb-3">Station Login Credentials</th>
                 <th className="pb-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredMembers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-xs text-[#84908a]">
+                  <td colSpan={4} className="py-8 text-center text-xs text-[#84908a]">
                     No dashboard members found matching your filter. Click <strong>"Add Member"</strong> to create one.
                   </td>
                 </tr>
@@ -8745,25 +9412,6 @@ function DashboardAccessPage({
                         <option value="Kitchen">Kitchen Head Station</option>
                         <option value="Manager">Manager Station</option>
                       </select>
-                    </td>
-                    <td className="py-3.5">
-                      <div className="flex items-center gap-2">
-                        <div className="font-mono text-[11px] text-[#24312e]">
-                          <div>Email: <strong className="text-[#315a3d]">{person.email || "No email"}</strong></div>
-                          <div className="text-[10px] text-[#84908a]">Pass: {person.password || "demo123"}</div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => copyCredentials(person)}
-                          className="rounded-lg border border-[#dfe1dc] bg-white p-1 text-[#68736e] hover:text-[#24312e] transition cursor-pointer shadow-2xs"
-                          title="Copy credentials"
-                        >
-                          <Copy size={13} />
-                        </button>
-                        {copiedId === person.id && (
-                          <span className="text-[10px] text-emerald-700 font-bold">Copied!</span>
-                        )}
-                      </div>
                     </td>
                     <td className="py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
@@ -9130,6 +9778,7 @@ function BookingModal({
   initialTableId,
   kitchenClosed,
   currencySymbol = "₹",
+  defaultDeposit = 500,
 }: {
   tables: RestaurantTable[];
   onBookingCreated: (booking: TableBooking) => void;
@@ -9137,6 +9786,7 @@ function BookingModal({
   initialTableId?: string;
   kitchenClosed?: boolean;
   currencySymbol?: string;
+  defaultDeposit?: number;
 }) {
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -9204,13 +9854,14 @@ function BookingModal({
       const created = await createBooking({
         customer: String(form.get("customer") || "").trim(),
         phone: String(form.get("phone") || "").trim(),
+        email: String(form.get("email") || "").trim(),
         bookingDate: String(form.get("bookingDate") || todayStr).trim(),
         bookingTime: String(bookingTime || form.get("bookingTime") || "").trim(),
         guests: Number(guests) || 2,
         tableId: tableId,
         source: (form.get("source") as any) || "Phone",
         specialRequests: String(form.get("specialRequests") || "").trim(),
-        deposit: 500,
+        deposit: defaultDeposit,
       });
       setConfirmedBooking(created);
       onBookingCreated(created);
@@ -9231,8 +9882,8 @@ function BookingModal({
           onClose={() => setShowTimePicker(false)}
         />
       )}
-      <div className="fixed inset-0 z-20 flex items-center justify-center overflow-y-auto bg-[#24312e]/40 p-4 backdrop-blur-sm">
-      <div className="my-auto w-full max-w-xl rounded-2xl bg-[#fbfaf7] p-6 shadow-2xl sm:p-7 max-h-[92vh] overflow-y-auto">
+      <div className="fixed inset-0 z-20 flex items-center justify-center overflow-y-auto bg-[#24312e]/40 p-3 sm:p-4 backdrop-blur-sm">
+      <div className="my-auto w-full max-w-xl rounded-2xl bg-[#fbfaf7] p-4 sm:p-7 shadow-2xl max-h-[92vh] overflow-y-auto">
         <div className="flex items-start justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.15em] text-[#b7623d]">
@@ -9276,7 +9927,7 @@ function BookingModal({
               {confirmedBooking?.tableId ? ` (Table ${confirmedBooking.tableId})` : " (Auto-allocated)"}.
             </p>
             <p className="mt-1 text-xs text-[#58715e]">
-              The {currencySymbol || "₹"}500 booking deposit is recorded and will be adjusted on final billing.
+              The {currencySymbol || "₹"}{defaultDeposit} booking deposit is recorded and will be adjusted on final billing.
             </p>
             <button
               onClick={onClose}
@@ -9312,6 +9963,16 @@ function BookingModal({
                   name="phone"
                   type="tel"
                   placeholder="e.g. +91 98765 43210"
+                  className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none placeholder:text-[#aab1ac] focus:border-[#b7623d]"
+                />
+              </label>
+
+              <label className="text-xs font-bold text-[#68736e]">
+                Email address
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="e.g. guest@example.com"
                   className="mt-2 w-full rounded-xl border border-[#dfe1dc] bg-white px-3 py-2.5 text-sm font-medium text-[#24312e] outline-none placeholder:text-[#aab1ac] focus:border-[#b7623d]"
                 />
               </label>
@@ -9548,6 +10209,7 @@ function BookingModal({
                   <option value="Walk-in">Walk-in</option>
                   <option value="Web link">Web link</option>
                   <option value="Online">Online</option>
+                  <option value="Website">Website</option>
                 </select>
               </label>
             </div>
@@ -9570,7 +10232,7 @@ function BookingModal({
               <div className="flex-1 text-xs">
                 <p className="font-bold text-[#684f37]">
                   Booking deposit{" "}
-                  <span className="float-right text-sm font-extrabold">{currencySymbol || "₹"}500</span>
+                  <span className="float-right text-sm font-extrabold">{currencySymbol || "₹"}{defaultDeposit}</span>
                 </p>
                 <p className="mt-0.5 text-[11px] text-[#8f7055]">
                   Recorded and adjusted against guest’s final bill.
@@ -10069,38 +10731,44 @@ function NewOrderModal({
           </div>
 
           {/* Sticky Modal Footer */}
-          <div className="border-t border-[#e9eae6] bg-white p-4 sm:p-5 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-baseline gap-2">
+          <div className="border-t border-[#e9eae6] bg-white p-3.5 sm:p-5 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
               <span className="text-xs font-bold text-[#84908a]">Order Total:</span>
-              <span className="text-xl font-black text-[#24312e]">
-                {currencySymbol || "₹"}{orderTotal.toLocaleString("en-IN")}
-              </span>
-              {totalItemCount > 0 && (
-                <span className="text-xs text-[#84908a]">
-                  ({totalItemCount} {totalItemCount === 1 ? "item" : "items"})
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-lg sm:text-xl font-black text-[#24312e]">
+                  {currencySymbol || "₹"}{orderTotal.toLocaleString("en-IN")}
                 </span>
-              )}
+                {totalItemCount > 0 && (
+                  <span className="text-[11px] text-[#84908a]">
+                    ({totalItemCount} {totalItemCount === 1 ? "item" : "items"})
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 sm:flex-none rounded-xl border border-[#dfe1dc] px-4 py-2.5 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+                className="rounded-xl border border-[#dfe1dc] px-3.5 py-2.5 text-xs font-bold text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer shrink-0"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting || totalItemCount === 0 || kitchenClosed}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl bg-[#24312e] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl bg-[#24312e] px-4 sm:px-6 py-2.5 text-xs font-bold text-white hover:bg-[#315a3d] shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer whitespace-nowrap min-w-0"
               >
-                <ShoppingBag size={15} />
-                {kitchenClosed
-                  ? "Kitchen Closed"
-                  : submitting
-                  ? "Booking order..."
-                  : `Book Order (${totalItemCount} item${totalItemCount === 1 ? "" : "s"})`}
+                <ShoppingBag size={14} className="shrink-0" />
+                <span className="truncate">
+                  {kitchenClosed
+                    ? "Kitchen Closed"
+                    : submitting
+                    ? "Booking..."
+                    : totalItemCount > 0
+                    ? `Book Order (${totalItemCount})`
+                    : "Book Order"}
+                </span>
               </button>
             </div>
           </div>
@@ -10117,6 +10785,8 @@ function getRoleEmail(role: StaffRole) {
 function LoginPage({
   onLogin,
   restaurantSettings,
+  onNavigateWebsite,
+  onNavigateEmployeePortal,
 }: {
   onLogin: (
     role: StaffRole,
@@ -10128,18 +10798,22 @@ function LoginPage({
       pin?: string;
       department?: string;
       systemRole: StaffRole;
-    }
-  ) => void;
+    isDemoAccount?: boolean;
+  }
+) => void;
   restaurantSettings?: StoreSettings;
+  onNavigateWebsite?: () => void;
+  onNavigateEmployeePortal?: () => void;
 }) {
   const [role, setRole] = useState<StaffRole>("Server");
-  const [email, setEmail] = useState(getRoleEmail("Server"));
-  const [password, setPassword] = useState("demo123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const selectRole = (nextRole: StaffRole) => {
     setRole(nextRole);
-    setEmail(getRoleEmail(nextRole));
+    setEmail("");
+    setPassword("");
     setError("");
   };
 
@@ -10176,8 +10850,10 @@ function LoginPage({
     }
 
     const expectedEmail = getRoleEmail(role);
+    const isDemoLogin = email.trim().toLowerCase() === "demo@tableandthyme.com" && password === "demo123";
+
     if (
-      email.trim().toLowerCase() !== expectedEmail ||
+      email.trim().toLowerCase() !== expectedEmail && !isDemoLogin ||
       password !== "demo123"
     ) {
       setError("Invalid email or password. Use your station credentials or the demo accounts below.");
@@ -10189,11 +10865,13 @@ function LoginPage({
       Kitchen: "Chef Sunita",
       Server: "Aarav Rao",
     };
+
     onLogin(role, {
-      name: demoNames[role] || `${role} Operator`,
-      email: expectedEmail,
+      name: isDemoLogin ? `Demo ${role}` : demoNames[role] || `${role} Operator`,
+      email: email.trim().toLowerCase(),
       department: role === "Manager" ? "Management" : role === "Kitchen" ? "Kitchen" : "Floor Service",
       systemRole: role,
+      isDemoAccount: isDemoLogin,
     });
   };
 
@@ -10318,9 +10996,30 @@ function LoginPage({
             <p className="mt-1">
               Server / Servant: <strong>server@tableandthyme.com</strong> (Aarav Rao)
             </p>
+            <p className="mt-2 text-[#b7623d]">
+              Demo Account (No Access): <strong>demo@tableandthyme.com</strong>
+            </p>
             <p className="mt-1">
               Password: <strong>demo123</strong>
             </p>
+          </div>
+          <div className="mt-5 flex items-center justify-between border-t border-[#e0e2dc] pt-4 text-xs font-semibold text-[#68736e]">
+            <button
+              type="button"
+              onClick={onNavigateWebsite}
+              className="flex items-center gap-1.5 hover:text-[#24312e] transition"
+            >
+              <ArrowLeft size={14} />
+              Restaurant Website (Home)
+            </button>
+            <button
+              type="button"
+              onClick={onNavigateEmployeePortal}
+              className="flex items-center gap-1.5 font-bold text-[#315a3d] hover:text-[#24312e] transition"
+            >
+              Staff Mobile Portal
+              <ArrowRight size={14} />
+            </button>
           </div>
         </div>
       </div>
@@ -10330,6 +11029,8 @@ function LoginPage({
 
 function CustomerWebsite({
   onBack,
+  onOpenPortal,
+  onOpenDashboard,
   menuItems,
   soldOutItems,
   onOrderCreated,
@@ -10338,6 +11039,8 @@ function CustomerWebsite({
   currencySymbol = "₹",
 }: {
   onBack: () => void;
+  onOpenPortal?: () => void;
+  onOpenDashboard?: () => void;
   menuItems: ApiMenuItem[];
   soldOutItems: string[];
   onOrderCreated: (order: Order) => void;
@@ -10408,19 +11111,31 @@ function CustomerWebsite({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {onOpenPortal && (
+              <button
+                onClick={onOpenPortal}
+                className="flex items-center gap-1.5 rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] px-3.5 py-2 text-xs font-bold text-[#4d5752] hover:bg-white transition shadow-xs"
+                title="Open Staff Mobile Portal"
+              >
+                <Users size={14} />
+                <span className="hidden sm:inline">Staff Portal</span>
+              </button>
+            )}
             <button
-              onClick={onBack}
-              className="rounded-xl border border-[#dfe1dc] px-3 py-2 text-xs font-bold text-[#68736e]"
+              onClick={onOpenDashboard || onBack}
+              className="flex items-center gap-1.5 rounded-xl bg-[#24312e] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#315a3d] transition shadow-xs"
+              title="Open Management Station Dashboard"
             >
-              Staff view
+              <LayoutDashboard size={14} />
+              <span>Dashboard</span>
             </button>
             <button
-              className="relative rounded-xl bg-[#24312e] p-3 text-white"
+              className="relative rounded-xl bg-[#f0f1ed] p-2.5 text-[#24312e] hover:bg-[#e4e6df] transition"
               aria-label="Cart"
             >
               <ShoppingBag size={18} />
               {cart.length > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#b7623d] text-[10px] font-bold">
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#b7623d] text-[10px] font-bold text-white">
                   {cart.length}
                 </span>
               )}
@@ -10559,8 +11274,37 @@ function CustomerWebsite({
   );
 }
 
+function extractBlogIdentifier(pathname: string, search: string): string {
+  if (search && search.startsWith("?")) {
+    const raw = search.slice(1);
+    if (raw.startsWith("id=")) {
+      return decodeURIComponent(raw.slice(3));
+    }
+    const param = raw.split("&")[0];
+    if (param && !param.includes("=")) {
+      return decodeURIComponent(param);
+    }
+    const searchParams = new URLSearchParams(search);
+    const qId = searchParams.get("id");
+    if (qId) return qId;
+  }
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts[0] === "blog" && parts[1]) {
+    return decodeURIComponent(parts[1]);
+  }
+  return "";
+}
+
 export default function RestaurantApp() {
-  const [role, setRole] = useState<StaffRole | null>(null);
+  const [role, setRole] = useState<StaffRole | null>(() => {
+    try {
+      const savedRole = localStorage.getItem("restro-active-role");
+      if (savedRole === "Manager" || savedRole === "Server" || savedRole === "Kitchen") {
+        return savedRole as StaffRole;
+      }
+    } catch {}
+    return null;
+  });
   const [currentUser, setCurrentUser] = useState<{
     id?: string;
     name: string;
@@ -10569,7 +11313,80 @@ export default function RestaurantApp() {
     pin?: string;
     department?: string;
     systemRole: StaffRole;
-  } | null>(null);
+  } | null>(() => {
+    try {
+      const savedUser = localStorage.getItem("restro-active-user");
+      if (savedUser) return JSON.parse(savedUser);
+    } catch {}
+    return null;
+  });
+  const [currentRoute, setCurrentRoute] = useState<AppRoute>(() =>
+    getRouteFromPath(window.location.pathname)
+  );
+  const [selectedBlogId, setSelectedBlogId] = useState<string>(() => {
+    try {
+      return extractBlogIdentifier(window.location.pathname, window.location.search) || "blog_1";
+    } catch {}
+    return "blog_1";
+  });
+
+  const navigateTo = (path: string) => {
+    if (window.location.pathname !== path && window.location.pathname + window.location.search !== path) {
+      window.history.pushState({}, "", path);
+    }
+    const cleanPath = path.split("?")[0];
+    const search = path.includes("?") ? "?" + path.split("?").slice(1).join("?") : "";
+    const nextRoute = getRouteFromPath(cleanPath);
+    if (nextRoute === "blog") {
+      const extracted = extractBlogIdentifier(cleanPath, search);
+      if (extracted) setSelectedBlogId(extracted);
+    }
+    setCurrentRoute(nextRoute);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const nextRoute = getRouteFromPath(window.location.pathname);
+      setCurrentRoute(nextRoute);
+      if (nextRoute === "blog") {
+        const extracted = extractBlogIdentifier(window.location.pathname, window.location.search);
+        if (extracted) setSelectedBlogId(extracted);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (role) {
+        localStorage.setItem("restro-active-role", role);
+      } else {
+        localStorage.removeItem("restro-active-role");
+      }
+    } catch {}
+  }, [role]);
+
+  useEffect(() => {
+    try {
+      if (currentUser) {
+        localStorage.setItem("restro-active-user", JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem("restro-active-user");
+      }
+    } catch {}
+  }, [currentUser]);
+
+  const handleSignOut = () => {
+    setRole(null);
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem("restro-active-role");
+      localStorage.removeItem("restro-active-user");
+    } catch {}
+    navigateTo("/dashboard");
+  };
   const [stationPreferences, setStationPreferences] = useState<StationDisplayPreferences>(() => {
     try {
       const saved = localStorage.getItem("restro-station-preferences");
@@ -10590,8 +11407,15 @@ export default function RestaurantApp() {
     estimatedPrepTimeMinutes: 20,
     tableTurnTimeMinutes: 60,
     logoUrl: "",
+    faviconUrl: "",
     isCurrencyLocked: false,
     gstNumber: "07AAAAA0000A1Z5",
+    address: "Connaught Place, Central Boulevard, New Delhi 110001",
+    websiteTheme: "system",
+    reservationDeposit: 500,
+    payuMerchantKey: "",
+    payuMerchantSalt: "",
+    payuTestMode: true,
   });
 
   useEffect(() => {
@@ -10608,8 +11432,15 @@ export default function RestaurantApp() {
             estimatedPrepTimeMinutes: data.estimatedPrepTimeMinutes || 20,
             tableTurnTimeMinutes: data.tableTurnTimeMinutes || 60,
             logoUrl: data.logoUrl || "",
+            faviconUrl: data.faviconUrl || "",
             isCurrencyLocked: Boolean(data.isCurrencyLocked),
             gstNumber: data.gstNumber || "07AAAAA0000A1Z5",
+            address: data.address || "Connaught Place, Central Boulevard, New Delhi 110001",
+            websiteTheme: data.websiteTheme || "system",
+            reservationDeposit: data.reservationDeposit !== undefined ? data.reservationDeposit : 500,
+            payuMerchantKey: data.payuMerchantKey || "",
+            payuMerchantSalt: data.payuMerchantSalt || "",
+            payuTestMode: data.payuTestMode ?? true,
           });
         }
       })
@@ -10621,6 +11452,12 @@ export default function RestaurantApp() {
       document.title = `${storeSettings.restaurantName}${storeSettings.branchName ? ` · ${storeSettings.branchName}` : ""}`;
     }
   }, [storeSettings.restaurantName, storeSettings.branchName]);
+
+  useEffect(() => {
+    if (storeSettings.faviconUrl) {
+      setDocumentFavicon(storeSettings.faviconUrl);
+    }
+  }, [storeSettings.faviconUrl]);
 
   const handleUpdatePreferences = (nextPrefs: StationDisplayPreferences) => {
     setStationPreferences(nextPrefs);
@@ -10645,8 +11482,15 @@ export default function RestaurantApp() {
           estimatedPrepTimeMinutes: result.estimatedPrepTimeMinutes || prev.estimatedPrepTimeMinutes,
           tableTurnTimeMinutes: result.tableTurnTimeMinutes || prev.tableTurnTimeMinutes,
           logoUrl: result.logoUrl !== undefined ? result.logoUrl : prev.logoUrl,
+          faviconUrl: result.faviconUrl !== undefined ? result.faviconUrl : prev.faviconUrl,
           isCurrencyLocked: result.isCurrencyLocked !== undefined ? result.isCurrencyLocked : prev.isCurrencyLocked,
           gstNumber: result.gstNumber || prev.gstNumber,
+          address: result.address || prev.address,
+          websiteTheme: result.websiteTheme || prev.websiteTheme,
+          reservationDeposit: result.reservationDeposit !== undefined ? result.reservationDeposit : prev.reservationDeposit,
+          payuMerchantKey: result.payuMerchantKey !== undefined ? result.payuMerchantKey : prev.payuMerchantKey,
+          payuMerchantSalt: result.payuMerchantSalt !== undefined ? result.payuMerchantSalt : prev.payuMerchantSalt,
+          payuTestMode: result.payuTestMode !== undefined ? result.payuTestMode : prev.payuTestMode,
         }));
       }
     } catch (err) {
@@ -10703,6 +11547,7 @@ export default function RestaurantApp() {
   };
 
   const [activeNav, setActiveNav] = useState<Page>("Overview");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
 
   useEffect(() => {
@@ -10754,11 +11599,9 @@ export default function RestaurantApp() {
   ]);
   const [showBooking, setShowBooking] = useState(false);
   const [showNewOrder, setShowNewOrder] = useState(false);
-  const [showWebsite, setShowWebsite] = useState(false);
   const [kitchenClosed, setKitchenClosed] = useState<boolean>(false);
   const [selectedTableForBooking, setSelectedTableForBooking] = useState<string | undefined>();
   const [selectedTableForOrder, setSelectedTableForOrder] = useState<string | undefined>();
-  const [showEmployeePortal, setShowEmployeePortal] = useState(false);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
@@ -10948,6 +11791,11 @@ export default function RestaurantApp() {
     status: TableStatus;
     serverName: string;
   }) => {
+    if (currentUser?.isDemoAccount) {
+      showToast("error", "Access Denied", "This feature is disabled for the demo account.");
+      return;
+    }
+
     const created = await createTable(newTable);
     setTables((current) => {
       const exists = current.some((t) => t.id === created.id);
@@ -11001,10 +11849,84 @@ export default function RestaurantApp() {
     window.addEventListener("storage", syncOrders);
     return () => window.removeEventListener("storage", syncOrders);
   }, []);
-  if (!role)
+  if (currentRoute === "landing") {
+    return (
+      <PublicWebsite
+        onNavigateDashboard={() => navigateTo("/dashboard")}
+        onNavigateEmployeePortal={() => navigateTo("/employe")}
+        onOpenBlog={(slugOrId) => {
+          setSelectedBlogId(slugOrId);
+          navigateTo(`/blog?${slugOrId}`);
+        }}
+        restaurantName={storeSettings.restaurantName}
+        restaurantAddress={storeSettings.address}
+        branchName={storeSettings.branchName}
+        websiteTheme={storeSettings.websiteTheme}
+        currencySymbol={storeSettings.currencySymbol || "₹"}
+        restaurantLogoUrl={storeSettings.logoUrl}
+        faviconUrl={storeSettings.faviconUrl}
+        kitchenClosed={kitchenClosed}
+      />
+    );
+  }
+
+  if (currentRoute === "blog") {
+    return (
+      <BlogPostPage
+        blogId={selectedBlogId}
+        restaurantName={storeSettings.restaurantName}
+        restaurantAddress={storeSettings.address}
+        branchName={storeSettings.branchName}
+        websiteTheme={storeSettings.websiteTheme}
+        onBack={() => navigateTo("/")}
+        onNavigateBookTable={() => {
+          navigateTo("/");
+          setTimeout(() => {
+            const el = document.getElementById("reservation");
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+          }, 150);
+        }}
+        onSelectBlog={(slugOrId) => {
+          setSelectedBlogId(slugOrId);
+          navigateTo(`/blog?${slugOrId}`);
+        }}
+        onNavigateEdit={() => {
+          setActiveNav("Website CMS");
+          navigateTo("/dashboard");
+        }}
+      />
+    );
+  }
+
+  if (currentRoute === "orderfromtable") {
+    return (
+      <TableOrderPage
+        menuItems={menuItems}
+        soldOutItems={soldOutItems}
+        onOrderCreated={handleOrderCreated}
+        kitchenClosed={kitchenClosed}
+        currencySymbol={storeSettings.currencySymbol || "₹"}
+        restaurantName={storeSettings.restaurantName}
+      />
+    );
+  }
+
+  if (currentRoute === "employee") {
+    return (
+      <EmployeePortal
+        onBackToApp={() => navigateTo("/dashboard")}
+        onBackToWebsite={() => navigateTo("/")}
+      />
+    );
+  }
+
+  // currentRoute === "dashboard"
+  if (!role) {
     return (
       <LoginPage
         restaurantSettings={storeSettings}
+        onNavigateWebsite={() => navigateTo("/")}
+        onNavigateEmployeePortal={() => navigateTo("/employe")}
         onLogin={(nextRole, staff) => {
           setRole(nextRole);
           const defaultId = nextRole === "Kitchen" ? "staff_102" : nextRole === "Server" ? "staff_103" : "staff_101";
@@ -11024,22 +11946,16 @@ export default function RestaurantApp() {
             department: nextRole === "Kitchen" ? "Kitchen" : nextRole === "Server" ? "Floor Service" : "Management",
           };
           setCurrentUser(user);
+          try {
+            localStorage.setItem("restro-active-role", nextRole);
+            localStorage.setItem("restro-active-user", JSON.stringify(user));
+          } catch {}
           setActiveNav(nextRole === "Kitchen" ? "Kitchen" : "Overview");
+          navigateTo("/dashboard");
         }}
       />
     );
-  if (showWebsite)
-    return (
-      <CustomerWebsite
-        onBack={() => setShowWebsite(false)}
-        menuItems={menuItems}
-        soldOutItems={soldOutItems}
-        onOrderCreated={handleOrderCreated}
-        kitchenClosed={kitchenClosed}
-        restaurantSettings={storeSettings}
-        currencySymbol={storeSettings.currencySymbol || "₹"}
-      />
-    );
+  }
 
   const visibleNavGroups = getNavGroups(role);
   const allowedPages = role ? roleNavGroups[role] : [];
@@ -11057,7 +11973,7 @@ export default function RestaurantApp() {
         userName={currentUser?.name}
         onBook={handleOpenBooking}
         onOrder={handleOpenNewOrder}
-        onWebsite={() => setShowWebsite(true)}
+        onWebsite={() => navigateTo("/")}
         onNavigate={(page) => setActiveNav(page)}
         role={role}
         tables={tables}
@@ -11076,6 +11992,7 @@ export default function RestaurantApp() {
         onBook={() => handleOpenBooking()}
         kitchenClosed={kitchenClosed}
         currencySymbol={storeSettings.currencySymbol || "₹"}
+        defaultDeposit={storeSettings.reservationDeposit ?? 500}
       />
     ) : safeActiveNav === "Floor plan" ? (
       <FloorPlanPage
@@ -11119,6 +12036,8 @@ export default function RestaurantApp() {
         setSoldOutItems={setSoldOutItems}
         canManage={role === "Manager"}
         currencySymbol={storeSettings.currencySymbol || "₹"}
+        currentUser={currentUser}
+        showToast={showToast}
       />
     ) : safeActiveNav === "Inventory" ? (
       <InventoryPage
@@ -11155,17 +12074,23 @@ export default function RestaurantApp() {
       />
     ) : safeActiveNav === "Dashboard access" ? (
       <DashboardAccessPage
-        onOpenPortal={() => setShowEmployeePortal(true)}
+        onOpenPortal={() => navigateTo("/employe")}
         departments={departments}
         onAddDepartment={handleAddDepartment}
+        currentUser={currentUser}
+        showToast={showToast}
       />
     ) : safeActiveNav === "Employees" || safeActiveNav === "Team" ? (
       <EmployeesPage
-        onOpenPortal={() => setShowEmployeePortal(true)}
+        onOpenPortal={() => navigateTo("/employe")}
         departments={departments}
         onAddDepartment={handleAddDepartment}
         onDeleteDepartment={handleDeleteDepartment}
+        currentUser={currentUser}
+        showToast={showToast}
       />
+    ) : safeActiveNav === "Website CMS" ? (
+      <WebsiteCmsPage />
     ) : safeActiveNav === "Settings" ? (
       <SettingsPage
         currentUser={currentUser}
@@ -11185,8 +12110,232 @@ export default function RestaurantApp() {
     );
 
   return (
-    <div className="paper-grid min-h-screen lg:h-screen lg:overflow-hidden lg:flex">
-      <aside className="flex w-full flex-col border-b border-[#dfe1dc] bg-[#fbfaf7] lg:h-screen lg:w-64 lg:shrink-0 lg:overflow-y-auto sidebar-scroll lg:border-b-0 lg:border-r">
+    <div className="paper-grid min-h-screen lg:h-screen lg:overflow-hidden lg:flex flex-col lg:flex-row">
+      {/* ==================================================== */}
+      {/* MOBILE TOP APP BAR (Sticky on < lg screens)          */}
+      {/* ==================================================== */}
+      <div className="flex items-center justify-between border-b border-[#dfe1dc] bg-[#fbfaf7] px-3.5 py-2.5 lg:hidden sticky top-0 z-30 shadow-2xs">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="rounded-xl border border-[#dfe1dc] bg-white p-2 text-[#24312e] hover:bg-[#f0f1ed] transition cursor-pointer shadow-2xs shrink-0"
+            aria-label="Open Navigation Menu"
+            title="Open navigation menu"
+          >
+            <MenuIcon size={18} />
+          </button>
+          <div className="flex items-center gap-2 min-w-0 cursor-pointer" onClick={() => setActiveNav("Overview")}>
+            {storeSettings.logoUrl ? (
+              <img
+                src={storeSettings.logoUrl}
+                alt={storeSettings.restaurantName || "Logo"}
+                className="h-7 w-7 rounded-lg object-contain border border-[#dfe1dc] bg-white p-0.5 shrink-0"
+              />
+            ) : (
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#24312e] text-[#f4bc83] shrink-0 font-bold">
+                <ChefHat size={15} />
+              </div>
+            )}
+            <div className="min-w-0">
+              <span className="display-font text-xs font-bold text-[#24312e] truncate block max-w-[130px] sm:max-w-[200px]">
+                {storeSettings.restaurantName || "Table & Thyme"}
+              </span>
+              <span className="text-[9px] font-bold text-[#315a3d] bg-[#e6eee5] px-1.5 py-0.2 rounded-md uppercase tracking-wider truncate inline-block">
+                {safeActiveNav}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {kitchenClosed && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-100 border border-red-300 text-red-800 text-[10px] font-bold">
+              <AlertTriangle size={12} />
+              <span className="hidden xs:inline">Closed</span>
+            </div>
+          )}
+          <button
+            onClick={() => setShowNotificationCenter(true)}
+            className="relative rounded-lg border border-[#dfe1dc] bg-white p-1.5 sm:p-2 text-[#68736e] hover:text-[#24312e] transition cursor-pointer"
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell size={16} />
+            {unreadNotificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#b7623d] px-0.5 text-[8px] font-bold text-white">
+                {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveNav("Settings")}
+            className={`rounded-lg border border-[#dfe1dc] p-1.5 sm:p-2 transition cursor-pointer ${
+              safeActiveNav === "Settings" ? "bg-[#24312e] text-white" : "bg-white text-[#68736e]"
+            }`}
+            aria-label="Settings"
+            title="Settings"
+          >
+            <Settings2 size={16} />
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="rounded-lg border border-[#dfe1dc] bg-white p-1.5 sm:p-2 text-red-600 hover:bg-red-50 transition cursor-pointer"
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* ==================================================== */}
+      {/* MOBILE FAST-SWITCH CATEGORY CHIPS                    */}
+      {/* ==================================================== */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-[#dfe1dc] bg-[#f8f7f4] px-3 py-1.5 lg:hidden">
+        {visibleNavGroups.flatMap((g) => g.items).map(({ label, icon: NavIcon }) => (
+          <button
+            key={label}
+            onClick={() => setActiveNav(label)}
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+              safeActiveNav === label
+                ? "bg-[#24312e] text-white shadow-2xs font-bold"
+                : "bg-white border border-[#dfe1dc] text-[#68736e] hover:bg-[#f0f1ed]"
+            }`}
+          >
+            <NavIcon size={13} />
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ==================================================== */}
+      {/* SLIDE-OVER MOBILE NAVIGATION DRAWER                  */}
+      {/* ==================================================== */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+
+          {/* Drawer Sheet */}
+          <div className="relative flex w-72 max-w-[85vw] flex-col bg-[#fbfaf7] shadow-2xl z-10 border-r border-[#dfe1dc] animate-in slide-in-from-left duration-200">
+            {/* Drawer Top */}
+            <div className="flex items-center justify-between border-b border-[#dfe1dc] px-5 py-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {storeSettings.logoUrl ? (
+                  <img
+                    src={storeSettings.logoUrl}
+                    alt={storeSettings.restaurantName || "Logo"}
+                    className="h-8 w-8 rounded-lg object-contain border border-[#dfe1dc] bg-white p-0.5 shrink-0"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#24312e] text-[#f4bc83] shrink-0 font-bold">
+                    <ChefHat size={16} />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="display-font text-sm font-bold text-[#24312e] truncate">
+                    {storeSettings.restaurantName || "Table & Thyme"}
+                  </p>
+                  <p className="text-[9px] font-semibold uppercase tracking-wider text-[#84908a] truncate">
+                    {storeSettings.branchName || "Restaurant OS"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="rounded-lg p-1.5 text-[#68736e] hover:bg-[#f0f1ed] transition cursor-pointer"
+                aria-label="Close menu"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* User Quick Info */}
+            <div className="border-b border-[#e9eae6] bg-[#f0f1ed]/60 px-5 py-3 flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f4bc83] text-xs font-bold text-[#684f37] shrink-0">
+                {currentUser?.name
+                  ? currentUser.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
+                  : role === "Kitchen" ? "CS" : role === "Server" ? "AR" : "PS"}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-bold text-[#24312e]">
+                  {currentUser?.name || (role === "Kitchen" ? "Chef Sunita" : role === "Server" ? "Aarav Rao" : "Priya Shah")}
+                </p>
+                <p className="truncate text-[10px] text-[#84908a]">
+                  {currentUser?.department || role} ({role})
+                </p>
+              </div>
+            </div>
+
+            {/* Drawer Nav Items */}
+            <div className="flex-1 overflow-y-auto sidebar-scroll px-3 py-3 space-y-4">
+              {visibleNavGroups.map((group) => {
+                const navItems = group.items.filter((item) => item.label !== "Settings");
+                if (navItems.length === 0) return null;
+                return (
+                  <div key={group.title}>
+                    <p className="px-3 pb-1.5 text-[9px] font-bold uppercase tracking-[.18em] text-[#a1aaa4]">
+                      {group.title}
+                    </p>
+                    <div className="space-y-0.5">
+                      {navItems.map(({ label, icon: NavIcon }) => (
+                        <button
+                          key={label}
+                          onClick={() => {
+                            setActiveNav(label);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition cursor-pointer ${
+                            safeActiveNav === label
+                              ? "bg-[#e6eee5] text-[#315a3d] font-bold shadow-2xs"
+                              : "text-[#74807a] hover:bg-[#f0f1ed]"
+                          }`}
+                        >
+                          <NavIcon size={16} strokeWidth={1.8} />
+                          <span>{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Drawer Bottom Actions */}
+            <div className="border-t border-[#e4e5df] p-3 space-y-1.5 bg-[#fbfaf7]">
+              <button
+                onClick={() => {
+                  setActiveNav("Settings");
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs font-semibold transition cursor-pointer ${
+                  safeActiveNav === "Settings"
+                    ? "bg-[#e6eee5] text-[#315a3d] font-bold"
+                    : "text-[#68736e] hover:bg-[#f0f1ed]"
+                }`}
+              >
+                <Settings2 size={16} />
+                <span>Settings</span>
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition cursor-pointer"
+              >
+                <LogOut size={15} />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* DESKTOP PERSISTENT SIDEBAR                           */}
+      {/* ==================================================== */}
+      <aside className="hidden lg:flex w-64 h-screen shrink-0 flex-col border-r border-[#dfe1dc] bg-[#fbfaf7] overflow-y-auto sidebar-scroll">
         <div className="flex shrink-0 items-center justify-between px-6 py-6">
           <div className="flex items-center gap-3 min-w-0">
             {storeSettings.logoUrl ? (
@@ -11209,33 +12358,31 @@ export default function RestaurantApp() {
               </p>
             </div>
           </div>
-          <button
-            className="rounded-lg p-2 text-[#68736e] lg:hidden"
-            aria-label="Open menu"
-          >
-            <MenuIcon size={21} />
-          </button>
         </div>
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:block lg:px-3 lg:py-3">
-          {visibleNavGroups.map((group) => (
-            <div key={group.title} className="lg:mb-6">
-              <p className="hidden px-4 pb-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#a1aaa4] lg:block">
-                {group.title}
-              </p>
-              {group.items.map(({ label, icon: NavIcon }) => (
-                <button
-                  key={label}
-                  onClick={() => setActiveNav(label)}
-                  className={`flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${safeActiveNav === label ? "bg-[#e6eee5] text-[#315a3d]" : "text-[#74807a] hover:bg-[#f0f1ed]"}`}
-                >
-                  <NavIcon size={18} strokeWidth={1.8} />
-                  <span>{label}</span>
-                </button>
-              ))}
-            </div>
-          ))}
+        <nav className="flex flex-col gap-1 px-3 py-3">
+          {visibleNavGroups.map((group) => {
+            const navItems = group.items.filter((item) => item.label !== "Settings");
+            if (navItems.length === 0) return null;
+            return (
+              <div key={group.title} className="mb-6">
+                <p className="px-4 pb-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#a1aaa4]">
+                  {group.title}
+                </p>
+                {navItems.map(({ label, icon: NavIcon }) => (
+                  <button
+                    key={label}
+                    onClick={() => setActiveNav(label)}
+                    className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition cursor-pointer ${safeActiveNav === label ? "bg-[#e6eee5] text-[#315a3d]" : "text-[#74807a] hover:bg-[#f0f1ed]"}`}
+                  >
+                    <NavIcon size={18} strokeWidth={1.8} />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            );
+          })}
         </nav>
-        <div className="mt-auto shrink-0 hidden border-t border-[#e4e5df] p-4 lg:block sticky bottom-0 bg-[#fbfaf7]">
+        <div className="mt-auto shrink-0 border-t border-[#e4e5df] p-4 sticky bottom-0 bg-[#fbfaf7]">
           <button
             onClick={() => setActiveNav("Settings")}
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition cursor-pointer ${
@@ -11284,29 +12431,34 @@ export default function RestaurantApp() {
           </div>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 lg:h-screen lg:overflow-y-auto lg:px-12 lg:py-10">
-        <header className="mb-8 flex items-center justify-between border-b border-[#e4e5df] pb-5">
-          <div className="flex items-center gap-3 text-xs font-semibold text-[#84908a]">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e8f1e8] text-[#3b724c]">
-              <UserRound size={16} />
+
+      {/* ==================================================== */}
+      {/* MAIN DASHBOARD CONTENT AREA                          */}
+      {/* ==================================================== */}
+      <main className="min-w-0 flex-1 px-3.5 py-4 sm:px-6 sm:py-6 lg:h-screen lg:overflow-y-auto lg:px-12 lg:py-10">
+        <header className="mb-4 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e4e5df] pb-3 sm:pb-5">
+          <div className="flex items-center gap-2 sm:gap-3 text-xs font-semibold text-[#84908a] min-w-0">
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-[#e8f1e8] text-[#3b724c] shrink-0">
+              <UserRound size={15} />
             </div>
-            <span>
+            <span className="truncate">
               <span className="font-bold text-[#24312e]">{storeSettings.restaurantName || "Table & Thyme"}</span>
               {storeSettings.branchName ? ` · ${storeSettings.branchName}` : ""}{" "}
               <span className="mx-1 text-[#c0c5c1]">/</span>{" "}
-              {safeActiveNav}
+              <span className="text-[#315a3d] font-bold">{safeActiveNav}</span>
             </span>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             {kitchenClosed && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-100 border border-red-300 text-red-800 text-xs font-bold">
-                <AlertTriangle size={14} />
-                Kitchen Closed
+              <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-red-100 border border-red-300 text-red-800 text-[11px] sm:text-xs font-bold">
+                <AlertTriangle size={13} />
+                <span>Kitchen Closed</span>
               </div>
             )}
             <button
               onClick={() => setActiveNav("Settings")}
-              className={`rounded-xl border border-[#dfe1dc] p-3 transition cursor-pointer ${
+              className={`hidden sm:flex rounded-xl border border-[#dfe1dc] p-2 sm:p-2.5 transition cursor-pointer ${
                 safeActiveNav === "Settings"
                   ? "bg-[#24312e] text-white shadow-xs"
                   : "bg-[#fbfaf7] text-[#68736e] hover:bg-white hover:text-[#24312e]"
@@ -11314,15 +12466,15 @@ export default function RestaurantApp() {
               aria-label="Settings"
               title="Station & User Settings"
             >
-              <Settings2 size={18} />
+              <Settings2 size={16} />
             </button>
             <button
               onClick={() => setShowNotificationCenter(true)}
-              className="relative rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-3 text-[#68736e] hover:bg-white hover:text-[#24312e] transition cursor-pointer"
+              className="hidden sm:flex relative rounded-xl border border-[#dfe1dc] bg-[#fbfaf7] p-2 sm:p-2.5 text-[#68736e] hover:bg-white hover:text-[#24312e] transition cursor-pointer"
               aria-label="Notifications"
               title="Notifications"
             >
-              <Bell size={18} />
+              <Bell size={16} />
               {unreadNotificationCount > 0 ? (
                 <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#b7623d] px-1 text-[9px] font-bold text-white shadow-xs">
                   {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
@@ -11335,20 +12487,20 @@ export default function RestaurantApp() {
               <>
                 <button
                   disabled={kitchenClosed}
-                  className={`hidden items-center gap-2 rounded-xl border border-[#dfe1dc] px-3 py-2.5 text-xs font-bold sm:flex transition ${
+                  className={`flex items-center gap-1.5 rounded-lg border border-[#dfe1dc] px-2.5 py-1.5 text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                     kitchenClosed
                       ? "opacity-50 cursor-not-allowed text-[#84908a] bg-[#f0f1ed]"
-                      : "text-[#315a3d] hover:bg-white"
+                      : "text-[#315a3d] bg-white hover:bg-[#f0f1ed] shadow-2xs"
                   }`}
                   onClick={() => handleOpenBooking()}
                   title={kitchenClosed ? "Kitchen is closed. Cannot book tables." : undefined}
                 >
-                  <CalendarCheck size={16} />
-                  Book table
+                  <CalendarCheck size={13} />
+                  <span>Book table</span>
                 </button>
                 <button
                   disabled={kitchenClosed}
-                  className={`hidden items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-white sm:flex transition ${
+                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] sm:text-xs font-semibold text-white transition cursor-pointer shadow-2xs ${
                     kitchenClosed
                       ? "opacity-50 cursor-not-allowed bg-[#74807a]"
                       : "bg-[#24312e] hover:bg-[#315a3d]"
@@ -11356,20 +12508,25 @@ export default function RestaurantApp() {
                   onClick={() => handleOpenNewOrder()}
                   title={kitchenClosed ? "Kitchen is closed. Cannot place new orders." : undefined}
                 >
-                  <Plus size={16} />
-                  New order
+                  <Plus size={13} />
+                  <span>New order</span>
                 </button>
               </>
             )}
             <button
-              onClick={() => {
-                setRole(null);
-                setCurrentUser(null);
-              }}
-              className="hidden items-center gap-2 rounded-xl border border-[#dfe1dc] px-3 py-2.5 text-xs font-bold text-[#68736e] sm:flex hover:bg-white"
+              onClick={() => navigateTo("/employe")}
+              className="hidden items-center gap-1.5 rounded-lg border border-[#dfe1dc] px-2.5 py-1.5 text-[11px] font-semibold text-[#68736e] sm:flex hover:bg-white transition"
+              title="Open Staff Mobile Portal"
             >
-              <LogOut size={16} />
-              Sign out
+              <Smartphone size={13} />
+              <span>Staff portal</span>
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="hidden items-center gap-1.5 rounded-lg border border-[#dfe1dc] px-2.5 py-1.5 text-[11px] font-semibold text-[#68736e] sm:flex hover:bg-white transition"
+            >
+              <LogOut size={13} />
+              <span>Sign out</span>
             </button>
           </div>
         </header>
@@ -11410,6 +12567,7 @@ export default function RestaurantApp() {
           kitchenClosed={kitchenClosed}
           onBookingCreated={handleBookingCreated}
           currencySymbol={storeSettings.currencySymbol || "₹"}
+          defaultDeposit={storeSettings.reservationDeposit ?? 500}
           onClose={() => {
             setShowBooking(false);
             setSelectedTableForBooking(undefined);
@@ -11432,9 +12590,6 @@ export default function RestaurantApp() {
             setSelectedTableForOrder(undefined);
           }}
         />
-      )}
-      {showEmployeePortal && (
-        <EmployeePortal onBackToApp={() => setShowEmployeePortal(false)} />
       )}
       {showNotificationCenter && role && (
         <NotificationCenterModal

@@ -14,6 +14,7 @@ export const bookingSources = [
   "Walk-in",
   "Web link",
   "Online",
+  "Website",
 ] as const;
 
 export type BookingSource = (typeof bookingSources)[number];
@@ -22,6 +23,7 @@ export type TableBooking = {
   id: string;
   customer: string;
   phone: string;
+  email?: string;
   bookingDate: string;
   bookingTime: string;
   guests: number;
@@ -30,6 +32,10 @@ export type TableBooking = {
   deposit: number;
   source: BookingSource;
   specialRequests: string;
+  paymentId?: string;
+  payuPaymentId?: string;
+  stripePaymentId?: string;
+  paymentStatus?: "Paid" | "Pending" | "Refunded" | "Waived";
   createdAt: string;
   updatedAt: string;
 };
@@ -37,6 +43,7 @@ export type TableBooking = {
 export type BookingInput = {
   customer: string;
   phone: string;
+  email?: string;
   bookingDate: string;
   bookingTime: string;
   guests: number;
@@ -44,6 +51,10 @@ export type BookingInput = {
   deposit?: number;
   source?: BookingSource;
   specialRequests?: string;
+  paymentId?: string;
+  payuPaymentId?: string;
+  stripePaymentId?: string;
+  paymentStatus?: "Paid" | "Pending" | "Refunded" | "Waived";
 };
 
 const isNonEmptyString = (value: unknown): value is string =>
@@ -99,6 +110,7 @@ export function validateBookingInput(body: unknown): {
     value: {
       customer: input.customer!.trim(),
       phone: input.phone!.trim(),
+      email: input.email ? input.email.trim() : "",
       bookingDate: input.bookingDate!.trim(),
       bookingTime: input.bookingTime!.trim(),
       guests: input.guests!,
@@ -106,6 +118,10 @@ export function validateBookingInput(body: unknown): {
       deposit: input.deposit !== undefined ? Number(input.deposit.toFixed(2)) : 500,
       source: input.source ?? "Phone",
       specialRequests: input.specialRequests ? input.specialRequests.trim() : "",
+      paymentId: input.paymentId?.trim() || input.payuPaymentId?.trim() || input.stripePaymentId?.trim() || "",
+      payuPaymentId: input.payuPaymentId?.trim() || input.paymentId?.trim() || input.stripePaymentId?.trim() || "",
+      stripePaymentId: input.stripePaymentId ? input.stripePaymentId.trim() : "",
+      paymentStatus: input.paymentStatus ?? "Paid",
     },
   };
 }
