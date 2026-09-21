@@ -2229,12 +2229,6 @@ export default function PublicWebsite({
               >
                 Reservations
               </button>
-              <button
-                onClick={onNavigateDashboard}
-                className={`font-bold transition ${isDark ? "text-[#f4bc83] hover:underline" : "text-[#9c6328] hover:underline"}`}
-              >
-                Staff Login
-              </button>
             </div>
           </div>
         </div>
