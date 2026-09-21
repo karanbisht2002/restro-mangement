@@ -65,7 +65,13 @@ jobs:
               sudo journalctl -u restro-management -n 100 --no-pager
               exit 1
             }
-            curl --fail --silent --show-error http://127.0.0.1:5000/api/health || {
+            curl --fail --silent --show-error \
+              --retry 15 \
+              --retry-connrefused \
+              --retry-all-errors \
+              --retry-delay 1 \
+              --retry-max-time 30 \
+              http://127.0.0.1:5000/api/health || {
               sudo systemctl status restro-management --no-pager -l
               sudo journalctl -u restro-management -n 100 --no-pager
               exit 1
